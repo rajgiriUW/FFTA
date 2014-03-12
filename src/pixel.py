@@ -80,11 +80,30 @@ class Pixel(object):
 
     def cwt(self):
 
+        # Calculate scale for wavelet transform.
         scale = (5 + np.sqrt(27)) / \
                 (self.drive_freq / self.sampling_rate * 4 * np.pi)
-        wavelet_inc = 0.5
-        widths = np.arange(scale * 0.9, scale * 1.2, wavelet_inc)
-        cwt_matrix = sps.cwt(self.signal, sps.morlet, widths)
+
+        # Get widths for wavelet transform from scale.
+        widths = np.arange(scale * 0.9, scale * 1.1, 0.5)
+
+        # Real Morlet wavelet.
+        morlet = lambda M, w: np.real(sps.morlet(M, w, complete=False))
+
+        # Continuous wavelet transform.
+        cwt_matrix = sps.cwt(self.signal, morlet, widths)
+
+        # Find the maximum in each column of cwt_matrix.
+        self.max_idx = np.empty(cwt_matrix.shape[1])
+
+        for i in range(cwt_matrix.shape[1]):
+
+            smooth_column = self.__smooth(cwt_matrix[:, i])
+            self.max_idx[i] = smooth_column.argmax()
+
+    def __smooth(vec, points=4):
+
+        return sps.fftconvolve(vec, np.ones(points) / points, mode='same')
 
     def run_cwt(self):
 
