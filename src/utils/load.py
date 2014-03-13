@@ -74,7 +74,7 @@ def configuration(path):
     # Assign parameters from file. These are the keys for parameters.
     paraf_keys = ['trigger', 'total_time', 'drive_freq']
     parai_keys = ['sampling_rate']
-    procf_keys = ['bandwidth', 'smooth_ time', 'window_size']
+    procf_keys = ['bandwidth', 'smooth_time', 'window_size']
     procb_keys = ['noise_reduction', 'bandpass_filter', 'window', 'smooth']
 
     if config.has_option('Parameters', 'n_pixels'):
