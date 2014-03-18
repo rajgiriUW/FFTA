@@ -1,8 +1,5 @@
-#!/usr/bin/env python
-from __future__ import division
-
 """pixel.py: Contains pixel class."""
-
+#pylint: disable=E1101,R0902
 __author__ = "Durmus U. Karatay"
 __copyright__ = "Copyright 2014, Ginger Lab"
 __maintainer__ = "Durmus U. Karatay"
@@ -10,29 +7,90 @@ __email__ = "ukaratay@uw.edu"
 __status__ = "Development"
 
 import numpy as np
-from utils import noise
+from utils import cwavelet, noise, utils
 from scipy import signal as sps
-from scipy import optimize as spo
 
 
 class Pixel(object):
+    """Digital Signal Process to Extract Time-to-First-Peak.
 
-    def __init__(self, parameters):
+    Extracts time-to-first-peak (tFP) from digitized Fast-Free time-resolved
+    Electrostatic Force Microscopy signal. Pixel class contains three different
+    methods to extract tFP: Hilbert-Huang transform, Continuous Wavelet
+    Transform and Synthetic Lock-in Amplifier.
+
+    Parameters
+    ----------
+    params : dict
+        Includes parameters for processing. Here is a list of parameters:
+
+        trigger = float
+        total_time = float
+        sampling_rate = int
+        drive_freq = float
+        bandwidth = float
+        smooth_time = float
+        window_size = float
+        noise_reduction = boolean
+        bandpass_filter = boolean
+        window = boolean
+        smooth = boolean
+
+    Attributes
+    ----------
+    `tidx` : int
+        Index of trigger in time-domain.
+
+    `n_points` : int
+        Number of points in time-domain.
+
+    `n_signals` : int
+        Number of signals to be averaged in a pixel.
+
+    `signal_array` : array, shape = [n_points, n_signals]
+        Array that contains signals from a single pixel.
+
+    `signal` : array, shape = [n_points]
+        The signal after phase-locking and averaging in time domain.
+
+    `phase` : array, shape = [n_points]
+        The phase information of the signal.
+
+    `cwt_matrix` : array, shape = [n_scales, n_points]
+        Continuous wavelet transform of the signal by Morlet wavelet.
+
+    `inst_freq` : array, shape = [n_points]
+        Instantenous frequency of the signal, depends on the method used.
+
+    `windows_type` : string, (default='blackman')
+        Possible windows are: boxcar, triang, blackman, hamming, hann,
+        bartlett, flattop, parzen, bohman, blackmanharris, nuttall, barthann.
+
+    """
+    def __init__(self, params):
 
         # Create parameter attributes from parameters dictionary.
-        for key, value in parameters.iteritems():
+        for key, value in params.iteritems():
 
             setattr(self, key, value)
 
+        self.signal_array = None
+        self.signal = None
+        self.phase = None
+        self.cwt_matrix = None
+        self.inst_freq = None
+
         self.tidx = self.trigger * self.sampling_rate
+        self.n_points = None
+        self.n_signals = None
 
         if self.window:
 
-            self.set_window('blackman')
+            self.window_type = 'blackman'
 
         else:
 
-            self.set_window('boxcar')
+            self.window_type = 'boxcar'
 
         return
 
@@ -52,7 +110,7 @@ class Pixel(object):
 
         return
 
-    def remove_DC(self):
+    def remove_dc(self):
         """Remove DC components from signals."""
 
         self.signal_array -= self.signal_array.mean(axis=0)
@@ -63,11 +121,11 @@ class Pixel(object):
         """Calculate drive frequency of averaged signals, and check against
            the given drive frequency."""
 
-        n = 2 ** int(np.log2(self.tidx))  # For FFT, choose n as a power of 2.
-        dfreq = self.sampling_rate / n  # Frequency separation.
+        n_fft = 2 ** int(np.log2(self.tidx))  # For FFT, power of 2.
+        dfreq = self.sampling_rate / n_fft  # Frequency separation.
 
         # Calculate drive frequency from maximum power of the FFT spectrum.
-        signal = self.signal[:n]
+        signal = self.signal[:n_fft]
         fft_amplitude = np.abs(np.fft.rfft(signal))
         drive_freq = fft_amplitude.argmax() * dfreq
 
@@ -89,26 +147,32 @@ class Pixel(object):
 
             return
 
-    def set_window(self, window_type):
-
-        self.window_type = window_type
-
-        return
-
     def filter_signal(self, n_taps=1999):
+        """
+        Filters signal with a FIR filter.
+
+        Parameters
+        ----------
+        n_taps : integer, (default=1999)
+            Number of taps for FIR filter.
+
+        """
 
         bw_half = self.bandwidth / 2
 
-        fL = (self.drive_freq - bw_half) / (0.5 * self.sampling_rate)
-        fH = (self.drive_freq + bw_half) / (0.5 * self.sampling_rate)
+        freq_low = (self.drive_freq - bw_half) / (0.5 * self.sampling_rate)
+        freq_high = (self.drive_freq + bw_half) / (0.5 * self.sampling_rate)
 
-        taps = sps.firwin(n_taps, [fL, fH], pass_zero=False, window='parzen')
+        bandpass = [freq_low, freq_high]
+
+        taps = sps.firwin(n_taps, bandpass, pass_zero=False, window='parzen')
 
         self.signal = sps.fftconvolve(self.signal, taps, mode='same')
 
         return
 
     def correct_phase_slope(self):
+        """Correct the slope of the phase by removing the drive phase."""
 
         self.phase -= (2 * np.pi * self.drive_freq * np.arange(self.n_points) /
                        self.sampling_rate)
@@ -118,11 +182,7 @@ class Pixel(object):
         end = int(0.8 * self.tidx)
         fit = self.phase[start:end]
 
-        line = lambda x, m, b: m * x + b
-
-        xfit, xn = spo.curve_fit(line,
-                                 np.arange(start, end) / self.sampling_rate,
-                                 fit)
+        xfit = np.polyfit(np.arange(start, end) / self.sampling_rate, fit, 1)
         self.phase -= (xfit[0] * np.arange(self.n_points) /
                        self.sampling_rate) + xfit[1]
 
@@ -134,7 +194,7 @@ class Pixel(object):
     def run_hilbert(self):
 
         # Remove DC component, first.
-        self.remove_DC()
+        self.remove_dc()
         # Phase-lock signals.
         self.signal_array, self.tidx = \
             noise.phase_lock(self.signal_array, self.tidx)
@@ -142,7 +202,7 @@ class Pixel(object):
         # Average signals.
         self.signal = self.signal_array.mean(axis=1)
         # Remove DC component again, introduced by phase-locking.
-        self.remove_DC()
+        self.remove_dc()
         # Check the drive frequency.
         self.check_drive_freq()
         # Apply window.
@@ -167,5 +227,27 @@ class Pixel(object):
 
         self.inst_freq = np.gradient(self.phase, 1 / self.sampling_rate)
 
+    def run_cwt(self):
 
+        # Remove DC component, first.
+        self.remove_dc()
+        # Phase-lock signals.
+        self.signal_array, self.tidx = \
+            noise.phase_lock(self.signal_array, self.tidx)
+        self.n_points = self.signal_array.shape[0]
+        # Average signals.
+        self.signal = self.signal_array.mean(axis=1)
+        # Remove DC component again, introduced by phase-locking.
+        self.remove_dc()
+        # Check the drive frequency.
+        self.check_drive_freq()
 
+        # Calculate scale and width, then apply CWT.
+        scale = (5 + np.sqrt(27)) /\
+                (4 * np.pi * self.drive_freq / self.sampling_rate)
+        scales = np.arange(scale * 0.8, scale * 1.2, 0.5)
+
+        self.cwt_matrix = cwavelet.cwt(self.signal, dt=1, scales=scales, w0=5)
+        freq = utils.max_2d_fit(np.abs(self.cwt_matrix))
+
+        self.inst_freq = -1*freq[:] + freq[0]

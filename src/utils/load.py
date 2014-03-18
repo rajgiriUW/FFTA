@@ -14,8 +14,7 @@ from igor.binarywave import load as loadibw
 
 
 def ibw(path):
-    """
-    Load .ibw files and return it as a numpy.ndarray.
+    """Load .ibw files and return it as a numpy.ndarray.
 
     Parameters
     ----------
@@ -24,7 +23,7 @@ def ibw(path):
 
     Returns
     -------
-    signal_array : array, [n_points, n_signals]
+    signal_array : array, shape = [n_points, n_signals]
         2D real-valued signal array loaded from given .ibw file.
 
     """
@@ -36,8 +35,7 @@ def ibw(path):
 
 
 def configuration(path):
-    """
-    Read an ASCII file with relevant parameters for processing.
+    """Read an ASCII file with relevant parameters for processing.
 
     Parameters
     ----------
@@ -72,8 +70,7 @@ def configuration(path):
     parameters = {}
 
     # Assign parameters from file. These are the keys for parameters.
-    paraf_keys = ['trigger', 'total_time', 'drive_freq']
-    parai_keys = ['sampling_rate']
+    paraf_keys = ['trigger', 'total_time', 'drive_freq', 'sampling_rate']
     procf_keys = ['bandwidth', 'smooth_time', 'window_size']
     procb_keys = ['noise_reduction', 'bandpass_filter', 'window', 'smooth']
 
@@ -86,12 +83,6 @@ def configuration(path):
         if config.has_option('Parameters', key):
 
             parameters[key] = config.getfloat('Parameters', key)
-
-    for key in parai_keys:
-
-        if config.has_option('Parameters', key):
-
-            parameters[key] = config.getint('Parameters', key)
 
     for key in procf_keys:
 
