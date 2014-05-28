@@ -54,28 +54,34 @@ def main(argv=None):
     n_pixels, parameters = load.configuration(args.config[0])
     path = args.input[0]
 
+    # Scan the path for .ibw files.
     filelist = os.listdir(path)
     filelist = filter(lambda name: name[-3:] == 'ibw', filelist)
     filelist = [os.path.join(path, name) for name in filelist]
 
+    # Start timing.
     start_time = time.time()
 
+    # Create a pool of workers.
     pool = multiprocessing.Pool(processes=None)
 
-    n = len(filelist)
-    iterable = zip(filelist, [n_pixels] * n, [parameters] * n)
+    n_files = len(filelist)
+    # Create the iterable and map onto the function.
+    iterable = zip(filelist, [n_pixels] * n_files, [parameters] * n_files)
     result = pool.map(process_line, iterable)
 
-    pool.close()
+    pool.close()  # Do not forget to close spawned processes.
     pool.join()
 
+    # Unzip the result.
     tfp_list, shift_list = zip(*result)
 
     # Initialize arrays.
-    tfp = np.zeros((len(filelist), n_pixels))
-    shift = np.zeros((len(filelist), n_pixels))
+    tfp = np.zeros((n_files, n_pixels))
+    shift = np.zeros((n_files, n_pixels))
 
-    for i in range(len(filelist)):
+    # Convert list of arrays to 2D array.
+    for i in range(n_files):
 
         tfp[i, :] = tfp_list[i]
         shift[i, :] = shift_list[i]
@@ -93,7 +99,3 @@ def main(argv=None):
 if __name__ == '__main__':
 
     sys.exit(main(sys.argv[1:]))
-
-
-
-
