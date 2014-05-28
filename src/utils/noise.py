@@ -43,20 +43,20 @@ def phase_lock(signal_array, tidx):
     fzero = lambda x: np.where(x[:-1] * x[1:] <= 0)[0][0]
 
     # Find positions of first zeros from beginning to 1% of a signal.
-    for j in range(n_signals):
+    for i in range(n_signals):
 
-        index_shift[j] = fzero(signal_array[:idx, j])
+        index_shift[i] = fzero(signal_array[:idx, i])
 
     # Have all signals same length by cutting them from both ends.
-    total_cut = index_shift.max() + index_shift.min()
+    total_cut = index_shift.max() + index_shift.min() + 1
     new_signal_array = np.empty((n_points - total_cut, n_signals))
     tidx -= int(index_shift.mean())  # Shift trigger index by average amount.
 
     # Cut signals.
-    for j in range(n_signals):
+    for i in range(n_signals):
 
-        new_signal_array[:, j] = \
-            signal_array[index_shift[j]:-(total_cut - index_shift[j]), j]
+        new_signal_array[:, i] = \
+            signal_array[index_shift[i]:-(total_cut - index_shift[i]), i]
 
     signal_array = new_signal_array
     # Find the new trigger index.
@@ -66,7 +66,7 @@ def phase_lock(signal_array, tidx):
     return signal_array, tidx
 
 
-def discard(signals, k):
+def pca_discard(signals, k):
     """
     Discards noisy signals using Principal Component Analysis.
 

@@ -10,16 +10,19 @@ __status__ = "Production"
 
 
 import ConfigParser
+import sys
 from igor.binarywave import load as loadibw
+from numpy import loadtxt
+from os.path import splitext
 
 
-def ibw(path):
-    """Load .ibw files and return it as a numpy.ndarray.
+def signal(path, skiprows=1):
+    """Load .ibw or ASCII files and return it as a numpy.ndarray.
 
     Parameters
     ----------
     path : string
-        Path to .ibw file.
+        Path to signal file.
 
     Returns
     -------
@@ -28,7 +31,21 @@ def ibw(path):
 
     """
 
-    signal_array = loadibw(path)['wave']['wData']  # Load data.
+    ext = splitext(path)[1]
+
+    if ext.lower() == '.ibw':
+
+        signal_array = loadibw(path)['wave']['wData']  # Load data.
+
+    elif ext.lower() == '.txt':
+
+        signal_array = loadtxt(path, skiprows=skiprows)
+
+    else:
+
+        print "Unrecognized file type!"
+        sys.exit(0)
+
     signal_array.flags.writeable = True  # Make array writable.
 
     return signal_array
@@ -54,13 +71,11 @@ def configuration(path):
         total_time = float
         sampling_rate = int
         drive_freq = float
-        bandwidth = float
-        smooth_time = float
-        window_size = float
-        noise_reduction = boolean
+
+        roi = float
+        filter_bandwidth = float
         bandpass_filter = boolean
         window = boolean
-        smooth = boolean
 
     """
 
@@ -71,12 +86,16 @@ def configuration(path):
 
     # Assign parameters from file. These are the keys for parameters.
     paraf_keys = ['trigger', 'total_time', 'drive_freq', 'sampling_rate']
-    procf_keys = ['bandwidth', 'smooth_time', 'window_size']
-    procb_keys = ['noise_reduction', 'bandpass_filter', 'window', 'smooth']
+    procb_keys = ['window', 'bandpass_filter', ]
+    procf_keys = ['roi', 'filter_bandwidth']
 
     if config.has_option('Parameters', 'n_pixels'):
 
         n_pixels = config.getint('Parameters', 'n_pixels')
+
+    else:
+
+        n_pixels = int(1)
 
     for key in paraf_keys:
 
