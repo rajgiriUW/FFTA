@@ -168,8 +168,8 @@ class Pixel(object):
 
         band = [freq_low, freq_high]
 
-        taps = sps.firwin(n_taps, band, pass_zero=False, window='parzen')
-
+        taps = sps.firwin(n_taps, band, pass_zero=False)
+        
         self.signal = sps.fftconvolve(self.signal, taps, mode='same')
 
         return
@@ -264,13 +264,13 @@ class Pixel(object):
         # Check the drive frequency.
         self.check_drive_freq()
 
-        # Apply window.
-        self.apply_window()
-
         # Filter the signal with an FIR filter, if wanted.
         if self.bandpass_filter:
 
-            self.butterworth_filter()
+            self.fir_filter()
+
+        # Apply window.
+        self.apply_window()
 
         # Get the analytical signal doing a Hilbert transform.
         self.hilbert_transform()
@@ -284,4 +284,4 @@ class Pixel(object):
         # Find where the minimum is.
         self.find_minimum()
 
-        return self.tfp, self.shift
+        return (self.tfp, self.shift)
