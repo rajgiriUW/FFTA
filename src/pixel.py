@@ -169,8 +169,9 @@ class Pixel(object):
         band = [freq_low, freq_high]
 
         taps = sps.firwin(n_taps, band, pass_zero=False)
-        
+
         self.signal = sps.fftconvolve(self.signal, taps, mode='same')
+        self.tidx = self.tidx - int(n_taps / 2)
 
         return
 
@@ -242,7 +243,7 @@ class Pixel(object):
         idx = int(spo.fminbound(func, 0, ridx))
 
         self.tfp = idx / self.sampling_rate
-        self.shift = -self.inst_freq[self.tfp + self.tidx]
+        self.shift = -self.inst_freq[idx + self.tidx]
 
         return
 
