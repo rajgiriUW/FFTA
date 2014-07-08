@@ -39,16 +39,13 @@ def phase_lock(signal_array, tidx):
     index_shift = np.empty(n_signals)  # Keep shifts from the beginning.
     idx = int(0.01 * n_points)  # Look at only the first 1% points of signals.
 
-    # Fast zero-finding function in lambda form.
-    fzero = lambda x: np.where(x[:-1] * x[1:] <= 0)[0][0]
-
     # Find positions of first zeros from beginning to 1% of a signal.
     for i in range(n_signals):
 
         index_shift[i] = fzero(signal_array[:idx, i])
 
     # Have all signals same length by cutting them from both ends.
-    total_cut = index_shift.max() + index_shift.min() + 1
+    total_cut = int(index_shift.max() + index_shift.min() + 1)
     new_signal_array = np.empty((n_points - total_cut, n_signals))
     tidx -= int(index_shift.mean())  # Shift trigger index by average amount.
 
@@ -64,6 +61,10 @@ def phase_lock(signal_array, tidx):
         (tidx - total_cut):(tidx + total_cut)]) - total_cut
 
     return signal_array, tidx
+
+def fzero(x):
+    """Fast zero-finding function in lambda form."""
+    return (np.where(x[:-1] * x[1:] <= 0)[0][0])
 
 
 def pca_discard(signals, k):

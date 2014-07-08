@@ -136,9 +136,6 @@ class Pixel(object):
         # If difference is too big, reassign. Otherwise, continue.
         if difference >= dfreq:
 
-            #print "Calculated and given drive frequencies are not matching!"
-            #print "New drive frequency: {0:.0f} Hz.".format(drive_freq)
-
             self.drive_freq = drive_freq
 
         return
@@ -150,7 +147,7 @@ class Pixel(object):
 
         return
 
-    def fir_filter(self, n_taps=1999):
+    def fir_filter(self):
         """
         Filters signal with a FIR bandpass filter.
 
@@ -168,10 +165,10 @@ class Pixel(object):
 
         band = [freq_low, freq_high]
 
-        taps = sps.firwin(n_taps, band, pass_zero=False)
+        taps = sps.firwin(self.n_taps, band, pass_zero=False)
 
         self.signal = sps.fftconvolve(self.signal, taps, mode='same')
-        self.tidx = self.tidx - int(n_taps / 2)
+        self.tidx = self.tidx - int(self.n_taps / 2)
 
         return
 
@@ -185,9 +182,9 @@ class Pixel(object):
         freq_low = (self.drive_freq - bw_half) / (0.5 * self.sampling_rate)
         freq_high = (self.drive_freq + bw_half) / (0.5 * self.sampling_rate)
 
-        band = [freq_low, freq_high]
-        b, a = sps.butter(5, band, btype='bandpass')
-
+        b, a = sps.butter(9, freq_low, btype='high')
+        self.signal = sps.filtfilt(b, a, self.signal)
+        b, a = sps.butter(9, freq_high, btype='low')
         self.signal = sps.filtfilt(b, a, self.signal)
 
     def hilbert_transform(self):
@@ -268,7 +265,7 @@ class Pixel(object):
         # Filter the signal with an FIR filter, if wanted.
         if self.bandpass_filter:
 
-            self.fir_filter()
+            self.butterworth_filter()
 
         # Apply window.
         self.apply_window()
