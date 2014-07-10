@@ -9,6 +9,7 @@ __status__ = "Development"
 import sys
 import os
 import pixel
+import line
 import argparse as ap
 import numpy as np
 from utils import load
@@ -65,14 +66,8 @@ def main(argv=None):
         for n in range(len(filelist)):
 
             signal_array = load.signal(filelist[n])
-            num = int(signal_array.shape[1] / n_pixels)
-
-            # For every pixel in the file, runs the pixel.getresult.
-            for m in range(n_pixels):
-
-                temp = signal_array[:, (num * m):(num * (m + 1))]
-                p = pixel.Pixel(temp, parameters)
-                tfp[n, m], shift[n, m] = p.get_tfp()
+            l = line.Line(signal_array, n_pixels, parameters)
+            tfp[n, :], shift[n, :] = l.get_tfp()
 
             tfpmean = 1e6 * tfp[n, :].mean()
             tfpstd = 1e6 * tfp[n, :].std()
@@ -103,7 +98,7 @@ def main(argv=None):
 
         raise SystemExit("Unrecoverable error! Exiting the program!!!")
 
-    return 0
+    return
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

@@ -1,5 +1,5 @@
 """pixel.py: Contains pixel class."""
-#pylint: disable=E1101,R0902
+# pylint: disable=E1101,R0902
 __author__ = "Durmus U. Karatay"
 __copyright__ = "Copyright 2014, Ginger Lab"
 __maintainer__ = "Durmus U. Karatay"
@@ -22,19 +22,20 @@ class Pixel(object):
     Parameters
     ----------
     signal_array : array, [n_points, n_signals]
-        2D real-valued signal array.
+        2D real-valued signal array, corresponds to a pixel.
 
     params : dict
         Includes parameters for processing. Here is a list of parameters:
 
-        trigger = float
-        total_time = float
-        sampling_rate = int
-        drive_freq = float
+        trigger = float (in seconds)
+        total_time = float (in seconds)
+        sampling_rate = int (in Hz)
+        drive_freq = float (in Hz)
 
-        window = boolean
-        bandpass_filter = boolean
-        filter_bandwidth = float
+        roi = float (in seconds)
+        window = string (see documentation of pixel.apply_window)
+        bandpass_filter = int (0: no filtering, 1: FIR filter, 2: IIR filter)
+        filter_bandwidth = float (in Hz)
 
     Attributes
     ----------
@@ -42,7 +43,7 @@ class Pixel(object):
         Index of trigger in time-domain.
 
     `n_points` : int
-        Number of points in time-domain.
+        Number of points in a signal.
 
     `n_signals` : int
         Number of signals to be averaged in a pixel.
@@ -59,12 +60,15 @@ class Pixel(object):
     `inst_freq` : array, shape = [n_points]
         Instantenous frequency of the signal, depends on the method used.
 
-    `window_type` : string, (default='blackman')
+    `window` : string
         Possible windows are: boxcar, triang, blackman, hamming, hann,
         bartlett, flattop, parzen, bohman, blackmanharris, nuttall, barthann.
 
     `tfp` : float
-        Time-to-First-Peak.
+        Time-to-First-Peak, in seconds.
+
+    `shift` : float
+        Frequency shift from steady-state to first-peak, in Hz.
 
     """
     def __init__(self, signal_array, params):
@@ -84,16 +88,6 @@ class Pixel(object):
         self.tidx = int(self.trigger * self.sampling_rate)
         self.n_points, self.n_signals = signal_array.shape
 
-        if self.window:
-
-            self.window_type = 'blackman'
-
-        else:
-
-            self.window_type = 'boxcar'
-
-        return
-
     def remove_dc(self):
         """Remove DC components from signals."""
 
@@ -107,6 +101,7 @@ class Pixel(object):
         self.signal_array, self.tidx = \
             noise.phase_lock(self.signal_array, self.tidx)
 
+        # Update number of points after phase-locking.
         self.n_points = self.signal_array.shape[0]
 
         return
@@ -143,21 +138,22 @@ class Pixel(object):
     def apply_window(self):
         """Apply the window defined in parameters."""
 
-        self.signal *= sps.get_window(self.window_type, self.n_points)
+        self.signal *= sps.get_window(self.window, self.n_points)
 
         return
 
-    def fir_filter(self):
+    def fir_filter(self, n_taps=999):
         """
         Filters signal with a FIR bandpass filter.
 
         Parameters
         ----------
-        n_taps : integer, (default=1999)
+        n_taps : integer, (default=999)
             Number of taps for FIR filter.
 
         """
 
+        # Calculate bandpass region from given parameters.
         bw_half = self.filter_bandwidth / 2
 
         freq_low = (self.drive_freq - bw_half) / (0.5 * self.sampling_rate)
@@ -165,27 +161,38 @@ class Pixel(object):
 
         band = [freq_low, freq_high]
 
-        taps = sps.firwin(self.n_taps, band, pass_zero=False)
+        # Create taps using window method.
+        taps = sps.firwin(n_taps, band, pass_zero=False, window='parzen')
+        warmup = n_taps - 1
+        delay = warmup / 2
 
+        # Convolve and correct for delay.
         self.signal = sps.fftconvolve(self.signal, taps, mode='same')
-        self.tidx = self.tidx - int(self.n_taps / 2)
+        self.tidx -= delay
 
         return
 
-    def butterworth_filter(self):
+    def iir_filter(self):
+        """Filters signal with two Butterworth filters (one lowpass,
+        one highpass) using filtfilt. This method has linear phase and no
+        time delay.
         """
-        Filters signal with a Butterworth bandpass filter using lfiltfilt.
-        This method has linear phase and no time delay.
-        """
+
+        # Calculate bandpass region from given parameters.
         bw_half = self.filter_bandwidth / 2
 
         freq_low = (self.drive_freq - bw_half) / (0.5 * self.sampling_rate)
         freq_high = (self.drive_freq + bw_half) / (0.5 * self.sampling_rate)
 
+        # Do a high-pass filtfilt operation.
         b, a = sps.butter(9, freq_low, btype='high')
         self.signal = sps.filtfilt(b, a, self.signal)
+
+        # Do a low-pass filtfilt operation.
         b, a = sps.butter(9, freq_high, btype='low')
         self.signal = sps.filtfilt(b, a, self.signal)
+
+        return
 
     def hilbert_transform(self):
         """Get the analytical signal doing a Hilbert transform."""
@@ -198,25 +205,24 @@ class Pixel(object):
         """Get the phase of the signal and correct the slope by removing
         the drive phase."""
 
+        # Unwrap the phase.
         self.phase = np.unwrap(np.angle(self.signal))
 
         if correct_slope:
 
+            # Remove the drive from phase.
             self.phase -= (2 * np.pi * self.drive_freq
                            * np.arange(self.n_points) / self.sampling_rate)
 
             # A curve fit on the initial part to make sure that it worked.
-            start = int(0.2 * self.tidx)
-            end = int(0.8 * self.tidx)
+            start = int(0.3 * self.tidx)
+            end = int(0.7 * self.tidx)
             fit = self.phase[start:end]
 
-            xfit = np.polyfit(np.arange(start, end) /
-                              self.sampling_rate, fit, 1)
-            self.phase -= (xfit[0] * np.arange(self.n_points) /
-                           self.sampling_rate) + xfit[1]
+            xfit = np.polyfit(np.arange(start, end), fit, 1)
 
-            # Drive frequency is corrected through curve fitting.
-            self.drive_freq += xfit[0]
+            # Remove the fit from phase.
+            self.phase -= (xfit[0] * np.arange(self.n_points)) + xfit[1]
 
         return
 
@@ -224,28 +230,33 @@ class Pixel(object):
         """Calculates the first derivative of the phase using Savitzky-Golay
         filter."""
 
-        delta = 1 / self.sampling_rate
+        dtime = 1 / self.sampling_rate  # Time step.
+
+        # Do a Savitzky-Golay smoothing derivative.
         self.inst_freq = sps.savgol_filter(self.phase, 9, 2,
-                                           deriv=1, delta=delta)
+                                           deriv=1, delta=dtime)
 
         return
 
     def find_minimum(self):
         """Find when the minimum of instantenous frequency happens."""
 
+        # Cut the signal into region of interest.
         ridx = int(self.roi * self.sampling_rate)
         cut = self.inst_freq[self.tidx:(self.tidx + ridx)]
 
+        # Define a function to be used in finding minimum and find minimum.
         func = lambda idx: cut[idx]
-        idx = int(spo.fminbound(func, 0, ridx))
+        idx = int(spo.fminbound(func, 0, ridx))  # Brent's Method.
 
+        # Do index to time conversion and find shift.
         self.tfp = idx / self.sampling_rate
-        self.shift = -self.inst_freq[idx + self.tidx]
+        self.shift = cut[0] - cut[idx]
 
         return
 
     def get_tfp(self):
-        """Runs the analysis for the pixel and outputs tFP."""
+        """Runs the analysis for the pixel and outputs tFP and shifts."""
 
         # Remove DC component, first.
         self.remove_dc()
@@ -263,9 +274,13 @@ class Pixel(object):
         self.check_drive_freq()
 
         # Filter the signal with an FIR filter, if wanted.
-        if self.bandpass_filter:
+        if self.bandpass_filter == 1:
 
-            self.butterworth_filter()
+            self.fir_filter()
+
+        elif self.bandpass_filter == 2:
+
+            self.iir_filter()
 
         # Apply window.
         self.apply_window()

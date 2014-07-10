@@ -9,7 +9,7 @@ __status__ = "Development"
 import os
 import sys
 import multiprocessing
-import pixel
+import line
 import time
 import argparse as ap
 import numpy as np
@@ -19,20 +19,10 @@ from utils import load
 def process_line(args):
 
     signal_file, n_pixels, parameters = args
-
     signal_array = load.signal(signal_file)
 
-    num = int(signal_array.shape[1] / n_pixels)
-
-    tfp = np.zeros(n_pixels)
-    shift = np.zeros(n_pixels)
-
-    # For every pixel in the file, runs the pixel.getresult.
-    for i in range(n_pixels):
-
-        temp = signal_array[:, (num * i):(num * (i + 1))]
-        p = pixel.Pixel(temp, parameters)
-        tfp[i], shift[i] = p.get_tfp()
+    l = line.Line(signal_array, n_pixels, parameters)
+    tfp, shift = l.get_tfp()
 
     return tfp, shift
 
@@ -94,7 +84,7 @@ def main(argv=None):
 
     print 'Time: ', elapsed_time
 
-    return 0
+    return
 
 if __name__ == '__main__':
 

@@ -12,7 +12,7 @@ __status__ = "Production"
 import ConfigParser
 import sys
 from igor.binarywave import load as loadibw
-from numpy import loadtxt
+from numpy.lib.npyio import loadtxt
 from os.path import splitext
 
 
@@ -67,15 +67,15 @@ def configuration(path):
     parameters : dict
         Parameters for pixel processing. The dictionary contains:
 
-        trigger = float
-        total_time = float
-        sampling_rate = int
-        drive_freq = float
+        trigger = float (in seconds)
+        total_time = float (in seconds)
+        sampling_rate = int (in Hz)
+        drive_freq = float (in Hz)
 
-        roi = float
-        filter_bandwidth = float
-        bandpass_filter = boolean
-        window = boolean
+        roi = float (in seconds)
+        window = string (see documentation of pixel.apply_window)
+        bandpass_filter = int (0: no filtering, 1: FIR filter, 2: IIR filter)
+        filter_bandwidth = float (in Hz)
 
     """
 
@@ -86,8 +86,8 @@ def configuration(path):
 
     # Assign parameters from file. These are the keys for parameters.
     paraf_keys = ['trigger', 'total_time', 'drive_freq', 'sampling_rate']
-    procb_keys = ['window', 'bandpass_filter', ]
-    procf_keys = ['roi', 'filter_bandwidth']
+    procs_keys = ['window']
+    procf_keys = ['roi', 'bandpass_filter', 'filter_bandwidth']
 
     if config.has_option('Parameters', 'n_pixels'):
 
@@ -109,10 +109,10 @@ def configuration(path):
 
             parameters[key] = config.getfloat('Processing', key)
 
-    for key in procb_keys:
+    for key in procs_keys:
 
         if config.has_option('Processing', key):
 
-            parameters[key] = config.getboolean('Processing', key)
+            parameters[key] = config.get('Processing', key)
 
     return n_pixels, parameters
