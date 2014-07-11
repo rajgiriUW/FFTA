@@ -1,14 +1,15 @@
-"""run.py: Runs the FF-trEFM calculation for a set of given files."""
-
+"""run.py: Runs the FF-trEFM Analysis for a set of given files."""
+# pylint: disable=E1101
 __author__ = "Durmus U. Karatay"
 __copyright__ = "Copyright 2014, Ginger Lab"
 __maintainer__ = "Durmus U. Karatay"
 __email__ = "ukaratay@uw.edu"
 __status__ = "Development"
 
-import sys
 import os
-import pixel
+import sys
+import time
+import multiprocessing
 import line
 import argparse as ap
 import numpy as np
@@ -16,89 +17,120 @@ from utils import load
 from progressbar import ProgressBar, ETA, Percentage
 
 
+def process_line(args):
+    """Wrapper function for line class. It is used in parallel processing."""
+
+    signal_file, n_pixels, parameters = args
+    signal_array = load.signal(signal_file)
+
+    line_inst = line.Line(signal_array, n_pixels, parameters)
+    tfp, shift = line_inst.get_tfp()
+
+    return tfp, shift
+
+
 def main(argv=None):
+    """Main function of the executable file."""
+
+    # Get the CPU count to display in help.
+    cpu_count = multiprocessing.cpu_count()
 
     if argv is None:
         argv = sys.argv[1:]
 
     # Parse arguments from the command line, and print out help.
-    p = ap.ArgumentParser(description='Data analysis software for FF-trEFM')
-    p.add_argument('input', nargs=1,
-                   help='data file (for image enter a directory)')
-    p.add_argument('config', nargs=1, help='configuration file for parameters')
-    p.add_argument('-v', action='version', version='FFtr-EFM 2.0b')
-    args = p.parse_args(argv)
+    parser = ap.ArgumentParser(description='Analysis software for FF-trEFM')
+    parser.add_argument('path', nargs=1, help='path to directory')
+    parser.add_argument('-p', help='parallel computing option should be'
+                        'followed by the number of CPUs.'.format(cpu_count),
+                        type=int, choices=range(1, cpu_count + 1))
+    parser.add_argument('-v', action='version',
+                        version='FFtr-EFM 2.0 Release Candidate')
+    args = parser.parse_args(argv)
+
+    # Scan the path for .ibw and .cfg files.
+    path = args.path[0]
+    filelist = os.listdir(path)
+
+    data_files = [os.path.join(path, name)
+                  for name in filelist if name[-3:] == 'ibw']
+
+    config_file = [os.path.join(path, name)
+                   for name in filelist if name[-3:] == 'cfg'][0]
 
     # Load parameters from .cfg file.
-    n_pixels, parameters = load.configuration(args.config[0])
+    n_pixels, parameters = load.configuration(config_file)
 
-    # Set the progress bar.
-    widgets = [Percentage(), ' | ', ETA()]
+    if not args.p:
 
-    # Check if given argument is a path to directory or a file.
-    if os.path.isdir(args.input[0]):
-
-        os.chdir(args.input[0])
-        filelist = []
-
-        # List files ending with .ibw or.txt in the given directory.
-        for files in os.listdir('.'):
-
-            if files.endswith('.ibw') or files.endswith('.txt'):
-
-                filelist.append(files)
-
-        filelist.sort()  # Sort the list alphabetically.
-
-        # If there is nothing, raise error and exit.
-        if not filelist:
-
-            raise SystemExit('There is no file in the given directory!')
+        # Set the progress bar.
+        widgets = [Percentage(), ' / ', ETA()]
+        pbar = ProgressBar(widgets=widgets, maxval=len(data_files)).start()
 
         # Initialize arrays.
-        tfp = np.zeros((len(filelist), n_pixels))
-        shift = np.zeros((len(filelist), n_pixels))
-
-        # Create a progress bar with defined widgets.
-        pbar = ProgressBar(widgets=widgets, maxval=len(filelist)).start()
+        tfp = np.zeros((len(data_files), n_pixels))
+        shift = np.zeros((len(data_files), n_pixels))
 
         # Load every file in the file list one by one.
-        for n in range(len(filelist)):
+        for i, data_file in enumerate(data_files):
 
-            signal_array = load.signal(filelist[n])
-            l = line.Line(signal_array, n_pixels, parameters)
-            tfp[n, :], shift[n, :] = l.get_tfp()
+            signal_array = load.signal(data_file)
+            line_inst = line.Line(signal_array, n_pixels, parameters)
+            tfp[i, :], shift[i, :] = line_inst.get_tfp()
 
-            tfpmean = 1e6 * tfp[n, :].mean()
-            tfpstd = 1e6 * tfp[n, :].std()
+            del line_inst  # Delete the instance to open up memory.
+
+            tfpmean = 1e6 * tfp[i, :].mean()
+            tfpstd = 1e6 * tfp[i, :].std()
 
             print ("For line {0:.0f}, average tFP (us) ="
-                   " {1:.2f} +/- {2:.2f}".format(n + 1, tfpmean, tfpstd))
-            pbar.update(n + 1)
+                   " {1:.2f} +/- {2:.2f}".format(i + 1, tfpmean, tfpstd))
 
-        # Save csv files.
-        np.savetxt('tfp.csv', np.fliplr(tfp).T, delimiter=',')
-        np.savetxt('shift.csv', np.fliplr(shift).T, delimiter=',')
+            pbar.update(i + 1)  # Update the progress bar.
 
-        # Finish the progress bar.
-        pbar.finish()
+        pbar.finish()  # Finish the progress bar.
 
-    # If given argument is a file, runs pixel.get_tfp for single pixel.
-    elif os.path.isfile(args.input[0]) and args.input[0].endswith('.ibw'):
+    elif args.p:
 
-        signal_array = load.signal(args.input[0])
-        p = pixel.Pixel(signal_array, parameters)
-        tfp, shift = p.get_tfp()
+        print 'Starting parallel processing, using {0:1d} CPUs.'.format(args.p)
+        start_time = time.time()  # Keep when it's started.
 
-        print "tFP (us) = {0:.3f}".format(tfp * 1e6)
-        print "Frequency Shift = {0:.3f}".format(shift)
+        # Create a pool of workers.
+        pool = multiprocessing.Pool(processes=args.p)
 
-    # If no condition holds, exits the process.
-    else:
+        # Create the iterable and map onto the function.
+        n_files = len(data_files)
+        iterable = zip(data_files,
+                       [n_pixels] * n_files, [parameters] * n_files)
+        result = pool.map(process_line, iterable)
 
-        raise SystemExit("Unrecoverable error! Exiting the program!!!")
+        pool.close()  # Do not forget to close spawned processes.
+        pool.join()
+
+        # Unzip the result.
+        tfp_list, shift_list = zip(*result)
+
+        # Initialize arrays.
+        tfp = np.zeros((n_files, n_pixels))
+        shift = np.zeros((n_files, n_pixels))
+
+        # Convert list of arrays to 2D array.
+        for i in range(n_files):
+
+            tfp[i, :] = tfp_list[i]
+            shift[i, :] = shift_list[i]
+
+        elapsed_time = time.time() - start_time
+
+        print 'It took {0:.1f} seconds.'.format(elapsed_time)
+
+    # Save csv files.
+    os.chdir(path)
+    np.savetxt('tfp.csv', np.fliplr(tfp).T, delimiter=',')
+    np.savetxt('shift.csv', np.fliplr(shift).T, delimiter=',')
 
     return
 
-if __name__ == "__main__":
+if __name__ == '__main__':
+
     sys.exit(main(sys.argv[1:]))

@@ -78,15 +78,19 @@ class Pixel(object):
 
             setattr(self, key, value)
 
+        # Assign values from inputs.
         self.signal_array = signal_array
+        self.tidx = int(self.trigger * self.sampling_rate)
+        self.n_points, self.n_signals = signal_array.shape
+
+        # Initialize attributes.
         self.signal = None
         self.phase = None
         self.inst_freq = None
         self.tfp = None
         self.shift = None
 
-        self.tidx = int(self.trigger * self.sampling_rate)
-        self.n_points, self.n_signals = signal_array.shape
+        return
 
     def remove_dc(self):
         """Remove DC components from signals."""
@@ -98,6 +102,7 @@ class Pixel(object):
     def phase_lock(self):
         """Phase-lock signals in the signal array. This also cuts signals."""
 
+        # Phase-lock signals.
         self.signal_array, self.tidx = \
             noise.phase_lock(self.signal_array, self.tidx)
 
@@ -136,7 +141,7 @@ class Pixel(object):
         return
 
     def apply_window(self):
-        """Apply the window defined in parameters."""
+        """Apply the window given in parameters."""
 
         self.signal *= sps.get_window(self.window, self.n_points)
 
@@ -163,19 +168,18 @@ class Pixel(object):
 
         # Create taps using window method.
         taps = sps.firwin(n_taps, band, pass_zero=False, window='parzen')
-        warmup = n_taps - 1
-        delay = warmup / 2
+        delay = (n_taps - 1) / 2
 
         # Convolve and correct for delay.
         self.signal = sps.fftconvolve(self.signal, taps, mode='same')
-        self.tidx -= delay
+        self.tidx -= int(delay)
 
         return
 
     def iir_filter(self):
         """Filters signal with two Butterworth filters (one lowpass,
         one highpass) using filtfilt. This method has linear phase and no
-        time delay.
+        time delay. Do not use for production.
         """
 
         # Calculate bandpass region from given parameters.
@@ -233,7 +237,7 @@ class Pixel(object):
         dtime = 1 / self.sampling_rate  # Time step.
 
         # Do a Savitzky-Golay smoothing derivative.
-        self.inst_freq = sps.savgol_filter(self.phase, 9, 2,
+        self.inst_freq = sps.savgol_filter(self.phase, 21, 1,
                                            deriv=1, delta=dtime)
 
         return
@@ -273,6 +277,9 @@ class Pixel(object):
         # Check the drive frequency.
         self.check_drive_freq()
 
+        # Apply window.
+        self.apply_window()
+
         # Filter the signal with an FIR filter, if wanted.
         if self.bandpass_filter == 1:
 
@@ -281,9 +288,6 @@ class Pixel(object):
         elif self.bandpass_filter == 2:
 
             self.iir_filter()
-
-        # Apply window.
-        self.apply_window()
 
         # Get the analytical signal doing a Hilbert transform.
         self.hilbert_transform()

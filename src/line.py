@@ -51,10 +51,12 @@ class Line(object):
 
     def __init__(self, signal_array, n_pixels, params):
 
+        # Pass inputs to the object.
         self.signal_array = signal_array
         self.n_pixels = n_pixels
         self.params = params
 
+        # Initialize tFP and shift arrays.
         self.tfp = np.empty(self.n_pixels)
         self.shift = np.empty(self.n_pixels)
 
@@ -63,8 +65,10 @@ class Line(object):
     def get_tfp(self):
         """Runs the analysis for a line and outputs tFPs and shifts."""
 
+        # Split the signal array into pixels.
         pixel_signals = np.split(self.signal_array, self.n_pixels, axis=1)
 
+        # Iterate over pixels and return tFP and shift arrays.
         for i, pix in enumerate(pixel_signals):
 
             p = pixel.Pixel(pix, self.params)
