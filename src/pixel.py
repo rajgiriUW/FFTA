@@ -104,7 +104,8 @@ class Pixel(object):
 
         # Phase-lock signals.
         self.signal_array, self.tidx = \
-            noise.phase_lock(self.signal_array, self.tidx)
+            noise.phase_lock(self.signal_array, self.tidx,
+                             np.ceil(self.sampling_rate / self.drive_freq))
 
         # Update number of points after phase-locking.
         self.n_points = self.signal_array.shape[0]
@@ -147,32 +148,31 @@ class Pixel(object):
 
         return
 
-    def fir_filter(self, n_taps=999):
+    def fir_filter(self, n_taps=399):
         """
         Filters signal with a FIR bandpass filter.
 
         Parameters
         ----------
-        n_taps : integer, (default=999)
+        n_taps : integer, (default=399)
             Number of taps for FIR filter.
 
         """
 
         # Calculate bandpass region from given parameters.
+        nyq_rate = 0.5 * self.sampling_rate
         bw_half = self.filter_bandwidth / 2
 
-        freq_low = (self.drive_freq - bw_half) / (0.5 * self.sampling_rate)
-        freq_high = (self.drive_freq + bw_half) / (0.5 * self.sampling_rate)
+        freq_low = (self.drive_freq - bw_half) / nyq_rate
+        freq_high = (self.drive_freq + bw_half) / nyq_rate
 
         band = [freq_low, freq_high]
 
         # Create taps using window method.
         taps = sps.firwin(n_taps, band, pass_zero=False, window='parzen')
-        delay = (n_taps - 1) / 2
 
-        # Convolve and correct for delay.
-        self.signal = sps.fftconvolve(self.signal, taps, mode='same')
-        self.tidx -= int(delay)
+        self.signal = sps.filtfilt(taps, [1], self.signal)
+        self.tidx -= (n_taps - 1) / 2
 
         return
 
@@ -237,7 +237,7 @@ class Pixel(object):
         dtime = 1 / self.sampling_rate  # Time step.
 
         # Do a Savitzky-Golay smoothing derivative.
-        self.inst_freq = sps.savgol_filter(self.phase, 21, 1,
+        self.inst_freq = sps.savgol_filter(self.phase, 11, 1,
                                            deriv=1, delta=dtime)
 
         return
@@ -251,6 +251,7 @@ class Pixel(object):
 
         # Define a function to be used in finding minimum and find minimum.
         func = lambda idx: cut[idx]
+
         idx = int(spo.fminbound(func, 0, ridx))  # Brent's Method.
 
         # Do index to time conversion and find shift.
@@ -260,7 +261,7 @@ class Pixel(object):
         return
 
     def get_tfp(self):
-        """Runs the analysis for the pixel and outputs tFP and shifts."""
+        """Runs the analysis for the pixel and outputs tFP and shift-s."""
 
         # Remove DC component, first.
         self.remove_dc()
@@ -280,7 +281,7 @@ class Pixel(object):
         # Apply window.
         self.apply_window()
 
-        # Filter the signal with an FIR filter, if wanted.
+        # Filter the signal with a filter, if wanted.
         if self.bandpass_filter == 1:
 
             self.fir_filter()
@@ -301,4 +302,4 @@ class Pixel(object):
         # Find where the minimum is.
         self.find_minimum()
 
-        return (self.tfp, self.shift)
+        return (self.tfp, self.shift, self.inst_freq)

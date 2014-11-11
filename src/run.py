@@ -18,7 +18,7 @@ from progressbar import ProgressBar, ETA, Percentage
 
 
 def process_line(args):
-    """Wrapper function for line class. It is used in parallel processing."""
+    """Wrapper function for line class, used in parallel processing."""
 
     signal_file, n_pixels, parameters = args
     signal_array = load.signal(signal_file)
