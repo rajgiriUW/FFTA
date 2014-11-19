@@ -82,7 +82,6 @@ class Pixel(object):
         self.signal_array = signal_array
         self.tidx = int(self.trigger * self.sampling_rate)
         self.n_points, self.n_signals = signal_array.shape
-        self.n_points_orig = signal_array.shape[0]
 
         # Initialize attributes.
         self.signal = None
@@ -261,20 +260,6 @@ class Pixel(object):
 
         return
 
-    def restore_length(self):
-        """Restores the length of instantenous frequency array to original,
-        keeping trigger at the center."""
-
-        # Decide how much cut there is going to be from the ends.
-        cut = np.min([(self.n_points - self.tidx), self.tidx])
-        new = self.inst_freq[(self.tidx - cut):(self.tidx + cut)]  # Cut
-
-        self.tidx = self.n_points_orig / 2
-        padding = int(self.tidx - cut)  # How much padding there is.
-        self.inst_freq = np.pad(new, (padding, padding), 'edge')
-
-        return
-
     def get_tfp(self):
         """Runs the analysis for the pixel and outputs tFP and shift-s."""
 
@@ -316,8 +301,5 @@ class Pixel(object):
 
         # Find where the minimum is.
         self.find_minimum()
-
-        # Restores the length of instantaneous frequency.
-        self.restore_length()
 
         return (self.tfp, self.shift, self.inst_freq)
