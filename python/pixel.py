@@ -7,6 +7,7 @@ __email__ = "ukaratay@uw.edu"
 __status__ = "Development"
 
 import numpy as np
+import logging
 from utils import noise
 from scipy import signal as sps
 from scipy import optimize as spo
@@ -82,6 +83,7 @@ class Pixel(object):
         self.signal_array = signal_array
         self.tidx = int(self.trigger * self.sampling_rate)
         self.n_points, self.n_signals = signal_array.shape
+        self.n_points_orig = signal_array.shape[0]
 
         # Initialize attributes.
         self.signal = None
@@ -260,46 +262,72 @@ class Pixel(object):
 
         return
 
+    def restore_length(self):
+        """Restores the length of instantenous frequency array to original,
+        keeping trigger at the center."""
+
+        # Decide how much cut there is going to be from the ends.
+        cut = np.min([(self.n_points - self.tidx), self.tidx])
+        new = self.inst_freq[(self.tidx - cut):(self.tidx + cut)]  # Cut
+
+        self.tidx = self.n_points_orig / 2
+        padding = int(self.tidx - cut)  # How much padding there is.
+        self.inst_freq = np.pad(new, (padding, padding), 'edge')
+
+        return
+
     def get_tfp(self):
         """Runs the analysis for the pixel and outputs tFP and shift-s."""
 
-        # Remove DC component, first.
-        self.remove_dc()
+        try:
+            # Remove DC component, first.
+            self.remove_dc()
 
-        # Phase-lock signals.
-        self.phase_lock()
+            # Phase-lock signals.
+            self.phase_lock()
 
-        # Average signals.
-        self.average()
+            # Average signals.
+            self.average()
 
-        # Remove DC component again, introduced by phase-locking.
-        self.remove_dc()
+            # Remove DC component again, introduced by phase-locking.
+            self.remove_dc()
 
-        # Check the drive frequency.
-        self.check_drive_freq()
+            # Check the drive frequency.
+            self.check_drive_freq()
 
-        # Apply window.
-        self.apply_window()
+            # Apply window.
+            self.apply_window()
 
-        # Filter the signal with a filter, if wanted.
-        if self.bandpass_filter == 1:
+            # Filter the signal with a filter, if wanted.
+            if self.bandpass_filter == 1:
 
-            self.fir_filter()
+                self.fir_filter()
 
-        elif self.bandpass_filter == 2:
+            elif self.bandpass_filter == 2:
 
-            self.iir_filter()
+                self.iir_filter()
 
-        # Get the analytical signal doing a Hilbert transform.
-        self.hilbert_transform()
+            # Get the analytical signal doing a Hilbert transform.
+            self.hilbert_transform()
 
-        # Calculate the phase from analytic signal.
-        self.calculate_phase(correct_slope=True)
+            # Calculate the phase from analytic signal.
+            self.calculate_phase(correct_slope=True)
 
-        # Calculate instantenous frequency.
-        self.calculate_inst_freq()
+            # Calculate instantenous frequency.
+            self.calculate_inst_freq()
 
-        # Find where the minimum is.
-        self.find_minimum()
+            # Find where the minimum is.
+            self.find_minimum()
+
+            # Restore the length.
+            self.restore_length()
+
+        except Exception as e:
+
+            self.tfp = 0
+            self.shift = 0
+            self.inst_freq = np.zeros(self.n_points_orig)
+
+            logging.exception(e, exc_info=True)
 
         return (self.tfp, self.shift, self.inst_freq)

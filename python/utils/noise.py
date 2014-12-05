@@ -64,40 +64,48 @@ def phase_lock(signal_array, tidx, cidx):
     return signal_array, tidx
 
 
-def pca_discard(signals, k):
+def pca_discard(signal_array, k):
     """
-    Discards noisy signals using Principal Component Analysis.
+    Discards noisy signals using Principal Component Analysis and Mahalonobis
+    distance.
 
     Parameters
     ----------
-    signals : array_like
+    signal_array : array, [n_points, n_signals]
+        2D real-valued signal array.
 
-            Real signals of a pixel, should be in a format of dxN.
+
+    k : int
+        Number of eigenvectors to use, can't be bigger than n_signals.
 
     Returns
     -------
-    idx : array_like
-
+    idx : array
             Return the indices of noisy signals.
 
     """
 
-    d, N = signals.shape  # Get the size of signals.
+    # Get the size of signals.
+    n_points, n_signals = signal_array.shape
 
-    meansignal = signals.mean(axis=1).reshape(d, 1)  # Calculate mean signal.
-    signals -= meansignal  # Subtract mean signal from every signal.
+    # Remove the mean from all signals.
+    mean_signal = signal_array.mean(axis=1).reshape(n_points, 1)
+    signal_array = signal_array - mean_signal
 
     # Calculate the biggest eigenvector of covariance matrix.
-    _, eigvec = spl.eigh(np.dot(signals.T, signals), eigvals=(N-k, N-1))
-    eigsig = np.dot(signals, eigvec)  # Convert it to eigensignal.
+    _, eigvec = spl.eigh(np.dot(signal_array.T, signal_array),
+                         eigvals=(n_signals - k, n_signals - 1))
 
-    weights = np.dot(eigsig.T, signals) / spl.norm(eigsig)
-    mu = weights.mean(axis=1).reshape(1, k)
-    idx = np.where(spsd.cdist(weights.T, mu, 'mahalanobis') > 2)
+    eigsig = np.dot(signal_array, eigvec)  # Convert it to eigensignal.
+
+    weights = np.dot(eigsig.T, signal_array) / spl.norm(eigsig)
+    mean = weights.mean(axis=1).reshape(1, k)
+    idx = np.where(spsd.cdist(weights.T, mean, 'mahalanobis') > 2)
 
     return idx
 
 
-def fzero(x):
+def fzero(array):
     """Fast zero-finding function in lambda form."""
-    return np.where(x[:-1] * x[1:] <= 0)[0][0]
+
+    return np.where(array[:-1] * array[1:] <= 0)[0][0]
