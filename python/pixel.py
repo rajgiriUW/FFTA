@@ -276,8 +276,9 @@ class Pixel(object):
 
         return
 
-    def get_tfp(self):
-        """Runs the analysis for the pixel and outputs tFP and shift-s."""
+    def analyze(self):
+        """Runs the analysis for the pixel and outputs tFP, shift and
+        instantenous frequency."""
 
         try:
             # Remove DC component, first.

@@ -1,5 +1,5 @@
 """line.py: Contains line class."""
-# pylint: disable=E1101,R0903
+
 __author__ = "Durmus U. Karatay"
 __copyright__ = "Copyright 2014, Ginger Lab"
 __maintainer__ = "Durmus U. Karatay"
@@ -12,7 +12,6 @@ import pixel
 
 class Line(object):
     """
-
     This is container class for a line. See documentation of pixel for details.
 
     Parameters
@@ -47,9 +46,12 @@ class Line(object):
     `shift` : array, shape = [n_pixels]
         Frequency shift from steady-state to first-peak, in Hz.
 
+    `inst_freq` : array, shape = [n_points, n_pixels]
+        Array that contains instantenous frequency data, in Hz.
+
     """
 
-    def __init__(self, signal_array, n_pixels, params):
+    def __init__(self, signal_array, params, n_pixels):
 
         # Pass inputs to the object.
         self.signal_array = signal_array
@@ -57,21 +59,22 @@ class Line(object):
         self.params = params
 
         # Initialize tFP and shift arrays.
-        self.tfp = np.empty(self.n_pixels)
-        self.shift = np.empty(self.n_pixels)
+        self.tfp = np.empty(n_pixels)
+        self.shift = np.empty(n_pixels)
+        self.inst_freq = np.empty((signal_array.shape[0], n_pixels))
 
         return
 
-    def get_tfp(self):
+    def analyze(self):
         """Runs the analysis for a line and outputs tFPs and shifts."""
 
         # Split the signal array into pixels.
         pixel_signals = np.split(self.signal_array, self.n_pixels, axis=1)
 
         # Iterate over pixels and return tFP and shift arrays.
-        for i, pix in enumerate(pixel_signals):
+        for i, pixel_signal in enumerate(pixel_signals):
 
-            p = pixel.Pixel(pix, self.params)
-            self.tfp[i], self.shift[i] = p.get_tfp()
+            pix = pixel.Pixel(pixel_signal, self.params)
+            (self.tfp[i], self.shift[i], self.inst_freq[:, i]) = pix.analyze()
 
-        return (self.tfp, self.shift)
+        return (self.tfp, self.shift, self.inst_freq)

@@ -1,5 +1,5 @@
 """run.py: Runs the FF-trEFM Analysis for a set of given files."""
-# pylint: disable=E1101
+
 __author__ = "Durmus U. Karatay"
 __copyright__ = "Copyright 2014, Ginger Lab"
 __maintainer__ = "Durmus U. Karatay"
@@ -20,11 +20,11 @@ from progressbar import ProgressBar, ETA, Percentage
 def process_line(args):
     """Wrapper function for line class, used in parallel processing."""
 
-    signal_file, n_pixels, parameters = args
+    signal_file, n_pixels, params = args
     signal_array = load.signal(signal_file)
 
-    line_inst = line.Line(signal_array, n_pixels, parameters)
-    tfp, shift = line_inst.get_tfp()
+    line_inst = line.Line(signal_array, params, n_pixels)
+    tfp, shift, _ = line_inst.analyze()
 
     return tfp, shift
 
@@ -76,7 +76,7 @@ def main(argv=None):
 
             signal_array = load.signal(data_file)
             line_inst = line.Line(signal_array, n_pixels, parameters)
-            tfp[i, :], shift[i, :] = line_inst.get_tfp()
+            tfp[i, :], shift[i, :], _ = line_inst.analyze()
 
             del line_inst  # Delete the instance to open up memory.
 
@@ -108,7 +108,7 @@ def main(argv=None):
         pool.join()
 
         # Unzip the result.
-        tfp_list, shift_list = zip(*result)
+        tfp_list, shift_list, _ = zip(*result)
 
         # Initialize arrays.
         tfp = np.zeros((n_files, n_pixels))
