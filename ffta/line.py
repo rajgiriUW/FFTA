@@ -7,7 +7,7 @@ __email__ = "ukaratay@uw.edu"
 __status__ = "Development"
 
 import numpy as np
-import pixel
+from . import pixel
 
 
 class Line(object):

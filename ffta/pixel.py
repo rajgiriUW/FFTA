@@ -150,7 +150,7 @@ class Pixel(object):
 
         return
 
-    def fir_filter(self, n_taps=399):
+    def fir_filter(self, n_taps=999):
         """
         Filters signal with a FIR bandpass filter.
 
@@ -319,6 +319,8 @@ class Pixel(object):
 
             # Find where the minimum is.
             self.find_minimum()
+#            self.tfp = 0
+#            self.shift = 0
 
             # Restore the length.
             self.restore_length()
