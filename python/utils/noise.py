@@ -56,12 +56,7 @@ def phase_lock(signal_array, tidx, cidx):
 
         new_signal_array[:, i] = signal_array[idx:-(total_cut - idx), i]
 
-    signal_array = new_signal_array
-    # Find the new trigger index.
-    tidx += fzero(signal_array.mean(axis=1)[
-        (tidx - total_cut):(tidx + total_cut)]) - total_cut
-
-    return signal_array, tidx
+    return new_signal_array, tidx
 
 
 def pca_discard(signal_array, k):
