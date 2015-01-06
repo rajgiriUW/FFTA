@@ -37,6 +37,7 @@ class Pixel(object):
         window = string (see documentation of pixel.apply_window)
         bandpass_filter = int (0: no filtering, 1: FIR filter, 2: IIR filter)
         filter_bandwidth = float (in Hz)
+        n_taps = integer (default: 999)
 
     Attributes
     ----------
@@ -91,6 +92,11 @@ class Pixel(object):
         self.inst_freq = None
         self.tfp = None
         self.shift = None
+
+        # Check if there is n_taps, if not assign default.
+        if not hasattr(self, 'n_taps'):
+
+            self.n_taps = 999
 
         return
 
@@ -150,16 +156,8 @@ class Pixel(object):
 
         return
 
-    def fir_filter(self, n_taps=999):
-        """
-        Filters signal with a FIR bandpass filter.
-
-        Parameters
-        ----------
-        n_taps : integer, (default=399)
-            Number of taps for FIR filter.
-
-        """
+    def fir_filter(self):
+        """Filters signal with a FIR bandpass filter."""
 
         # Calculate bandpass region from given parameters.
         nyq_rate = 0.5 * self.sampling_rate
@@ -171,18 +169,17 @@ class Pixel(object):
         band = [freq_low, freq_high]
 
         # Create taps using window method.
-        taps = sps.firwin(n_taps, band, pass_zero=False, window='parzen')
+        taps = sps.firwin(self.n_taps, band, pass_zero=False, window='parzen')
 
         self.signal = sps.filtfilt(taps, [1], self.signal)
-        self.tidx -= (n_taps - 1) / 2
+        self.tidx -= (self.n_taps - 1) / 2
 
         return
 
     def iir_filter(self):
         """Filters signal with two Butterworth filters (one lowpass,
         one highpass) using filtfilt. This method has linear phase and no
-        time delay. Do not use for production.
-        """
+        time delay. Do not use for production."""
 
         # Calculate bandpass region from given parameters.
         bw_half = self.filter_bandwidth / 2
@@ -239,7 +236,7 @@ class Pixel(object):
         dtime = 1 / self.sampling_rate  # Time step.
 
         # Do a Savitzky-Golay smoothing derivative.
-        self.inst_freq = sps.savgol_filter(self.phase, 11, 1,
+        self.inst_freq = sps.savgol_filter(self.phase, 5, 1,
                                            deriv=1, delta=dtime)
 
         return

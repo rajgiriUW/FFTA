@@ -76,6 +76,7 @@ def configuration(path):
         window = string (see documentation of pixel.apply_window)
         bandpass_filter = int (0: no filtering, 1: FIR filter, 2: IIR filter)
         filter_bandwidth = float (in Hz)
+        n_taps = integer (default: 999)
 
     """
 
@@ -87,7 +88,7 @@ def configuration(path):
     # Assign parameters from file. These are the keys for parameters.
     paraf_keys = ['trigger', 'total_time', 'drive_freq', 'sampling_rate']
     procs_keys = ['window']
-    procf_keys = ['roi', 'bandpass_filter', 'filter_bandwidth']
+    procf_keys = ['roi', 'bandpass_filter', 'n_taps', 'filter_bandwidth']
 
     if config.has_option('Parameters', 'n_pixels'):
 
