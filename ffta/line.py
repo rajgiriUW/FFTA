@@ -7,7 +7,7 @@ __email__ = "ukaratay@uw.edu"
 __status__ = "Development"
 
 import numpy as np
-from . import pixel
+from ffta import pixel
 
 
 class Line(object):
@@ -18,9 +18,6 @@ class Line(object):
     ----------
     signal_array : array, [n_points, n_signals]
         2D real-valued signal array, corresponds to a line.
-
-    n_pixels : int
-        Number of pixels in a line.
 
     params : dict
         Includes parameters for processing. Here is a list of parameters:
@@ -34,6 +31,9 @@ class Line(object):
         window = string (see documentation of pixel.apply_window)
         bandpass_filter = int (0: no filtering, 1: FIR filter, 2: IIR filter)
         filter_bandwidth = float (in Hz)
+
+    n_pixels : int
+        Number of pixels in a line.
 
     Attributes
     ----------

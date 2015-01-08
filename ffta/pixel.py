@@ -8,7 +8,7 @@ __status__ = "Development"
 
 import numpy as np
 import logging
-from utils import noise
+from ffta.utils import noise
 from scipy import signal as sps
 from scipy import optimize as spo
 
@@ -171,7 +171,7 @@ class Pixel(object):
         # Create taps using window method.
         taps = sps.firwin(self.n_taps, band, pass_zero=False, window='parzen')
 
-        self.signal = sps.filtfilt(taps, [1], self.signal)
+        self.signal = sps.fftconvolve(self.signal, taps, mode='same')
         self.tidx -= (self.n_taps - 1) / 2
 
         return
@@ -309,15 +309,13 @@ class Pixel(object):
             self.hilbert_transform()
 
             # Calculate the phase from analytic signal.
-            self.calculate_phase(correct_slope=True)
+            self.calculate_phase()
 
             # Calculate instantenous frequency.
             self.calculate_inst_freq()
 
             # Find where the minimum is.
             self.find_minimum()
-#            self.tfp = 0
-#            self.shift = 0
 
             # Restore the length.
             self.restore_length()

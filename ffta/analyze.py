@@ -1,4 +1,4 @@
-"""run.py: Runs the FF-trEFM Analysis for a set of given files."""
+"""analyze.py: Runs the FF-trEFM Analysis for a set of given files."""
 
 __author__ = "Durmus U. Karatay"
 __copyright__ = "Copyright 2014, Ginger Lab"
@@ -10,10 +10,10 @@ import os
 import sys
 import time
 import multiprocessing
-import line
 import argparse as ap
 import numpy as np
-from utils import load
+import ffta.line as line
+from ffta.utils import load
 from progressbar import ProgressBar, ETA, Percentage
 
 
