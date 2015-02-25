@@ -20,7 +20,7 @@ from progressbar import ProgressBar, ETA, Percentage
 def process_line(args):
     """Wrapper function for line class, used in parallel processing."""
 
-    signal_file, n_pixels, params = args
+    signal_file, params, n_pixels = args
     signal_array = load.signal(signal_file)
 
     line_inst = line.Line(signal_array, params, n_pixels)
@@ -75,7 +75,7 @@ def main(argv=None):
         for i, data_file in enumerate(data_files):
 
             signal_array = load.signal(data_file)
-            line_inst = line.Line(signal_array, n_pixels, parameters)
+            line_inst = line.Line(signal_array, parameters, n_pixels)
             tfp[i, :], shift[i, :], _ = line_inst.analyze()
 
             del line_inst  # Delete the instance to open up memory.
@@ -100,15 +100,15 @@ def main(argv=None):
 
         # Create the iterable and map onto the function.
         n_files = len(data_files)
-        iterable = zip(data_files,
-                       [n_pixels] * n_files, [parameters] * n_files)
+        iterable = zip(data_files, [parameters] * n_files,
+                       [n_pixels] * n_files)
         result = pool.map(process_line, iterable)
 
         pool.close()  # Do not forget to close spawned processes.
         pool.join()
 
         # Unzip the result.
-        tfp_list, shift_list, _ = zip(*result)
+        tfp_list, shift_list = zip(*result)
 
         # Initialize arrays.
         tfp = np.zeros((n_files, n_pixels))

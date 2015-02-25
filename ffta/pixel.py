@@ -11,7 +11,7 @@ import logging
 from ffta.utils import noise
 from scipy import signal as sps
 from scipy import optimize as spo
-
+from scipy import interpolate as spi
 
 class Pixel(object):
     """Signal Processing to Extract Time-to-First-Peak.
@@ -248,14 +248,16 @@ class Pixel(object):
         ridx = int(self.roi * self.sampling_rate)
         cut = self.inst_freq[self.tidx:(self.tidx + ridx)]
 
-        # Define a function to be used in finding minimum and find minimum.
-        func = lambda idx: cut[idx]
+        # Define a spline to be used in finding minimum and find minimum.
+        x = np.arange(ridx)
+        y = cut
+        func = spi.UnivariateSpline(x, y, ext=3)
 
-        idx = int(spo.fminbound(func, 0, ridx))  # Brent's Method.
+        idx = spo.fmin_powell(func, cut.argmin(), disp=0)
 
         # Do index to time conversion and find shift.
         self.tfp = idx / self.sampling_rate
-        self.shift = cut[0] - cut[idx]
+        self.shift = func(0) - func(idx)
 
         return
 
