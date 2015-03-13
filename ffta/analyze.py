@@ -16,6 +16,12 @@ import ffta.line as line
 from ffta.utils import load
 from progressbar import ProgressBar, ETA, Percentage
 
+# Plotting imports
+import matplotlib as mpl
+mpl.use('WXAgg')
+from matplotlib import pyplot as plt
+
+
 
 def process_line(args):
     """Wrapper function for line class, used in parallel processing."""
@@ -43,7 +49,7 @@ def main(argv=None):
     parser.add_argument('path', nargs=1, help='path to directory')
     parser.add_argument('-p', help='parallel computing option should be'
                         'followed by the number of CPUs.'.format(cpu_count),
-                        type=int, choices=range(1, cpu_count + 1))
+                        type=int, choices=range(2, cpu_count + 1))
     parser.add_argument('-v', action='version',
                         version='FFtr-EFM 2.0 Release Candidate')
     args = parser.parse_args(argv)
@@ -71,12 +77,21 @@ def main(argv=None):
         tfp = np.zeros((len(data_files), n_pixels))
         shift = np.zeros((len(data_files), n_pixels))
 
+        plt.ion()
+        fig = plt.figure(figsize=(12, 6))
+        plt.imshow(tfp)
+        plt.show()
+
         # Load every file in the file list one by one.
         for i, data_file in enumerate(data_files):
 
             signal_array = load.signal(data_file)
             line_inst = line.Line(signal_array, parameters, n_pixels)
             tfp[i, :], shift[i, :], _ = line_inst.analyze()
+
+            plt.imshow(tfp * 1e6, origin='lower')
+            plt.draw()
+            plt.pause(0.0001)
 
             del line_inst  # Delete the instance to open up memory.
 
