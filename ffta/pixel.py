@@ -13,6 +13,7 @@ from scipy import signal as sps
 from scipy import optimize as spo
 from scipy import interpolate as spi
 
+
 class Pixel(object):
     """Signal Processing to Extract Time-to-First-Peak.
 

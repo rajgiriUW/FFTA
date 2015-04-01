@@ -1,3 +1,11 @@
+"""sim.py: Contains DDHO class."""
+# pylint: disable=E1101,R0902,C0103
+__author__ = "Durmus U. Karatay"
+__copyright__ = "Copyright 2014, Ginger Lab"
+__maintainer__ = "Durmus U. Karatay"
+__email__ = "ukaratay@uw.edu"
+__status__ = "Development"
+
 import numpy as np
 from scipy import integrate as sci
 
