@@ -3,6 +3,39 @@ from scipy import integrate as sci
 
 
 class DDHO(object):
+    """Damped Driven Harmonic Oscillator Simulator.
+
+    Simulates a DDHO, under excitation with given parameters.
+
+    Parameters
+    ----------
+    sim_params : dict
+        Parameters for simulation. The dictionary contains:
+
+        trigger = float (in seconds)
+        total_time = float (in seconds)
+        sampling_rate = int (in Hz)
+
+    can_params : dict
+        Parameters for cantilever properties. The dictionary contains:
+
+        amp_invols = float (in m/V)
+        def_invols = float (in m/V)
+        drive_freq = float (in Hz)
+        amplitude = float (in m)
+        k = float (in N/m)
+        q_factor = float
+        drive_force = float (in N)
+
+    force_params : dict
+        Parameters for forces. The dictionary contains:
+
+        drive = float (in N)
+        electrostatic = float (in N)
+        delta_freq = float (in Hz)
+        tau = float (in seconds)
+
+    """
 
     def __init__(self, sim_params, can_params, force_params):
 
@@ -30,6 +63,7 @@ class DDHO(object):
         return
 
     def set_trigger_phase(self, delta):
+        """Set the phase of oscillation at trigger."""
 
         current_phase = np.mod(self.T0, 2 * np.pi)
         diff = delta - current_phase
@@ -39,6 +73,7 @@ class DDHO(object):
         return
 
     def exp_decay(self, T):
+        """Exponential decay function that starts at trigger."""
 
         if T > self.T0:
 
@@ -51,18 +86,21 @@ class DDHO(object):
             return 0
 
     def gamma(self, T):
+        """Helper function for differential equation."""
 
         exp_decay = np.vectorize(self.exp_decay, otypes=[np.float])
 
         return 1 + self.ratio * exp_decay(T)
 
     def F(self, T):
+        """Total force that is on the oscillator."""
 
         exp_decay = np.vectorize(self.exp_decay, otypes=[np.float])
 
         return self.fd * np.cos(T) + self.fe * exp_decay(T)
 
     def dZ_dt(self, Z, T=0):
+        """Differential equation to be solved."""
 
         a = self.gamma(T) / self.can['q_factor']
         b = self.gamma(T) ** 2
@@ -74,6 +112,7 @@ class DDHO(object):
         return np.array([zdot, vdot])
 
     def solve(self, full_output=True):
+        """Solves the differential equation and outputs z and v."""
 
         Z, infodict = sci.odeint(self.dZ_dt, self.Z0, self.T, full_output=True)
 
