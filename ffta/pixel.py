@@ -8,6 +8,7 @@ __status__ = "Development"
 
 import numpy as np
 import logging
+from numba import jit
 from ffta.utils import noise
 from scipy import signal as sps
 from scipy import optimize as spo
@@ -74,7 +75,8 @@ class Pixel(object):
         Frequency shift from steady-state to first-peak, in Hz.
 
     """
-    def __init__(self, signal_array, params):
+
+    def __init__(self, signal_array, params, fit=False):
 
         # Create parameter attributes from parameters dictionary.
         for key, value in params.iteritems():
@@ -86,6 +88,7 @@ class Pixel(object):
         self.tidx = int(self.trigger * self.sampling_rate)
         self.n_points, self.n_signals = signal_array.shape
         self.n_points_orig = signal_array.shape[0]
+        self.fit = fit
 
         # Initialize attributes.
         self.signal = None
@@ -112,9 +115,9 @@ class Pixel(object):
         """Phase-lock signals in the signal array. This also cuts signals."""
 
         # Phase-lock signals.
-        self.signal_array, self.tidx = \
-            noise.phase_lock(self.signal_array, self.tidx,
-                             np.ceil(self.sampling_rate / self.drive_freq))
+        self.signal_array, self.tidx = noise.phase_lock(
+            self.signal_array, self.tidx,
+            np.ceil(self.sampling_rate / self.drive_freq))
 
         # Update number of points after phase-locking.
         self.n_points = self.signal_array.shape[0]
@@ -215,8 +218,8 @@ class Pixel(object):
         if correct_slope:
 
             # Remove the drive from phase.
-            self.phase -= (2 * np.pi * self.drive_freq
-                           * np.arange(self.n_points) / self.sampling_rate)
+            self.phase -= (2 * np.pi * self.drive_freq *
+                           np.arange(self.n_points) / self.sampling_rate)
 
             # A curve fit on the initial part to make sure that it worked.
             start = int(0.3 * self.tidx)
@@ -238,7 +241,8 @@ class Pixel(object):
 
         # Do a Savitzky-Golay smoothing derivative.
         self.inst_freq = sps.savgol_filter(self.phase, 5, 1,
-                                           deriv=1, delta=dtime)
+                                           deriv=1,
+                                           delta=dtime)
 
         return
 
@@ -259,6 +263,33 @@ class Pixel(object):
         # Do index to time conversion and find shift.
         self.tfp = idx / self.sampling_rate
         self.shift = func(0) - func(idx)
+
+        return
+
+    @jit
+    def __decay__(t, tau, tau2, dfz):
+
+        decay = dfz * np.expm1(-t / tau)
+        relax = -2 * dfz * np.expm1(-t / tau2)
+
+        return (decay + relax)
+
+    def fit_minimum(self):
+
+        ridx = int(self.roi * self.sampling_rate)
+        fit_time = np.arange(0, ridx) / self.sampling_rate
+        fit_inst_freq = self.inst_freq[self.tidx:ridx]
+
+        initial_guess = (100e-6, 5.28e-4, 1000.)
+
+        popt, pcov = spo.curve_fit(self.__decay__, fit_time, fit_inst_freq,
+                                   p0=initial_guess)
+
+        tau = popt[0]
+        tau2 = popt[1]
+
+        self.tfp = tau * tau2 * np.log(tau / (2 * tau2)) / (tau2 - tau)
+        self.shift = self.__decay__(self.tfp, *popt)
 
         return
 
@@ -318,7 +349,13 @@ class Pixel(object):
             self.calculate_inst_freq()
 
             # Find where the minimum is.
-            self.find_minimum()
+            if self.fit:
+
+                self.fit_minimum()
+
+            else:
+
+                self.find_minimum()
 
             # Restore the length.
             self.restore_length()

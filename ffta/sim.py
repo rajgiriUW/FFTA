@@ -6,6 +6,7 @@ __maintainer__ = "Durmus U. Karatay"
 __email__ = "ukaratay@uw.edu"
 __status__ = "Development"
 
+from numba import jit
 import numpy as np
 from scipy import integrate as sci
 
@@ -93,6 +94,7 @@ class DDHO(object):
 
             return 0
 
+    @jit
     def gamma(self, T):
         """Helper function for differential equation."""
 
@@ -100,6 +102,7 @@ class DDHO(object):
 
         return 1 + self.ratio * exp_decay(T)
 
+    @jit
     def F(self, T):
         """Total force that is on the oscillator."""
 

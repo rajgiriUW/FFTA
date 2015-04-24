@@ -1,5 +1,5 @@
 """noise.py: Includes functions for reducing noise in a pixel."""
-
+# pylint: disable=E1101,R0902
 __author__ = "Durmus U. Karatay"
 __copyright__ = "Copyright 2013, Ginger Lab"
 __maintainer__ = "Durmus U. Karatay"
