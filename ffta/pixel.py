@@ -106,13 +106,10 @@ class Pixel(object):
 
             self.n_taps = 999
 
-        if not hasattr(self, 'wavelet'):
+        # Check if there is wavelet_analysis, if not assign default.
+        if not hasattr(self, 'wavelet_analysis'):
 
-            self.wavelet = False
-
-        else:
-
-            self.wavelet = True
+            self.wavelet_analysis = False
 
         return
 
@@ -343,7 +340,7 @@ class Pixel(object):
         # Generate necessary tools for wavelet transform.
         w0, wavelet_increment, cwt_scale = self.__get_cwt__()
 
-        n_scales, n_points = np.shape(self.cwtmatrix)
+        n_scales, n_points = np.shape(self.cwt_matrix)
         inst_freq = np.empty(n_points)
 
         x = np.arange(n_scales)
@@ -382,7 +379,13 @@ class Pixel(object):
             # Check the drive frequency.
             self.check_drive_freq()
 
-            if not self.wavelet:   # Hilbert method
+            if self.wavelet_analysis:
+
+                # Calculate instantenous frequency using wavelet transform.
+                self.calculate_cwt_freq()
+
+            else:
+
                 # Apply window.
                 self.apply_window()
 
@@ -403,11 +406,6 @@ class Pixel(object):
 
                 # Calculate instantenous frequency.
                 self.calculate_inst_freq()
-
-            else:
-
-                # Calculate frequency from CWT Matrix
-                self.calculate_cwt_freq()
 
             # Find where the minimum is.
             if self.fit:

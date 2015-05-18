@@ -88,7 +88,8 @@ def configuration(path):
     # Assign parameters from file. These are the keys for parameters.
     paraf_keys = ['trigger', 'total_time', 'drive_freq', 'sampling_rate']
     procs_keys = ['window']
-    procf_keys = ['roi', 'bandpass_filter', 'n_taps', 'filter_bandwidth']
+    procf_keys = ['roi', 'bandpass_filter', 'n_taps', 'filter_bandwidth',
+                  'wavelet_analysis']
 
     if config.has_option('Parameters', 'n_pixels'):
 
