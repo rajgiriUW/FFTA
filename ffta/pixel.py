@@ -343,19 +343,16 @@ class Pixel(object):
         n_scales, n_points = np.shape(self.cwt_matrix)
         inst_freq = np.empty(n_points)
 
-        x = np.arange(n_scales)
-
         for i in range(n_points):
 
             cut = self.cwt_matrix[:, i]
-            y = -1 * cut  # Inverting it to use minimization algorithms.
-
-            func = spi.UnivariateSpline(x, y, ext=3)
-            inst_freq[i] = spo.fmin_powell(func, cut.argmin(), disp=0)
+            inst_freq[i] = -cut.max()
 
         inst_freq = (inst_freq * wavelet_increment + 0.9 * cwt_scale)
-        self.inst_freq = ((w0 + np.sqrt(2 + w0 ** 2)) /
-                          (4 * np.pi * inst_freq[:] / self.sampling_rate))
+        inst_freq = ((w0 + np.sqrt(2 + w0 ** 2)) /
+                     (4 * np.pi * inst_freq[:] / self.sampling_rate))
+
+        self.inst_freq = inst_freq - inst_freq[self.tidx]
 
         return
 
