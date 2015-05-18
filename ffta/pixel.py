@@ -20,7 +20,7 @@ class Pixel(object):
     """Signal Processing to Extract Time-to-First-Peak.
 
     Extracts time-to-first-peak (tFP) from digitized Fast-Free time-resolved
-    Electrostatic Force Microscopy signal. Pixel class uses Morlet Wavelet 
+    Electrostatic Force Microscopy signal. Pixel class uses Morlet Wavelet
     transform to extract tFP.
 
     Parameters
@@ -76,7 +76,7 @@ class Pixel(object):
     `shift` : float
         Frequency shift from steady-state to first-peak, in Hz.
 
-    
+
 
     """
 
@@ -92,7 +92,7 @@ class Pixel(object):
         self.tidx = int(self.trigger * self.sampling_rate)
         self.n_points, self.n_signals = signal_array.shape
         self.n_points_orig = signal_array.shape[0]
-        self.fit = fit    
+        self.fit = fit
 
         # Initialize attributes.
         self.signal = None
@@ -107,11 +107,11 @@ class Pixel(object):
             self.n_taps = 999
 
         if not hasattr(self, 'wavelet'):
-            
+
             self.wavelet = False
-        
+
         else:
-            
+
             self.wavelet = True
 
         return
@@ -319,52 +319,51 @@ class Pixel(object):
 
         return
 
-    def get_Morlet_scaling(self):
-        """Returns the Morlet wavelet scaling factor used in correcting
-        the result and determining the scale bounds for the CWT"""  
-        
-        self.w0 = 5 #default for Morlet
-        self.cwtScale = (w0 + np.sqrt(2+w0**2) )/ \
-                        (self.drive_freq/self.sampling_rate*4*np.pi)
-                        
-        return
-    
-    def get_CWT(self):
-        """Generates the CWT using Morlet wavelet. Returns a 2D Matrix"""
-        
-        self.waveletIncrement = 0.5  #reducing this has little benefit
-        widths = np.arange(self.cwtScale*0.9,self.cwtScale*1.1,self.waveletIncrement)
-        
-        self.cwtmatrix = cwavelet.cwt(self.signal, dt=1, scales=widths, wf='morlet', p=5)
-        self.cwtmatrix = np.abs(self.cwtmatrix)
-        
-        return
-        
-    def calculate_CWT_freq(self):
-        """Fits a curve to each column in the CWT matrix to generate the 
-        frequency. Called inst_freq for consistency with C++ code. """
+    def __get_cwt__(self):
+        """Generates the CWT using Morlet wavelet. Returns a 2D Matrix."""
 
-        r, c = np.shape(self.cwtmatrix)
-        self.inst_freq = np.zeros(c)
+        w0 = 5  # Default for Morlet
+        wavelet_increment = 0.5  # Reducing this has little benefit.\
 
-        x = np.arange(r)
-        for i in range(c):
-            cut = cwtmatrix[:,i]         
-            y = -1*cut #-1 is to let me use fmin_powell
+        cwt_scale = ((w0 + np.sqrt(2 + w0 ** 2)) /
+                     (4 * np.pi * self.drive_freq / self.sampling_rate))
+
+        widths = np.arange(cwt_scale * 0.9, cwt_scale * 1.1, wavelet_increment)
+
+        cwt_matrix = cwavelet.cwt(self.signal, dt=1, scales=widths,
+                                  wf='morlet', p=5)
+        self.cwt_matrix = np.abs(cwt_matrix)
+
+        return w0, wavelet_increment, cwt_scale
+
+    def calculate_cwt_freq(self):
+        """Fits a curve to each column in the CWT matrix to generate the
+        frequency."""
+
+        # Generate necessary tools for wavelet transform.
+        w0, wavelet_increment, cwt_scale = self.__get_cwt__()
+
+        n_scales, n_points = np.shape(self.cwtmatrix)
+        inst_freq = np.empty(n_points)
+
+        x = np.arange(n_scales)
+
+        for i in range(n_points):
+
+            cut = self.cwt_matrix[:, i]
+            y = -1 * cut  # Inverting it to use minimization algorithms.
+
             func = spi.UnivariateSpline(x, y, ext=3)
-            self.inst_freq[i] = spo.fmin_powell(func, cut.argmin(), disp=0)
-        
-        wI = self.waveletIncrement
-        w0 = self.w0        
-        
-        self.inst_freq = (self.inst_freq*wI)+0.9*self.cwtScale
-        self.inst_freq = (w0 + np.sqrt(2+w0**2)) / \
-                         (4*np.pi*self.inst_freq[:] / self.sampling_rate)        
+            inst_freq[i] = spo.fmin_powell(func, cut.argmin(), disp=0)
+
+        inst_freq = (inst_freq * wavelet_increment + 0.9 * cwt_scale)
+        self.inst_freq = ((w0 + np.sqrt(2 + w0 ** 2)) /
+                          (4 * np.pi * inst_freq[:] / self.sampling_rate))
 
         return
 
     def analyze(self):
-        """Hilbert method: Runs the analysis for the pixel and outputs tFP, 
+        """Hilbert method: Runs the analysis for the pixel and outputs tFP,
         shift and instantenous frequency."""
 
         try:
@@ -383,37 +382,32 @@ class Pixel(object):
             # Check the drive frequency.
             self.check_drive_freq()
 
-            if self.wavelet == False:   # Hilbert method
+            if not self.wavelet:   # Hilbert method
                 # Apply window.
                 self.apply_window()
 
                 # Filter the signal with a filter, if wanted.
                 if self.bandpass_filter == 1:
-    
+
                     self.fir_filter()
-    
+
                 elif self.bandpass_filter == 2:
-    
+
                     self.iir_filter()
-    
+
                 # Get the analytical signal doing a Hilbert transform.
                 self.hilbert_transform()
-    
+
                 # Calculate the phase from analytic signal.
                 self.calculate_phase()
-    
+
                 # Calculate instantenous frequency.
                 self.calculate_inst_freq()
 
             else:
-                # Calculates the scale and appropriate boundaries for CWT
-                self.get_Morlet_scaling()            
-                
-                # Gets the CWT about the drive frequency
-                self.get_CWT()            
-                
+
                 # Calculate frequency from CWT Matrix
-                self.calculate_CWT_freq()
+                self.calculate_cwt_freq()
 
             # Find where the minimum is.
             if self.fit:
