@@ -11,6 +11,7 @@ import logging
 from numba import jit
 from ffta.utils import noise
 from ffta.utils import cwavelet
+from ffta.utils import parab
 from scipy import signal as sps
 from scipy import optimize as spo
 from scipy import interpolate as spi
@@ -346,7 +347,8 @@ class Pixel(object):
         for i in range(n_points):
 
             cut = self.cwt_matrix[:, i]
-            inst_freq[i] = -cut.max()
+            #inst_freq[i] = -cut.max()
+            inst_freq[i], gb = parab.fit(canncut, np.argmax(cut) )
 
         inst_freq = (inst_freq * wavelet_increment + 0.9 * cwt_scale)
         inst_freq = ((w0 + np.sqrt(2 + w0 ** 2)) /
