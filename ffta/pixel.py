@@ -111,7 +111,7 @@ class Pixel(object):
         if not hasattr(self, 'wavelet_analysis'):
 
             self.wavelet_analysis = False
-
+        
         return
 
     def remove_dc(self):
@@ -321,7 +321,7 @@ class Pixel(object):
         """Generates the CWT using Morlet wavelet. Returns a 2D Matrix."""
 
         w0 = 5  # Default for Morlet
-        wavelet_increment = 0.5  # Reducing this has little benefit.\
+        wavelet_increment = 0.1  # Reducing this has little benefit.\
 
         cwt_scale = ((w0 + np.sqrt(2 + w0 ** 2)) /
                      (4 * np.pi * self.drive_freq / self.sampling_rate))
@@ -344,11 +344,18 @@ class Pixel(object):
         n_scales, n_points = np.shape(self.cwt_matrix)
         inst_freq = np.empty(n_points)
 
+
+        x = np.arange(n_scales)
+
         for i in range(n_points):
 
             cut = self.cwt_matrix[:, i]
             #inst_freq[i] = -cut.max()
-            inst_freq[i], gb = parab.fit(canncut, np.argmax(cut) )
+            inst_freq[i], gb = parab.fit(cut, np.argmax(cut) )
+            #y = -1 * cut  # Inverting it to use minimization algorithms.
+
+            #func = spi.UnivariateSpline(x, y, ext=3)
+            #inst_freq[i] = spo.fmin_powell(func, cut.argmin(), disp=0)
 
         inst_freq = (inst_freq * wavelet_increment + 0.9 * cwt_scale)
         inst_freq = ((w0 + np.sqrt(2 + w0 ** 2)) /
