@@ -20,6 +20,7 @@ from progressbar import ProgressBar, ETA, Percentage
 import matplotlib as mpl
 mpl.use('WXAgg')
 from matplotlib import pyplot as plt
+from matplotlib import gridspec as gs
 
 
 
@@ -69,40 +70,70 @@ def main(argv=None):
 
     if not args.p:
 
-        # Set the progress bar.
-        widgets = [Percentage(), ' / ', ETA()]
-        pbar = ProgressBar(widgets=widgets, maxval=len(data_files)).start()
-
         # Initialize arrays.
         tfp = np.zeros((len(data_files), n_pixels))
         shift = np.zeros((len(data_files), n_pixels))
 
+        # Initialize plotting.
         plt.ion()
-        fig = plt.figure(figsize=(12, 6))
-        plt.imshow(tfp)
+
+        fig = plt.figure(figsize=(12, 6), tight_layout=True)
+        grid = gs.GridSpec(1, 2)
+        tfp_ax = plt.subplot(grid[0, 0])
+        shift_ax = plt.subplot(grid[0, 1])
+
+        plt.setp(tfp_ax.get_xticklabels(), visible=False)
+        plt.setp(tfp_ax.get_yticklabels(), visible=False)
+        plt.setp(shift_ax.get_xticklabels(), visible=False)
+        plt.setp(shift_ax.get_yticklabels(), visible=False)
+
+        tfp_ax.set_title('tFP Image')
+        shift_ax.set_title('Shift Image')
+
+        kwargs = {'origin': 'lower', 'aspect': 'equal'}
+
+        tfp_image = tfp_ax.imshow(tfp * 1e6, cmap='afmhot', **kwargs)
+        shift_image = shift_ax.imshow(shift, cmap='cubehelix', **kwargs)
+        text = plt.figtext(0.4, 0.1, '')
         plt.show()
+
+        # Set the progress bar.
+        widgets = [Percentage(), ' / ', ETA()]
+        pbar = ProgressBar(widgets=widgets, maxval=len(data_files)).start()
 
         # Load every file in the file list one by one.
         for i, data_file in enumerate(data_files):
 
             signal_array = load.signal(data_file)
             line_inst = line.Line(signal_array, parameters, n_pixels)
-            tfp[i, :], shift[i, :], _ = line_inst.analyze()
+            tfp[i, :], shift[i, :], _inst = line_inst.analyze()
 
-            plt.imshow(tfp * 1e6, origin='lower')
+            tfp_image = tfp_ax.imshow(tfp * 1e6, cmap='afmhot', **kwargs)
+            shift_image = shift_ax.imshow(shift, cmap='cubehelix', **kwargs)
+
+            tfp_sc = tfp[tfp.nonzero()] * 1e6
+            tfp_image.set_clim(vmin=tfp_sc.min(), vmax=tfp_sc.max())
+
+            shift_sc = shift[shift.nonzero()]
+            shift_image.set_clim(vmin=shift_sc.min(), vmax=shift_sc.max())
+
+            tfpmean = 1e6 * tfp[i, :].mean()
+            tfpstd = 1e6 * tfp[i, :].std()
+
+            string = ("Line {0:.0f}, average tFP (us) ="
+                      " {1:.2f} +/- {2:.2f}".format(i + 1, tfpmean, tfpstd))
+
+            text.remove()
+            text = plt.figtext(0.35, 0.1, string)
+
             plt.draw()
             plt.pause(0.0001)
 
             del line_inst  # Delete the instance to open up memory.
 
-            tfpmean = 1e6 * tfp[i, :].mean()
-            tfpstd = 1e6 * tfp[i, :].std()
-
-            print ("For line {0:.0f}, average tFP (us) ="
-                   " {1:.2f} +/- {2:.2f}".format(i + 1, tfpmean, tfpstd))
-
             pbar.update(i + 1)  # Update the progress bar.
 
+        fig.close()
         pbar.finish()  # Finish the progress bar.
 
     elif args.p:
