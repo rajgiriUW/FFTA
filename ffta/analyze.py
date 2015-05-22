@@ -23,7 +23,6 @@ from matplotlib import pyplot as plt
 from matplotlib import gridspec as gs
 
 
-
 def process_line(args):
     """Wrapper function for line class, used in parallel processing."""
 

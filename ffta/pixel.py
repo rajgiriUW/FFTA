@@ -276,6 +276,7 @@ class Pixel(object):
 
         return
 
+    @staticmethod
     @jit
     def __decay__(t, tau, tau2, dfz):
 
@@ -288,7 +289,7 @@ class Pixel(object):
 
         ridx = int(self.roi * self.sampling_rate)
         fit_time = np.arange(0, ridx) / self.sampling_rate
-        fit_inst_freq = self.inst_freq[self.tidx:ridx]
+        fit_inst_freq = self.inst_freq[self.tidx:(self.tidx + ridx)]
 
         initial_guess = (100e-6, 5.28e-4, 1000.)
 
