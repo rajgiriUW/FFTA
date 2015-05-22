@@ -46,7 +46,8 @@ def main(argv=None):
 
     # Parse arguments from the command line, and print out help.
     parser = ap.ArgumentParser(description='Analysis software for FF-trEFM')
-    parser.add_argument('path', nargs=1, help='path to directory')
+    parser.add_argument('path', nargs='?', default=os.getcwd(),
+                        help='path to directory')
     parser.add_argument('-p', help='parallel computing option should be'
                         'followed by the number of CPUs.'.format(cpu_count),
                         type=int, choices=range(2, cpu_count + 1))
@@ -54,8 +55,9 @@ def main(argv=None):
                         version='FFtr-EFM 2.0 Release Candidate')
     args = parser.parse_args(argv)
 
+
     # Scan the path for .ibw and .cfg files.
-    path = args.path[0]
+    path = args.path
     filelist = os.listdir(path)
 
     data_files = [os.path.join(path, name)
