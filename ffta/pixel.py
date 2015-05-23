@@ -329,8 +329,7 @@ class Pixel(object):
 
         widths = np.arange(cwt_scale * 0.9, cwt_scale * 1.1, wavelet_increment)
 
-        cwt_matrix = cwavelet.cwt(self.signal, dt=1, scales=widths,
-                                  wf='morlet', p=5)
+        cwt_matrix = cwavelet.cwt(self.signal, dt=1, scales=widths, p=5)
         self.cwt_matrix = np.abs(cwt_matrix)
 
         return w0, wavelet_increment, cwt_scale
@@ -345,11 +344,11 @@ class Pixel(object):
         n_scales, n_points = np.shape(self.cwt_matrix)
         inst_freq = np.empty(n_points)
 
-        for i in range(n_points):
+        for i in xrange(n_points):
 
             cut = self.cwt_matrix[:, i]
             #inst_freq[i] = -cut.max()
-            inst_freq[i], gb = parab.fit(canncut, np.argmax(cut) )
+            inst_freq[i], gb = parab.fit(cut, np.argmax(cut))
 
         inst_freq = (inst_freq * wavelet_increment + 0.9 * cwt_scale)
         inst_freq = ((w0 + np.sqrt(2 + w0 ** 2)) /

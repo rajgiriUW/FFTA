@@ -134,7 +134,7 @@ def main(argv=None):
 
             pbar.update(i + 1)  # Update the progress bar.
 
-        fig.close()
+        plt.close(fig)
         pbar.finish()  # Finish the progress bar.
 
     elif args.p:
