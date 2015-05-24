@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='FFTA',
-    version='1.1',
+    version='1.2',
     description='FF-trEFM Analysis Package',
 
     author='Durmus U. Karatay',

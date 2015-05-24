@@ -98,9 +98,3 @@ def pca_discard(signal_array, k):
     idx = np.where(spsd.cdist(weights.T, mean, 'mahalanobis') > 2)
 
     return idx
-
-
-def fzero(array):
-    """Fast zero-finding function in lambda form."""
-
-    return np.where(array[:-1] * array[1:] <= 0)[0][0]

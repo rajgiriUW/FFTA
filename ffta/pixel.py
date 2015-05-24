@@ -276,6 +276,7 @@ class Pixel(object):
 
         return
 
+    @staticmethod
     @jit
     def __decay__(t, tau, tau2, dfz):
 
@@ -288,7 +289,7 @@ class Pixel(object):
 
         ridx = int(self.roi * self.sampling_rate)
         fit_time = np.arange(0, ridx) / self.sampling_rate
-        fit_inst_freq = self.inst_freq[self.tidx:ridx]
+        fit_inst_freq = self.inst_freq[self.tidx:(self.tidx + ridx)]
 
         initial_guess = (100e-6, 5.28e-4, 1000.)
 
@@ -328,8 +329,7 @@ class Pixel(object):
 
         widths = np.arange(cwt_scale * 0.9, cwt_scale * 1.1, wavelet_increment)
 
-        cwt_matrix = cwavelet.cwt(self.signal, dt=1, scales=widths,
-                                  wf='morlet', p=5)
+        cwt_matrix = cwavelet.cwt(self.signal, dt=1, scales=widths, p=5)
         self.cwt_matrix = np.abs(cwt_matrix)
 
         return w0, wavelet_increment, cwt_scale
@@ -344,6 +344,7 @@ class Pixel(object):
         n_scales, n_points = np.shape(self.cwt_matrix)
         inst_freq = np.empty(n_points)
 
+<<<<<<< HEAD
 
         x = np.arange(n_scales)
 
@@ -356,6 +357,13 @@ class Pixel(object):
 
             #func = spi.UnivariateSpline(x, y, ext=3)
             #inst_freq[i] = spo.fmin_powell(func, cut.argmin(), disp=0)
+=======
+        for i in xrange(n_points):
+
+            cut = self.cwt_matrix[:, i]
+            #inst_freq[i] = -cut.max()
+            inst_freq[i], gb = parab.fit(cut, np.argmax(cut))
+>>>>>>> e23a411b4940de2301b1d981b19ba47b45a13ac8
 
         inst_freq = (inst_freq * wavelet_increment + 0.9 * cwt_scale)
         inst_freq = ((w0 + np.sqrt(2 + w0 ** 2)) /
