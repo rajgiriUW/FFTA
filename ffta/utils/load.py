@@ -89,7 +89,7 @@ def configuration(path):
     paraf_keys = ['trigger', 'total_time', 'drive_freq', 'sampling_rate']
     procs_keys = ['window']
     procf_keys = ['roi', 'bandpass_filter', 'n_taps', 'filter_bandwidth',
-                  'wavelet_analysis']
+                  'wavelet_analysis', 'wavelet_parameter']
 
     if config.has_option('Parameters', 'n_pixels'):
 

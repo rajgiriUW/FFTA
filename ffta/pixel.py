@@ -111,6 +111,11 @@ class Pixel(object):
         if not hasattr(self, 'wavelet_analysis'):
 
             self.wavelet_analysis = False
+            
+        # Check if there is a bandwidth parameter for the wavelet            
+        if not hasattr(self, 'wavelet_parameter'):
+
+            self.wavelet_parameter = 5
         
         return
 
@@ -321,15 +326,15 @@ class Pixel(object):
     def __get_cwt__(self):
         """Generates the CWT using Morlet wavelet. Returns a 2D Matrix."""
 
-        w0 = 5  # Default for Morlet
-        wavelet_increment = 0.1  # Reducing this has little benefit.\
+        w0 = self.wavelet_parameter  
+        wavelet_increment = 0.5  # Reducing this has little benefit.\
 
         cwt_scale = ((w0 + np.sqrt(2 + w0 ** 2)) /
                      (4 * np.pi * self.drive_freq / self.sampling_rate))
 
         widths = np.arange(cwt_scale * 0.9, cwt_scale * 1.1, wavelet_increment)
 
-        cwt_matrix = cwavelet.cwt(self.signal, dt=1, scales=widths, p=5)
+        cwt_matrix = cwavelet.cwt(self.signal, dt=1, scales=widths, p=w0)
         self.cwt_matrix = np.abs(cwt_matrix)
 
         return w0, wavelet_increment, cwt_scale
@@ -344,8 +349,6 @@ class Pixel(object):
         n_scales, n_points = np.shape(self.cwt_matrix)
         inst_freq = np.empty(n_points)
 
-<<<<<<< HEAD
-
         x = np.arange(n_scales)
 
         for i in range(n_points):
@@ -357,13 +360,13 @@ class Pixel(object):
 
             #func = spi.UnivariateSpline(x, y, ext=3)
             #inst_freq[i] = spo.fmin_powell(func, cut.argmin(), disp=0)
-=======
+
         for i in xrange(n_points):
 
             cut = self.cwt_matrix[:, i]
             #inst_freq[i] = -cut.max()
             inst_freq[i], gb = parab.fit(cut, np.argmax(cut))
->>>>>>> e23a411b4940de2301b1d981b19ba47b45a13ac8
+
 
         inst_freq = (inst_freq * wavelet_increment + 0.9 * cwt_scale)
         inst_freq = ((w0 + np.sqrt(2 + w0 ** 2)) /
