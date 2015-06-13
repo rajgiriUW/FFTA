@@ -10,6 +10,7 @@ import os
 import sys
 import time
 import multiprocessing
+import logging
 import argparse as ap
 import numpy as np
 import ffta.line as line
@@ -37,6 +38,7 @@ def process_line(args):
 
 def main(argv=None):
     """Main function of the executable file."""
+    logging.basicConfig(filename='error.log', level=logging.INFO)
 
     # Get the CPU count to display in help.
     cpu_count = multiprocessing.cpu_count()
