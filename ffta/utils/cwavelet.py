@@ -2,18 +2,18 @@
 
 import numpy as np
 from scipy import fftpack as spf
-from numba import autojit
+from numba import jit
 
 PI2 = 2 * np.pi
 
 
-@autojit
+@jit
 def normalization(s, dt):
 
     return np.sqrt(2 * np.pi * s / dt)
 
 
-@autojit
+@jit
 def morletft(s, w, w0, dt):
     """Fourier tranformed Morlet Function.
 
@@ -34,7 +34,6 @@ def morletft(s, w, w0, dt):
     Returns
     -------
     wavelet : array
-
         Normalized Fourier-transformed Morlet Function
 
     """
@@ -51,7 +50,7 @@ def morletft(s, w, w0, dt):
     return wavelet
 
 
-@autojit
+@jit
 def angularfreq(N, dt):
     """Compute angular frequencies.
 
@@ -86,39 +85,41 @@ def angularfreq(N, dt):
     return w
 
 
-@autojit
-def cwt(x, dt, scales, p=2):
-    """Continuous Wavelet Tranform.
+@jit
+def cwt(x, dt, s, w0=2):
+    """Continuous Wavelet Transform.
 
-    :Parameters:
-       x : 1d array_like object
-          data
-       dt : float
-          time step
-       scales : 1d array_like object
-          scales
-       wf : string ('morlet', 'paul', 'dog')
-          wavelet function
-       p : float
-          wavelet function parameter ('omega0' for morlet, 'm' for paul
-          and dog)
+    Parameters
+    ----------
+    x : array
+        Data samples to transform
 
-    :Returns:
-       X : 2d numpy array
-          transformed data
+    dt : float
+        Time step
+
+    s : array
+      Wavelet scales
+
+    w0 : float
+       Omega0
+
+    Returns
+    -------
+    X : array
+        Transformed data
+
     """
 
     x -= np.mean(x)
-    w = angularfreq(N=x.shape[0], dt=dt)
+    w = angularfreq(x.shape[0], dt)
+    wft = morletft(s, w, w0, dt)
 
-    wft = morletft(s=scales, w=w, w0=p, dt=dt)
-
-    X = np.empty((wft.shape[0], wft.shape[1]), dtype=np.complex128)
+    X = np.zeros(wft.shape, dtype=np.complex128)
 
     x_ft = spf.fft(x)
 
-    for i in xrange(X.shape[0]):
+    for i in xrange(wft.shape[0]):
 
-        X[i] = spf.ifft(x_ft * wft[i])
+        X[i, :] = spf.ifft(x_ft * wft[i])
 
     return X
