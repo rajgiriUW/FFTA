@@ -19,7 +19,7 @@ from progressbar import ProgressBar, ETA, Percentage
 
 # Plotting imports
 import matplotlib as mpl
-mpl.use('WXAgg')
+mpl.use('WxAgg')
 from matplotlib import pyplot as plt
 from matplotlib import gridspec as gs
 

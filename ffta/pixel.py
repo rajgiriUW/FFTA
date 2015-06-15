@@ -9,7 +9,6 @@ __status__ = "Development"
 import numpy as np
 import logging
 from numba import jit
-from ffta.utils import noise
 from ffta.utils import cwavelet
 from ffta.utils import parab
 from scipy import signal as sps
@@ -307,7 +306,6 @@ class Pixel(object):
 
         cwt_matrix = cwavelet.cwt(self.signal, 1, widths, w0)
 
-        print "this"
         self.cwt_matrix = np.abs(cwt_matrix)
 
         return w0, wavelet_increment, cwt_scale
@@ -321,11 +319,6 @@ class Pixel(object):
 
         n_scales, n_points = np.shape(self.cwt_matrix)
         inst_freq = np.empty(n_points)
-
-        for i in range(n_points):
-
-            cut = self.cwt_matrix[:, i]
-            inst_freq[i], gb = parab.fit(cut, np.argmax(cut))
 
         for i in xrange(n_points):
 
