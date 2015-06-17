@@ -9,6 +9,7 @@ __status__ = "Development"
 import numpy as np
 import logging
 from numba import jit
+from ffta.utils import noise
 from ffta.utils import cwavelet
 from ffta.utils import parab
 from scipy import signal as sps
@@ -76,6 +77,8 @@ class Pixel(object):
     `shift` : float
         Frequency shift from steady-state to first-peak, in Hz.
 
+
+
     """
 
     def __init__(self, signal_array, params, fit=False):
@@ -109,10 +112,14 @@ class Pixel(object):
 
             self.wavelet_analysis = False
 
-        # Check if there is a bandwidth parameter for the wavelet.
+        # Check if there is a bandwidth parameter for the wavelet
         if not hasattr(self, 'wavelet_parameter'):
 
             self.wavelet_parameter = 5
+
+        if not hasattr(self, 'recombination'):
+
+            self.recombination = False
 
         return
 
@@ -120,6 +127,19 @@ class Pixel(object):
         """Remove DC components from signals."""
 
         self.signal_array -= self.signal_array.mean(axis=0)
+
+        return
+
+    def phase_lock(self):
+        """Phase-lock signals in the signal array. This also cuts signals."""
+
+        # Phase-lock signals.
+        self.signal_array, self.tidx = noise.phase_lock(
+            self.signal_array, self.tidx,
+            np.ceil(self.sampling_rate / self.drive_freq))
+
+        # Update number of points after phase-locking.
+        self.n_points = self.signal_array.shape[0]
 
         return
 
@@ -293,6 +313,18 @@ class Pixel(object):
 
         return
 
+    def restore_length(self):
+        """Restores the length of instantenous frequency array to original."""
+
+        padding = np.ceil((self.n_points_orig - self.n_points) / 2)
+        self.inst_freq = np.pad(self.inst_freq, (padding, padding), 'edge')
+
+        if self.inst_freq.shape[0] != self.n_points_orig:
+            self.inst_freq = np.pad(self.inst_freq, (0, 1), 'edge')
+
+        return
+
+
     def __get_cwt__(self):
         """Generates the CWT using Morlet wavelet. Returns a 2D Matrix."""
 
@@ -304,8 +336,7 @@ class Pixel(object):
 
         widths = np.arange(cwt_scale * 0.9, cwt_scale * 1.1, wavelet_increment)
 
-        cwt_matrix = cwavelet.cwt(self.signal, 1, widths, w0)
-
+        cwt_matrix = cwavelet.cwt(self.signal, dt=1, scales = widths, p = w0)
         self.cwt_matrix = np.abs(cwt_matrix)
 
         return w0, wavelet_increment, cwt_scale
@@ -341,8 +372,14 @@ class Pixel(object):
             # Remove DC component, first.
             self.remove_dc()
 
+            # Phase-lock signals.
+            self.phase_lock()
+
             # Average signals.
             self.average()
+
+            # Remove DC component again, introduced by phase-locking.
+            self.remove_dc()
 
             # Check the drive frequency.
             self.check_drive_freq()
@@ -375,6 +412,11 @@ class Pixel(object):
                 # Calculate instantenous frequency.
                 self.calculate_inst_freq()
 
+            # if recombination, invert
+            if self.recombination:
+
+                self.inst_freq = self.inst_freq * -1
+
             # Find where the minimum is.
             if self.fit:
 
@@ -383,6 +425,9 @@ class Pixel(object):
             else:
 
                 self.find_minimum()
+
+            # Restore the length.
+            self.restore_length()
 
         except Exception as e:
 
