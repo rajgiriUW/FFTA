@@ -270,9 +270,8 @@ class Pixel(object):
         y = cut
         func = spi.UnivariateSpline(x, y, k=4)
 
-        # Find the minimum of the spline using 1st and 2nd derivatives.
-        extrema = func.derivative(n=1).roots()
-        idx = extrema[np.argmax(func.derivative(n=2)(extrema))]
+        # Find the minimum of the spline using Powell's method.
+        idx = spo.fmin_powell(func, cut.argmin(), disp=0)
 
         # Do index to time conversion and find shift.
         self.tfp = idx / self.sampling_rate
