@@ -1,5 +1,5 @@
 """pixel.py: Contains pixel class."""
-# pylint: disable=E1101,R0902
+# pylint: disable=E1101,R0902,C0103
 __author__ = "Durmus U. Karatay"
 __copyright__ = "Copyright 2014, Ginger Lab"
 __maintainer__ = "Durmus U. Karatay"
@@ -42,7 +42,10 @@ class Pixel(object):
         bandpass_filter = int (0: no filtering, 1: FIR filter, 2: IIR filter)
         filter_bandwidth = float (in Hz)
         n_taps = integer (default: 999)
-        wavelet = bool (exists: wavelet method, otherwise: Hilbert method)
+        wavelet_analysis = bool (0: Hilbert method, 1: Wavelet Method)
+        wavelet_parameter = int (default: 5)
+        recombination = bool (0: FF-trEFMm, 1: Recombination)
+
 
     Attributes
     ----------
@@ -83,7 +86,14 @@ class Pixel(object):
 
     def __init__(self, signal_array, params, fit=False):
 
-        # Create parameter attributes from parameters dictionary.
+        # Create parameter attributes for optional parameters.
+        # They will be overwritten by following for loop if they exist.
+        self.n_taps = 999
+        self.wavelet_analysis = False
+        self.wavelet_parameter = 5
+        self.recombination = False
+
+        # Read parameter attributes from parameters dictionary.
         for key, value in params.iteritems():
 
             setattr(self, key, value)
@@ -95,31 +105,13 @@ class Pixel(object):
         self.n_points_orig = signal_array.shape[0]
         self.fit = fit
 
-        # Initialize attributes.
+        # Initialize attributes that are going to be assigned later.
         self.signal = None
         self.phase = None
         self.inst_freq = None
         self.tfp = None
         self.shift = None
-
-        # Check if there is n_taps, if not assign default.
-        if not hasattr(self, 'n_taps'):
-
-            self.n_taps = 999
-
-        # Check if there is wavelet_analysis, if not assign default.
-        if not hasattr(self, 'wavelet_analysis'):
-
-            self.wavelet_analysis = False
-
-        # Check if there is a bandwidth parameter for the wavelet
-        if not hasattr(self, 'wavelet_parameter'):
-
-            self.wavelet_parameter = 5
-
-        if not hasattr(self, 'recombination'):
-
-            self.recombination = False
+        self.cwt_matrix = None
 
         return
 
@@ -205,10 +197,11 @@ class Pixel(object):
         time delay. Do not use for production."""
 
         # Calculate bandpass region from given parameters.
+        nyq_rate = 0.5 * self.sampling_rate
         bw_half = self.filter_bandwidth / 2
 
-        freq_low = (self.drive_freq - bw_half) / (0.5 * self.sampling_rate)
-        freq_high = (self.drive_freq + bw_half) / (0.5 * self.sampling_rate)
+        freq_low = (self.drive_freq - bw_half) / nyq_rate
+        freq_high = (self.drive_freq + bw_half) / nyq_rate
 
         # Do a high-pass filtfilt operation.
         b, a = sps.butter(9, freq_low, btype='high')
@@ -258,9 +251,9 @@ class Pixel(object):
 
         dtime = 1 / self.sampling_rate  # Time step.
 
-        # Do a Savitzky-Golay smoothing derivative.
-        self.inst_freq = sps.savgol_filter(self.phase, 5, 1,
-                                           deriv=1,
+        # Do a Savitzky-Golay smoothing derivative
+        # using 5 point 1st order polynomial.
+        self.inst_freq = sps.savgol_filter(self.phase, 5, 1, deriv=1,
                                            delta=dtime)
 
         return
@@ -272,12 +265,14 @@ class Pixel(object):
         ridx = int(self.roi * self.sampling_rate)
         cut = self.inst_freq[self.tidx:(self.tidx + ridx)]
 
-        # Define a spline to be used in finding minimum and find minimum.
+        # Define a spline to be used in finding minimum.
         x = np.arange(ridx)
         y = cut
-        func = spi.UnivariateSpline(x, y, ext=3)
+        func = spi.UnivariateSpline(x, y, k=4)
 
-        idx = spo.fmin_powell(func, cut.argmin(), disp=0)
+        # Find the minimum of the spline using 1st and 2nd derivatives.
+        extrema = func.derivative(n=1).roots()
+        idx = extrema[np.argmax(func.derivative(n=2)(extrema))]
 
         # Do index to time conversion and find shift.
         self.tfp = idx / self.sampling_rate
@@ -288,26 +283,32 @@ class Pixel(object):
     @staticmethod
     @jit
     def __decay__(t, tau, tau2, dfz):
-
+        """ Fit function for the decay curve."""
         decay = dfz * np.expm1(-t / tau)
         relax = -2 * dfz * np.expm1(-t / tau2)
 
-        return (decay + relax)
+        return decay + relax
 
     def fit_minimum(self):
+        """Fits the decay curve with an analytic approximation and
+        gets the minimum of it. Do not use for production."""
 
+        # Cut the signal into region of interest.
         ridx = int(self.roi * self.sampling_rate)
         fit_time = np.arange(0, ridx) / self.sampling_rate
         fit_inst_freq = self.inst_freq[self.tidx:(self.tidx + ridx)]
 
+        # Give some initial guesses for fitting.
         initial_guess = (100e-6, 5.28e-4, 1000.)
 
-        popt, pcov = spo.curve_fit(self.__decay__, fit_time, fit_inst_freq,
-                                   p0=initial_guess)
+        # Fit and assign variables.
+        popt, _ = spo.curve_fit(self.__decay__, fit_time, fit_inst_freq,
+                                p0=initial_guess)
 
         tau = popt[0]
         tau2 = popt[1]
 
+        # Assign tfp and shift analytically.
         self.tfp = tau * tau2 * np.log(tau / (2 * tau2)) / (tau2 - tau)
         self.shift = self.__decay__(self.tfp, *popt)
 
@@ -324,19 +325,19 @@ class Pixel(object):
 
         return
 
-
     def __get_cwt__(self):
         """Generates the CWT using Morlet wavelet. Returns a 2D Matrix."""
 
         w0 = self.wavelet_parameter
-        wavelet_increment = 0.5  # Reducing this has little benefit.\
+        wavelet_increment = 0.5  # Reducing this has little benefit.
 
         cwt_scale = ((w0 + np.sqrt(2 + w0 ** 2)) /
                      (4 * np.pi * self.drive_freq / self.sampling_rate))
 
-        widths = np.arange(cwt_scale * 0.9, cwt_scale * 1.1, wavelet_increment)
+        widths = np.arange(cwt_scale * 0.9, cwt_scale * 1.1,
+                           wavelet_increment)
 
-        cwt_matrix = cwavelet.cwt(self.signal, dt=1, scales = widths, p = w0)
+        cwt_matrix = cwavelet.cwt(self.signal, dt=1, scales=widths, p=w0)
         self.cwt_matrix = np.abs(cwt_matrix)
 
         return w0, wavelet_increment, cwt_scale
@@ -348,13 +349,13 @@ class Pixel(object):
         # Generate necessary tools for wavelet transform.
         w0, wavelet_increment, cwt_scale = self.__get_cwt__()
 
-        n_scales, n_points = np.shape(self.cwt_matrix)
+        _, n_points = np.shape(self.cwt_matrix)
         inst_freq = np.empty(n_points)
 
         for i in xrange(n_points):
 
             cut = self.cwt_matrix[:, i]
-            inst_freq[i], gb = parab.fit(cut, np.argmax(cut))
+            inst_freq[i], _ = parab.fit(cut, np.argmax(cut))
 
         inst_freq = (inst_freq * wavelet_increment + 0.9 * cwt_scale)
         inst_freq = ((w0 + np.sqrt(2 + w0 ** 2)) /
@@ -365,8 +366,8 @@ class Pixel(object):
         return
 
     def analyze(self):
-        """Hilbert method: Runs the analysis for the pixel and outputs tFP,
-        shift and instantenous frequency."""
+        """Runs the analysis for the pixel and outputs tFP, shift and
+        instantenous frequency."""
 
         try:
             # Remove DC component, first.
@@ -412,7 +413,7 @@ class Pixel(object):
                 # Calculate instantenous frequency.
                 self.calculate_inst_freq()
 
-            # if recombination, invert
+            # If it's a recombination image invert it to find minimum.
             if self.recombination:
 
                 self.inst_freq = self.inst_freq * -1
@@ -429,12 +430,13 @@ class Pixel(object):
             # Restore the length.
             self.restore_length()
 
-        except Exception as e:
+        # If caught exception, set everything to zero and log it.
+        except Exception as exception:
 
             self.tfp = 0
             self.shift = 0
             self.inst_freq = np.zeros(self.n_points_orig)
 
-            logging.exception(e, exc_info=True)
+            logging.exception(exception, exc_info=True)
 
         return (self.tfp, self.shift, self.inst_freq)

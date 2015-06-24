@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """load.py: Includes routines for loading data and configuration files."""
 
 __author__ = "Durmus U. Karatay"
@@ -7,7 +5,6 @@ __copyright__ = "Copyright 2014, Ginger Lab"
 __maintainer__ = "Durmus U. Karatay"
 __email__ = "ukaratay@uw.edu"
 __status__ = "Production"
-
 
 import ConfigParser
 import sys
@@ -31,6 +28,7 @@ def signal(path, skiprows=1):
 
     """
 
+    # Get the path and check what the extension is.
     ext = splitext(path)[1]
 
     if ext.lower() == '.ibw':
@@ -85,12 +83,14 @@ def configuration(path):
     config.read(path)
     parameters = {}
 
-    # Assign parameters from file. These are the keys for parameters.
+    # These are the keys for parameters.
     paraf_keys = ['trigger', 'total_time', 'drive_freq', 'sampling_rate']
     procs_keys = ['window']
     procf_keys = ['roi', 'bandpass_filter', 'n_taps', 'filter_bandwidth',
                   'wavelet_analysis', 'wavelet_parameter', 'recombination']
 
+    # Check if the configuration file has n_pixel,
+    # if not assume single pixel.
     if config.has_option('Parameters', 'n_pixels'):
 
         n_pixels = config.getint('Parameters', 'n_pixels')
@@ -99,6 +99,7 @@ def configuration(path):
 
         n_pixels = int(1)
 
+    # Loop through the parameters and assign them.
     for key in paraf_keys:
 
         if config.has_option('Parameters', key):
