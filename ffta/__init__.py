@@ -1,1 +1,1 @@
-__all__ = ['line', 'pixel', 'sim']
+__all__ = ['line', 'pixel', 'simulate']

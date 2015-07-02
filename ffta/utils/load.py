@@ -131,31 +131,30 @@ def simulation_configuration(path):
 
     Returns
     -------
+    can_params : dict
+        Parameters for cantilever properties. The dictionary contains:
+
+        amp_invols = float (in m/V)
+        def_invols = float (in m/V)
+        soft_amp = float (in V)
+        drive_freq = float (in Hz)
+        res_freq = float (in Hz)
+        k = float (in N/m)
+        q_factor = float
+
+    force_params : dict
+        Parameters for forces. The dictionary contains:
+
+        es_force = float (in N)
+        delta_freq = float (in Hz)
+        tau = float (in seconds)
+
     sim_params : dict
         Parameters for simulation. The dictionary contains:
 
         trigger = float (in seconds)
         total_time = float (in seconds)
         sampling_rate = int (in Hz)
-
-    can_params : dict
-        Parameters for cantilever properties. The dictionary contains:
-
-        amp_invols = float (in m/V)
-        def_invols = float (in m/V)
-        drive_freq = float (in Hz)
-        amplitude = float (in m)
-        k = float (in N/m)
-        q_factor = float
-        drive_force = float (in N)
-
-    force_params : dict
-        Parameters for forces. The dictionary contains:
-
-        drive = float (in N)
-        electrostatic = float (in N)
-        delta_freq = float (in Hz)
-        tau = float (in seconds)
 
     """
 
@@ -168,16 +167,10 @@ def simulation_configuration(path):
     force_params = {}
 
     # Assign parameters from file. These are the keys for parameters.
+    can_keys = ['amp_invols', 'def_invols', 'soft_amp', 'drive_freq',
+                'res_freq', 'k', 'q_factor']
+    force_keys = ['es_force', 'delta_freq', 'tau']
     sim_keys = ['trigger', 'total_time', 'sampling_rate']
-    can_keys = ['amp_invols', 'def_invols', 'drive_freq', 'amplitude',
-                'k', 'q_factor']
-    force_keys = ['drive', 'electrostatic', 'delta_freq', 'tau']
-
-    for key in sim_keys:
-
-        if config.has_option('Simulation Parameters', key):
-
-            sim_params[key] = config.getfloat('Simulation Parameters', key)
 
     for key in can_keys:
 
@@ -191,4 +184,10 @@ def simulation_configuration(path):
 
             force_params[key] = config.getfloat('Force Parameters', key)
 
-    return sim_params, can_params, force_params
+    for key in sim_keys:
+
+        if config.has_option('Simulation Parameters', key):
+
+            sim_params[key] = config.getfloat('Simulation Parameters', key)
+
+    return can_params, force_params, sim_params

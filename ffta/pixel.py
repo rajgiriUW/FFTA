@@ -94,7 +94,7 @@ class Pixel(object):
         self.recombination = False
 
         # Read parameter attributes from parameters dictionary.
-        for key, value in params.iteritems():
+        for key, value in params.items():
 
             setattr(self, key, value)
 
@@ -314,7 +314,8 @@ class Pixel(object):
         return
 
     def restore_length(self):
-        """Restores the length of instantenous frequency array to original."""
+        """Restores the length of instantenous frequency array to
+        original."""
 
         padding = np.ceil((self.n_points_orig - self.n_points) / 2)
         self.inst_freq = np.pad(self.inst_freq, (padding, padding), 'edge')
