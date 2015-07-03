@@ -268,10 +268,12 @@ class Pixel(object):
         # Define a spline to be used in finding minimum.
         x = np.arange(ridx)
         y = cut
-        func = spi.UnivariateSpline(x, y, k=4)
+        func = spi.UnivariateSpline(x, y, k=4, ext=3)
 
-        # Find the minimum of the spline using Powell's method.
-        idx = spo.fmin_powell(func, cut.argmin(), disp=0)
+        # Find the minimum of the spline using TNC method.
+        res = spo.minimize(func, cut.argmin(),
+                           method='TNC', bounds=((0, ridx),))
+        idx = res.x[0]
 
         # Do index to time conversion and find shift.
         self.tfp = idx / self.sampling_rate
