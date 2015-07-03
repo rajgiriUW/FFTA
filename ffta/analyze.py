@@ -51,12 +51,11 @@ def main(argv=None):
     parser.add_argument('path', nargs='?', default=os.getcwd(),
                         help='path to directory')
     parser.add_argument('-p', help='parallel computing option should be'
-                        'followed by the number of CPUs.'.format(cpu_count),
-                        type=int, choices=range(2, cpu_count + 1))
+                        'followed by the number of CPUs.', type=int,
+                        choices=range(2, cpu_count + 1))
     parser.add_argument('-v', action='version',
                         version='FFtr-EFM 2.0 Release Candidate')
     args = parser.parse_args(argv)
-
 
     # Scan the path for .ibw and .cfg files.
     path = args.path
@@ -109,7 +108,7 @@ def main(argv=None):
 
             signal_array = load.signal(data_file)
             line_inst = line.Line(signal_array, parameters, n_pixels)
-            tfp[i, :], shift[i, :], _inst = line_inst.analyze()
+            tfp[i, :], shift[i, :], _ = line_inst.analyze()
 
             tfp_image = tfp_ax.imshow(tfp * 1e6, cmap='afmhot', **kwargs)
             shift_image = shift_ax.imshow(shift, cmap='cubehelix', **kwargs)
@@ -141,7 +140,8 @@ def main(argv=None):
 
     elif args.p:
 
-        print 'Starting parallel processing, using {0:1d} CPUs.'.format(args.p)
+        print 'Starting parallel processing, using {0:1d} \
+               CPUs.'.format(args.p)
         start_time = time.time()  # Keep when it's started.
 
         # Create a pool of workers.
@@ -153,7 +153,8 @@ def main(argv=None):
                        [n_pixels] * n_files)
         result = pool.map(process_line, iterable)
 
-        pool.close()  # Do not forget to close spawned processes.
+        # Do not forget to close spawned processes.
+        pool.close()
         pool.join()
 
         # Unzip the result.

@@ -80,8 +80,6 @@ class Pixel(object):
     `shift` : float
         Frequency shift from steady-state to first-peak, in Hz.
 
-
-
     """
 
     def __init__(self, signal_array, params, fit=False):
@@ -184,7 +182,8 @@ class Pixel(object):
         band = [freq_low, freq_high]
 
         # Create taps using window method.
-        taps = sps.firwin(self.n_taps, band, pass_zero=False, window='parzen')
+        taps = sps.firwin(self.n_taps, band, pass_zero=False,
+                          window='parzen')
 
         self.signal = sps.fftconvolve(self.signal, taps, mode='same')
         self.tidx -= (self.n_taps - 1) / 2

@@ -12,7 +12,8 @@ from ffta import pixel
 
 class Line(object):
     """
-    This is container class for a line. See documentation of pixel for details.
+    This is container class for a line. See documentation of pixel for
+    details.
 
     Parameters
     ----------
