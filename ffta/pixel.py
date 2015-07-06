@@ -99,8 +99,10 @@ class Pixel(object):
         self.signal_array = signal_array
         self.tidx = int(self.trigger * self.sampling_rate)
         self.n_points, self.n_signals = signal_array.shape
-        self.n_points_orig = signal_array.shape[0]
-        self.fit = fit
+
+        # Keep the original values for restoring the signal properties.
+        self._tidx_orig = self.tidx
+        self._n_points_orig = signal_array.shape[0]
 
         # Initialize attributes that are going to be assigned later.
         self.signal = None
@@ -279,15 +281,31 @@ class Pixel(object):
 
         return
 
-    def restore_length(self):
-        """Restores the length of instantenous frequency array to
-        original."""
+    def restore_signal(self):
+        """Restores the signal length and position of trigger to original
+        values."""
 
-        padding = np.ceil((self.n_points_orig - self.n_points) / 2)
-        self.inst_freq = np.pad(self.inst_freq, (padding, padding), 'edge')
+        # Difference between current and original values.
+        d_trig = self._tidx_orig - self.tidx
+        d_points = self._n_points_orig - self.n_points
 
-        if self.inst_freq.shape[0] != self.n_points_orig:
-            self.inst_freq = np.pad(self.inst_freq, (0, 1), 'edge')
+        # Check if the signal length can accomodate the shift or not.
+        if d_trig >= d_points:
+
+            # Pad from left and set the original length.
+            self.inst_freq = np.pad(self.inst_freq, (d_trig, 0), 'edge')
+            self.inst_freq = self.inst_freq[:self._n_points_orig]
+
+        else:
+
+            # Calculate how many points is needed for padding from right.
+            pad_right = d_points - d_trig
+            self.inst_freq = np.pad(self.inst_freq, (d_trig, pad_right),
+                                    'edge')
+
+        # Set the public variables back to original values.
+        self.tidx = self._tidx_orig
+        self.n_points = self._n_points_orig
 
         return
 
@@ -388,9 +406,9 @@ class Pixel(object):
             self.find_minimum()
 
             # Restore the length.
-            self.restore_length()
+            self.restore_signal()
 
-        # If caught exception, set everything to zero and log it.
+        # If caught any exception, set everything to zero and log it.
         except Exception as exception:
 
             self.tfp = 0
