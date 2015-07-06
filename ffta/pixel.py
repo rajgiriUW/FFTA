@@ -352,7 +352,6 @@ class Pixel(object):
     def analyze(self):
         """Runs the analysis for the pixel and outputs tFP, shift and
         instantenous frequency."""
-
         try:
             # Remove DC component, first.
             self.remove_dc()
@@ -413,7 +412,7 @@ class Pixel(object):
 
             self.tfp = 0
             self.shift = 0
-            self.inst_freq = np.zeros(self.n_points_orig)
+            self.inst_freq = np.zeros(self._n_points_orig)
 
             logging.exception(exception, exc_info=True)
 
