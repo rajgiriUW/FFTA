@@ -8,7 +8,6 @@ __status__ = "Development"
 
 import numpy as np
 import logging
-from numba import jit
 from ffta.utils import noise
 from ffta.utils import cwavelet
 from ffta.utils import parab
@@ -82,7 +81,7 @@ class Pixel(object):
 
     """
 
-    def __init__(self, signal_array, params, fit=False):
+    def __init__(self, signal_array, params):
 
         # Create parameter attributes for optional parameters.
         # They will be overwritten by following for loop if they exist.
@@ -280,40 +279,6 @@ class Pixel(object):
 
         return
 
-    @staticmethod
-    @jit
-    def __decay__(t, tau, tau2, dfz):
-        """ Fit function for the decay curve."""
-        decay = dfz * np.expm1(-t / tau)
-        relax = -2 * dfz * np.expm1(-t / tau2)
-
-        return decay + relax
-
-    def fit_minimum(self):
-        """Fits the decay curve with an analytic approximation and
-        gets the minimum of it. Do not use for production."""
-
-        # Cut the signal into region of interest.
-        ridx = int(self.roi * self.sampling_rate)
-        fit_time = np.arange(0, ridx) / self.sampling_rate
-        fit_inst_freq = self.inst_freq[self.tidx:(self.tidx + ridx)]
-
-        # Give some initial guesses for fitting.
-        initial_guess = (100e-6, 5.28e-4, 1000.)
-
-        # Fit and assign variables.
-        popt, _ = spo.curve_fit(self.__decay__, fit_time, fit_inst_freq,
-                                p0=initial_guess)
-
-        tau = popt[0]
-        tau2 = popt[1]
-
-        # Assign tfp and shift analytically.
-        self.tfp = tau * tau2 * np.log(tau / (2 * tau2)) / (tau2 - tau)
-        self.shift = self.__decay__(self.tfp, *popt)
-
-        return
-
     def restore_length(self):
         """Restores the length of instantenous frequency array to
         original."""
@@ -420,13 +385,7 @@ class Pixel(object):
                 self.inst_freq = self.inst_freq * -1
 
             # Find where the minimum is.
-            if self.fit:
-
-                self.fit_minimum()
-
-            else:
-
-                self.find_minimum()
+            self.find_minimum()
 
             # Restore the length.
             self.restore_length()
