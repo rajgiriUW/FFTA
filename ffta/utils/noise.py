@@ -18,20 +18,18 @@ def phase_lock(signal_array, tidx, cidx):
 
     Parameters
     ----------
-    signal_array : array, [n_points, n_signals]
+    signal_array : (n_points, n_signals), array_like
         2D real-valued signal array.
-
     tidx: int
         Time to trigger from the start of signals as index.
-
     cidx: int
-        Period of the signal as number of points, i.e. drive_freq/sampling_rate
+        Period of the signal as number of points,
+        i.e. drive_freq/sampling_rate
 
     Returns
     -------
-    signal_array : array, [n_points, n_signals]
+    signal_array : (n_points, n_signals), array_like
         Phase-locked signal array
-
     tidx : int
         Index of trigger after phase-locking.
 
@@ -66,17 +64,15 @@ def pca_discard(signal_array, k):
 
     Parameters
     ----------
-    signal_array : array, [n_points, n_signals]
+    signal_array : (n_points, n_signals), array_like
         2D real-valued signal array.
-
-
     k : int
         Number of eigenvectors to use, can't be bigger than n_signals.
 
     Returns
     -------
     idx : array
-            Return the indices of noisy signals.
+        Return the indices of noisy signals.
 
     """
 

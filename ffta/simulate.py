@@ -16,7 +16,7 @@ PI2 = 2 * np.pi
 class Cantilever(object):
     """Damped Driven Harmonic Oscillator Simulator for AFM Cantilevers.
 
-    Simulates a DDHO, under excitation with given parameters.
+    Simulates a DDHO under excitation with given parameters.
 
     Parameters
     ----------
@@ -44,6 +44,39 @@ class Cantilever(object):
         trigger = float (in seconds)
         total_time = float (in seconds)
         sampling_rate = int (in Hz)
+
+    Attributes
+    ----------
+    amp : float
+        Amplitude of the cantilever in meters.
+    beta : float
+        Damping factor of the cantilever in rad/s.
+    delta : float
+        Initial phase of the cantilever in radians.
+    delta_freq : float
+        Frequency shift of the cantilever under excitation.
+    mass : float
+        Mass of the cantilever in kilograms.
+
+    Method
+    ------
+    simulate(trigger_phase=180)
+        Simulates the cantilever motion with excitation happening
+        at the given phase.
+
+    See Also
+    --------
+    pixel: Pixel processing for FF-trEFM data.
+
+    Examples
+    --------
+    >>> from ffta import simulate, utils
+    >>>
+    >>> params_file = '../examples/sim_params.cfg'
+    >>> params = utils.load.configuration(params_file)
+    >>>
+    >>> c = simulate.Cantilever(*params)
+    >>> Z, infodict = c.simulate()
 
     """
 
@@ -83,8 +116,15 @@ class Cantilever(object):
         return
 
     def set_conditions(self, trigger_phase=180):
-        """Sets initial conditions and other simulation parameters.
-           Trigger phase is in degrees and with respect to cosine."""
+        """
+        Sets initial conditions and other simulation parameters.
+
+        Parameters
+        ----------
+        trigger_phase: float, optional
+           Trigger phase is in degrees and wrt cosine. Default value is 180.
+
+        """
 
         self.trigger_phase = np.mod(np.pi * trigger_phase / 180, PI2)
         self.n_points = self.total_time * 1e8
@@ -112,7 +152,24 @@ class Cantilever(object):
 
     @staticmethod
     def __gamma__(t, t0, tau):
-        """Exponential decay function for forces and omega."""
+        """
+        Exponential decay function for force and resonance frequency.
+
+        Parameters
+        ----------
+        t : float
+            Time in seconds.
+        t0: float
+            Event time in seconds.
+        tau : float
+            Decay constant in the exponential function, in seconds.
+
+        Returns
+        -------
+        value : float
+            Value of the function at the given time.
+
+        """
 
         if t >= t0:
 
@@ -123,20 +180,71 @@ class Cantilever(object):
             return 0
 
     def omega(self, t, t0, tau):
-        """Time decaying resonance frequency."""
+        """
+        Exponentially decaying resonance frequency.
+
+        Parameters
+        ----------
+        t : float
+            Time in seconds.
+        t0: float
+            Event time in seconds.
+        tau : float
+            Decay constant in the exponential function, in seconds.
+
+        Returns
+        -------
+        w : float
+            Resonance frequency of the cantilever at a given time, in rad/s.
+
+        """
 
         return self.w0 + self.delta_w * self.__gamma__(t, t0, tau)
 
     def force(self, t, t0, tau):
-        """Force for the LHS of DDHO."""
+        """
+        Force on the cantilever at a given time. It contains driving force and
+        electrostatic force.
 
+        Parameters
+        ----------
+        t : float
+            Time in seconds.
+        t0: float
+            Event time in seconds.
+        tau : float
+            Decay constant in the exponential function, in seconds.
+
+        Returns
+        -------
+        f : float
+            Force on the cantilever at a given time, in N/kg.
+
+        """
         driving_force = self.f0 * np.sin(self.wd * t)
         electro_force = self.fe * self.__gamma__(t, t0, tau)
 
         return driving_force - electro_force
 
     def dZ_dt(self, Z, t=0):
-        """Returns the derivatives of z and v."""
+        """
+        Takes the derivative of the given Z with respect to time.
+
+        Parameters
+        ----------
+        Z : (2, ) array_like
+            Z[0] is the cantilever position, and Z[1] is the cantilever
+            velocity.
+        t : float
+            Time.
+
+        Returns
+        -------
+        Zdot : (2, ) array_like
+            Zdot[0] is the cantilever velocity, and Zdot[1] is the cantilever
+            acceleration.
+
+        """
 
         t0 = self.t0
         tau = self.tau
@@ -149,7 +257,22 @@ class Cantilever(object):
         return np.array([v, vdot])
 
     def simulate(self, trigger_phase=180):
-        """Simulates the cantilever and returns the result."""
+        """
+        Simulates the cantilever motion.
+
+        Parameters
+        ----------
+        trigger_phase: float, optional
+           Trigger phase is in degrees and wrt cosine. Default value is 180.
+
+        Returns
+        -------
+        Z : (n_points, 1) array_like
+            Cantilever position in Volts.
+        infodict : dict
+            Information about the ODE solver.
+
+        """
         self.set_conditions(trigger_phase)
         Z, infodict = odeint(self.dZ_dt, self.Z0, self.t, full_output=True)
 

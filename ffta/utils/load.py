@@ -14,7 +14,8 @@ from os.path import splitext
 
 
 def signal(path, skiprows=1):
-    """Load .ibw or ASCII files and return it as a numpy.ndarray.
+    """
+    Loads .ibw or ASCII files and return it as a numpy.ndarray.
 
     Parameters
     ----------
@@ -23,7 +24,7 @@ def signal(path, skiprows=1):
 
     Returns
     -------
-    signal_array : array, shape = [n_points, n_signals]
+    signal_array : (n_points, n_signals) array_like
         2D real-valued signal array loaded from given .ibw file.
 
     """
@@ -50,7 +51,8 @@ def signal(path, skiprows=1):
 
 
 def configuration(path):
-    """Read an ASCII file with relevant parameters for processing.
+    """
+    Reads an ASCII file with relevant parameters for processing.
 
     Parameters
     ----------
@@ -61,9 +63,8 @@ def configuration(path):
     -------
     n_pixels: int
         Number of pixels in the image.
-
     parameters : dict
-        Parameters for pixel processing. The dictionary contains:
+        The list of parameters is:
 
         trigger = float (in seconds)
         total_time = float (in seconds)
@@ -71,10 +72,13 @@ def configuration(path):
         drive_freq = float (in Hz)
 
         roi = float (in seconds)
-        window = string (see documentation of pixel.apply_window)
+        window = string (see documentation of scipy.signal.get_window)
         bandpass_filter = int (0: no filtering, 1: FIR filter, 2: IIR filter)
         filter_bandwidth = float (in Hz)
         n_taps = integer (default: 999)
+        wavelet_analysis = bool (0: Hilbert method, 1: Wavelet Method)
+        wavelet_parameter = int (default: 5)
+        recombination = bool (0: FF-trEFMm, 1: Recombination)
 
     """
 
@@ -122,7 +126,8 @@ def configuration(path):
 
 
 def simulation_configuration(path):
-    """Read an ASCII file with relevant parameters for simulation.
+    """
+    Reads an ASCII file with relevant parameters for simulation.
 
     Parameters
     ----------

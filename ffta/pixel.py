@@ -6,30 +6,32 @@ __maintainer__ = "Durmus U. Karatay"
 __email__ = "ukaratay@uw.edu"
 __status__ = "Development"
 
-import numpy as np
 import logging
-from ffta.utils import noise
-from ffta.utils import cwavelet
-from ffta.utils import parab
+
+import numpy as np
 from scipy import signal as sps
 from scipy import optimize as spo
 from scipy import interpolate as spi
 
+from ffta.utils import noise
+from ffta.utils import cwavelet
+from ffta.utils import parab
+
 
 class Pixel(object):
-    """Signal Processing to Extract Time-to-First-Peak.
+    """
+    Signal Processing to Extract Time-to-First-Peak.
 
-    Extracts time-to-first-peak (tFP) from digitized Fast-Free time-resolved
-    Electrostatic Force Microscopy signal. Pixel class uses Morlet Wavelet
-    transform to extract tFP.
+    Extracts Time-to-First-Peak (tFP) from digitized Fast-Free Time-Resolved
+    Electrostatic Force Microscopy (FF-trEFM) signals [1]_. It includes two
+    types of frequency analysis: Hilbert Transform and Wavelet Transform.
 
     Parameters
     ----------
-    signal_array : array, [n_points, n_signals]
+    signal_array : (n_points, n_signals) array_like
         2D real-valued signal array, corresponds to a pixel.
-
     params : dict
-        Includes parameters for processing. Here is a list of parameters:
+        Includes parameters for processing. The list of parameters is:
 
         trigger = float (in seconds)
         total_time = float (in seconds)
@@ -37,7 +39,7 @@ class Pixel(object):
         drive_freq = float (in Hz)
 
         roi = float (in seconds)
-        window = string (see documentation of pixel.apply_window)
+        window = string (see documentation of scipy.signal.get_window)
         bandpass_filter = int (0: no filtering, 1: FIR filter, 2: IIR filter)
         filter_bandwidth = float (in Hz)
         n_taps = integer (default: 999)
@@ -45,39 +47,67 @@ class Pixel(object):
         wavelet_parameter = int (default: 5)
         recombination = bool (0: FF-trEFMm, 1: Recombination)
 
-
     Attributes
     ----------
-    `tidx` : int
-        Index of trigger in time-domain.
-
-    `n_points` : int
+    n_points : int
         Number of points in a signal.
-
-    `n_signals` : int
+    n_signals : int
         Number of signals to be averaged in a pixel.
+    signal_array : (n_points, n_signals) array_like
+        Array that contains original signals.
+    signal : (n_points,) array_like
+        Signal after phase-locking and averaging.
+    tidx : int
+        Index of trigger in time-domain.
+    phase : (n_points,) array_like
+        Phase of the signal, only calculated with Hilbert Transform method.
+    cwt_matrix : (n_widths, n_points) array_like
+        Wavelet matrix for continuous wavelet transform.
+    inst_freq : (n_points,) array_like
+        Instantenous frequency of the signal.
+    tfp : float
+        Time from trigger to first-peak, in seconds.
+    shift : float
+        Frequency shift from trigger to first-peak, in Hz.
 
-    `signal_array` : array, shape = [n_points, n_signals]
-        Array that contains signals from a single pixel.
+    Methods
+    -------
+    analyze()
+        Analyzes signals and returns tfp, shift and inst_freq.
 
-    `signal` : array, shape = [n_points]
-        The signal after phase-locking and averaging in time domain.
+    See Also
+    --------
+    line: Line processing for FF-trEFM data.
+    simulate: Simulation for synthetic FF-trEFM data.
+    scipy.signal.get_window: Windows for signal processing.
 
-    `phase` : array, shape = [n_points]
-        The phase information of the signal.
+    Notes
+    -----
+    Frequency shift from wavelet analysis is not in Hertz. It should be used
+    with caution.
 
-    `inst_freq` : array, shape = [n_points]
-        Instantenous frequency of the signal, depends on the method used.
+    analyze() does not raise an exception if there is one, however it logs the
+    exception if logging is turned on. This is implemented this way to avoid
+    crashing in the case of exception when this method is called from C API.
 
-    `window` : string
-        Possible windows are: boxcar, triang, blackman, hamming, hann,
-        bartlett, flattop, parzen, bohman, blackmanharris, nuttall, barthann.
+    References
+    ----------
+    .. [1] Giridharagopal R, Rayermann GE, Shao G, et al. Submicrosecond time
+       resolution atomic force microscopy for probing nanoscale dynamics.
+       Nano Lett. 2012;12(2):893-8.
 
-    `tfp` : float
-        Time-to-First-Peak, in seconds.
-
-    `shift` : float
-        Frequency shift from steady-state to first-peak, in Hz.
+    Examples
+    --------
+    >>> from ffta import pixel, utils
+    >>>
+    >>> signal_file = '../data/SW_0000.ibw'
+    >>> params_file = '../data/parameters.cfg'
+    >>>
+    >>> signal_array = utils.load.signal(signal_file)
+    >>> n_pixels, params = utils.load.configuration(params_file)
+    >>>
+    >>> p = pixel.Pixel(signal_array, params)
+    >>> tfp, shift, inst_freq = p.analyze()
 
     """
 
@@ -115,14 +145,14 @@ class Pixel(object):
         return
 
     def remove_dc(self):
-        """Remove DC components from signals."""
+        """Removes DC components from signals."""
 
         self.signal_array -= self.signal_array.mean(axis=0)
 
         return
 
     def phase_lock(self):
-        """Phase-lock signals in the signal array. This also cuts signals."""
+        """Phase-locks signals in the signal array. This also cuts signals."""
 
         # Phase-lock signals.
         self.signal_array, self.tidx = noise.phase_lock(
@@ -135,14 +165,14 @@ class Pixel(object):
         return
 
     def average(self):
-        """Average signals."""
+        """Averages signals."""
 
         self.signal = self.signal_array.mean(axis=1)
 
         return
 
     def check_drive_freq(self):
-        """Calculate drive frequency of averaged signals, and check against
+        """Calculates drive frequency of averaged signals, and check against
            the given drive frequency."""
 
         n_fft = 2 ** int(np.log2(self.tidx))  # For FFT, power of 2.
@@ -164,7 +194,7 @@ class Pixel(object):
         return
 
     def apply_window(self):
-        """Apply the window given in parameters."""
+        """Applies the window given in parameters."""
 
         self.signal *= sps.get_window(self.window, self.n_points)
 
@@ -214,14 +244,14 @@ class Pixel(object):
         return
 
     def hilbert_transform(self):
-        """Get the analytical signal doing a Hilbert transform."""
+        """Gets the analytical signal doing a Hilbert transform."""
 
         self.signal = sps.hilbert(self.signal)
 
         return
 
     def calculate_phase(self, correct_slope=True):
-        """Get the phase of the signal and correct the slope by removing
+        """Gets the phase of the signal and correct the slope by removing
         the drive phase."""
 
         # Unwrap the phase.
@@ -259,7 +289,7 @@ class Pixel(object):
         return
 
     def find_minimum(self):
-        """Find when the minimum of instantenous frequency happens."""
+        """Finds when the minimum of instantenous frequency happens."""
 
         # Cut the signal into region of interest.
         ridx = int(self.roi * self.sampling_rate)
@@ -350,8 +380,26 @@ class Pixel(object):
         return
 
     def analyze(self):
-        """Runs the analysis for the pixel and outputs tFP, shift and
-        instantenous frequency."""
+        """
+        Analyzes the pixel with the given method.
+
+        Returns
+        -------
+        tfp : float
+            Time from trigger to first-peak, in seconds.
+        shift : float
+            Frequency shift from trigger to first-peak, in Hz.
+        inst_freq : (n_points,) array_like
+            Instantenous frequency of the signal.
+
+        Notes
+        -----
+        It does not raise an exception if there is one, however it logs
+        the exception if logging is turned on. This is implemented this way to
+        avoid crashing in the case of exception when this method is called
+        from C API.
+
+        """
 
         try:
             # Remove DC component, first.
@@ -417,4 +465,4 @@ class Pixel(object):
 
             logging.exception(exception, exc_info=True)
 
-        return (self.tfp, self.shift, self.inst_freq)
+        return self.tfp, self.shift, self.inst_freq
