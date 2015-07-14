@@ -286,6 +286,9 @@ class Pixel(object):
         self.inst_freq = sps.savgol_filter(self.phase, 5, 1, deriv=1,
                                            delta=dtime)
 
+        # Bring trigger to zero.
+        self.inst_freq -= self.inst_freq[self.tidx]
+
         return
 
     def find_minimum(self):

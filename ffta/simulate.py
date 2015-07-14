@@ -138,7 +138,7 @@ class Cantilever(object):
 
         # Current phase at trigger.
         current_phase = np.mod(self.wd * self.trigger - self.delta, PI2)
-        phase_diff = np.mod(trigger_phase - current_phase, PI2)
+        phase_diff = np.mod(self.trigger_phase - current_phase, PI2)
 
         self.t0 = self.trigger + phase_diff / self.wd
 
