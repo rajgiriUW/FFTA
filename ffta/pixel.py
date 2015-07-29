@@ -17,6 +17,7 @@ from ffta.utils import noise
 from ffta.utils import cwavelet
 from ffta.utils import parab
 
+from numba import autojit
 
 class Pixel(object):
     """
@@ -314,6 +315,34 @@ class Pixel(object):
 
         return
 
+    def fit_minimum(self):
+        """ Uses a product of two exponentials to fit to the solution """
+        func = lambda t, A, tau1, tau2: -A*np.exp(-t/tau1)*np.expm1(-t/tau2)
+
+        # Cut the signal into region of interest.
+        ridx = int(self.roi * self.sampling_rate)
+
+        if not self.wavelet_analysis:
+            self.tidx += (self.n_taps - 1) / 2
+
+        cut = self.inst_freq[self.tidx:(self.tidx + ridx)]
+
+        # Define a spline to be used in finding minimum.
+        t = np.arange(ridx)/self.sampling_rate
+        y = cut
+        p0 = (cut.min(), 1e-5, 5e-4)
+        popt, _ = spo.curve_fit(func, t, y, p0)
+
+        self.tfp = popt[2] * np.log((popt[1]+popt[2])/popt[2])
+        self.shift = func(self.tfp, *popt)
+
+        self.fitparams = popt
+        
+        if not self.wavelet_analysis:
+            self.tidx -= (self.n_taps - 1) / 2
+
+        return
+
     def restore_signal(self):
         """Restores the signal length and position of trigger to original
         values."""
@@ -342,6 +371,7 @@ class Pixel(object):
 
         return
 
+    @autojit
     def __get_cwt__(self):
         """Generates the CWT using Morlet wavelet. Returns a 2D Matrix."""
 
@@ -454,7 +484,7 @@ class Pixel(object):
                 self.inst_freq = self.inst_freq * -1
 
             # Find where the minimum is.
-            self.find_minimum()
+            self.fit_minimum()
 
             # Restore the length.
             self.restore_signal()
