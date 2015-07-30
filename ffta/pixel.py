@@ -19,6 +19,8 @@ from ffta.utils import parab
 
 from numba import autojit
 
+import lmfit as lf
+
 class Pixel(object):
     """
     Signal Processing to Extract Time-to-First-Peak.
@@ -326,6 +328,7 @@ class Pixel(object):
             self.tidx += (self.n_taps - 1) / 2
 
         cut = self.inst_freq[self.tidx:(self.tidx + ridx)]
+        self.cut = cut
 
         # Define a spline to be used in finding minimum.
         t = np.arange(ridx)/self.sampling_rate
@@ -337,9 +340,46 @@ class Pixel(object):
         self.shift = func(self.tfp, *popt)
 
         self.fitparams = popt
+
+        if not self.wavelet_analysis:
+            self.tidx -= (self.n_taps - 1) / 2
+
+        return
+
+    def fit_minimum_bounded(self):
+        """ Uses lmfit with bounded values to fit to the frequency"""
+
+        def __fit_func__(t, A, tau1, tau2):
+           return -A * np.exp(-t/tau1)*np.expm1(-t/tau2)
+
+        model = lf.Model(__fit_func__)
+        params = model.make_params()
+        params.add('A', value = -500.0, max = -1.0, min = -10000.0)
+        params.add('tau1', value = 1e-5, min = 1e-7, max = 0.1)
+        params.add('tau2', value = 1e-5, min = 1e-7, max = 0.1)
+
+        # Cut the signal into region of interest.
+        ridx = int(self.roi * self.sampling_rate)
+
+        if not self.wavelet_analysis:
+            self.tidx += (self.n_taps - 1) / 2
+
+        cut = self.inst_freq[self.tidx:(self.tidx + ridx)]
+        t = np.arange(ridx)/self.sampling_rate
+
+        result = model.fit(cut, params=params, t=t)
+        [tau1, tau2] = result.best_values['tau1'], result.best_values['tau2']
+
+        self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
+        self.shift = float(result.eval(t = self.tfp))
+        self.result = result
         
         if not self.wavelet_analysis:
             self.tidx -= (self.n_taps - 1) / 2
+        
+        # check for bad fits
+        if result.chisqr > 1e8:
+            self.find_minimum()
 
         return
 
@@ -482,9 +522,9 @@ class Pixel(object):
             if self.recombination:
 
                 self.inst_freq = self.inst_freq * -1
-
+                     
             # Find where the minimum is.
-            self.fit_minimum()
+            self.fit_minimum_bounded()
 
             # Restore the length.
             self.restore_signal()
