@@ -15,7 +15,8 @@ setup(
     'numpy>=1.9.2',
     'scipy>=0.15.1',
     'igor>=0.2',
-    'progressbar>=2.2'
+    'progressbar>=2.2',
+    'lmfit>=0.8.3'
     ],
 
     entry_points={

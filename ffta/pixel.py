@@ -7,7 +7,6 @@ __email__ = "ukaratay@uw.edu"
 __status__ = "Development"
 
 import logging
-
 import numpy as np
 from scipy import signal as sps
 from scipy import optimize as spo
@@ -16,10 +15,10 @@ from scipy import interpolate as spi
 from ffta.utils import noise
 from ffta.utils import cwavelet
 from ffta.utils import parab
+from lmfit import Model
 
 from numba import autojit
 
-import lmfit as lf
 
 class Pixel(object):
     """
@@ -44,8 +43,8 @@ class Pixel(object):
         roi = float (in seconds)
         window = string (see documentation of scipy.signal.get_window)
         bandpass_filter = int (0: no filtering, 1: FIR filter, 2: IIR filter)
-        filter_bandwidth = float (in Hz)
-        n_taps = integer (default: 999)
+        filter_bandwidth = float (default: 5kHz)
+        n_taps = integer (default: 1799)
         wavelet_analysis = bool (0: Hilbert method, 1: Wavelet Method)
         wavelet_parameter = int (default: 5)
         recombination = bool (0: FF-trEFMm, 1: Recombination)
@@ -114,11 +113,12 @@ class Pixel(object):
 
     """
 
-    def __init__(self, signal_array, params):
+    def __init__(self, signal_array, params, fit=True):
 
         # Create parameter attributes for optional parameters.
         # They will be overwritten by following for loop if they exist.
-        self.n_taps = 999
+        self.n_taps = 1799
+        self.filter_bandwidth = 5000
         self.wavelet_analysis = False
         self.wavelet_parameter = 5
         self.recombination = False
@@ -144,6 +144,9 @@ class Pixel(object):
         self.tfp = None
         self.shift = None
         self.cwt_matrix = None
+
+        # Assign the fit parameter.
+        self.fit = fit
 
         return
 
@@ -318,67 +321,50 @@ class Pixel(object):
         return
 
     def fit_minimum(self):
-        """ Uses a product of two exponentials to fit to the solution """
-        func = lambda t, A, tau1, tau2: -A*np.exp(-t/tau1)*np.expm1(-t/tau2)
+        """Fits the frequency shift to an approximate functional form using
+        lmfit with bounded values."""
 
-        # Cut the signal into region of interest.
-        ridx = int(self.roi * self.sampling_rate)
-
-        if not self.wavelet_analysis:
-            self.tidx += (self.n_taps - 1) / 2
-
-        cut = self.inst_freq[self.tidx:(self.tidx + ridx)]
-        self.cut = cut
-
-        # Define a spline to be used in finding minimum.
-        t = np.arange(ridx)/self.sampling_rate
-        y = cut
-        p0 = (cut.min(), 1e-5, 5e-4)
-        popt, _ = spo.curve_fit(func, t, y, p0)
-
-        self.tfp = popt[2] * np.log((popt[1]+popt[2])/popt[2])
-        self.shift = func(self.tfp, *popt)
-
-        self.fitparams = popt
-
-        if not self.wavelet_analysis:
-            self.tidx -= (self.n_taps - 1) / 2
-
-        return
-
-    def fit_minimum_bounded(self):
-        """ Uses lmfit with bounded values to fit to the frequency"""
-
+        # Define the fit function.
         def __fit_func__(t, A, tau1, tau2):
-           return -A * np.exp(-t/tau1)*np.expm1(-t/tau2)
 
-        model = lf.Model(__fit_func__)
+            decay = np.exp(-t / tau1)
+            relaxation = np.expm1(-t / tau2)
+
+            return -A * decay * relaxation
+
+        # Define the fitting model.
+        model = Model(__fit_func__)
         params = model.make_params()
         params.add('A', value = -500.0, max = -1.0, min = -10000.0)
         params.add('tau1', value = 1e-5, min = 1e-7, max = 0.1)
         params.add('tau2', value = 1e-5, min = 1e-7, max = 0.1)
 
-        # Cut the signal into region of interest.
+        # Calculate the region of interest and if filtered move the fit idx.
         ridx = int(self.roi * self.sampling_rate)
 
-        if not self.wavelet_analysis:
-            self.tidx += (self.n_taps - 1) / 2
+        if self.wavelet_analysis:
 
-        cut = self.inst_freq[self.tidx:(self.tidx + ridx)]
-        t = np.arange(ridx)/self.sampling_rate
+            fidx = self.tidx
 
-        result = model.fit(cut, params=params, t=t)
-        [tau1, tau2] = result.best_values['tau1'], result.best_values['tau2']
+        else:
 
+            fidx = self.tidx + (self.n_taps - 1) / 2
+
+        cut = self.inst_freq[fidx:(fidx + ridx)]
+        t = np.arange(ridx) / self.sampling_rate
+
+        # Fit the cut to the model.
+        self.fit_result = model.fit(cut, params=params, t=t)
+        tau1 = self.fit_result.best_values['tau1']
+        tau2 = self.fit_result.best_values['tau2']
+
+        # Analytical minimum of the fit.
         self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
-        self.shift = float(result.eval(t = self.tfp))
-        self.result = result
-        
-        if not self.wavelet_analysis:
-            self.tidx -= (self.n_taps - 1) / 2
-        
-        # check for bad fits
-        if result.chisqr > 1e8:
+        self.shift = (self.fit_result.eval(t=self.tfp))
+
+        # Check for bad fits
+        if self.fit_result.chisqr > 1e8:
+
             self.find_minimum()
 
         return
@@ -522,9 +508,16 @@ class Pixel(object):
             if self.recombination:
 
                 self.inst_freq = self.inst_freq * -1
-                     
+
             # Find where the minimum is.
-            self.fit_minimum_bounded()
+
+            if self.fit:
+
+                self.fit_minimum()
+
+            else:
+
+                self.find_minimum()
 
             # Restore the length.
             self.restore_signal()
