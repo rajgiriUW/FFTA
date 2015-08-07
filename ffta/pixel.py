@@ -324,21 +324,6 @@ class Pixel(object):
         """Fits the frequency shift to an approximate functional form using
         lmfit with bounded values."""
 
-        # Define the fit function.
-        def __fit_func__(t, A, tau1, tau2):
-
-            decay = np.exp(-t / tau1)
-            relaxation = np.expm1(-t / tau2)
-
-            return -A * decay * relaxation
-
-        # Define the fitting model.
-        model = Model(__fit_func__)
-        params = model.make_params()
-        params.add('A', value = -500.0, max = -1.0, min = -10000.0)
-        params.add('tau1', value = 1e-5, min = 1e-7, max = 0.1)
-        params.add('tau2', value = 1e-5, min = 1e-7, max = 0.1)
-
         # Calculate the region of interest and if filtered move the fit idx.
         ridx = int(self.roi * self.sampling_rate)
 
@@ -352,6 +337,22 @@ class Pixel(object):
 
         cut = self.inst_freq[fidx:(fidx + ridx)]
         t = np.arange(ridx) / self.sampling_rate
+
+        # Define the fit function.
+        def __fit_func__(t, A, tau1, tau2, y0):
+
+            decay = np.exp(-t / tau1)
+            relaxation = np.expm1(-t / tau2)
+
+            return -A * decay * relaxation + y0
+
+        # Define the fitting model.
+        model = Model(__fit_func__)
+        params = model.make_params()
+        params.add('A', value = cut.min() - cut[0], max = -1.0)
+        params.add('tau1', value = 5e-4, min = 1e-7, max = 0.1)
+        params.add('tau2', value = 1e-4, min = 1e-5, max = 0.1)
+        params.add('y0', value = cut[0], vary = False)
 
         # Fit the cut to the model.
         self.fit_result = model.fit(cut, params=params, t=t)
