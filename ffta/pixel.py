@@ -117,6 +117,7 @@ class Pixel(object):
 
         # Create parameter attributes for optional parameters.
         # They will be overwritten by following for loop if they exist.
+        self.Q = 500
         self.n_taps = 1799
         self.filter_bandwidth = 5000
         self.wavelet_analysis = False
@@ -335,24 +336,26 @@ class Pixel(object):
 
             fidx = self.tidx + (self.n_taps - 1) / 2
 
-        cut = self.inst_freq[fidx:(fidx + ridx)]
+        cut = self.inst_freq[fidx:(fidx + ridx)] - self.inst_freq[fidx]
         t = np.arange(ridx) / self.sampling_rate
 
         # Define the fit function.
-        def __fit_func__(t, A, tau1, tau2, y0):
+        def __fit_func__(t, A, tau1, tau2):
 
             decay = np.exp(-t / tau1)
             relaxation = np.expm1(-t / tau2)
 
-            return -A * decay * relaxation + y0
+            return -A * decay * relaxation
+
+        # We can be smarter about our relaxation constant.
+        beta = self.Q / (np.pi * self.drive_freq)
 
         # Define the fitting model.
         model = Model(__fit_func__)
         params = model.make_params()
-        params.add('A', value = cut.min() - cut[0], max = -1.0)
-        params.add('tau1', value = 5e-4, min = 1e-7, max = 0.1)
-        params.add('tau2', value = 1e-4, min = 1e-5, max = 0.1)
-        params.add('y0', value = cut[0], vary = False)
+        params.add('A', value=cut.min(), max=-1.0)
+        params.add('tau1', value=5e-4, min=1e-7, max=0.1)
+        params.add('tau2', value=beta, min=1e-6, max=0.1)
 
         # Fit the cut to the model.
         self.fit_result = model.fit(cut, params=params, t=t)

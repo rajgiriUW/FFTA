@@ -83,8 +83,6 @@ bld/
 
 # Visual Studio 2015 cache/options directory
 .vs/
-# Uncomment if you have tasks that create the project's static files in wwwroot
-#wwwroot/
 
 # MSTest test Results
 [Tt]est[Rr]esult*/
@@ -167,7 +165,6 @@ _TeamCity*
 # NCrunch
 _NCrunch_*
 .*crunch*.local.xml
-nCrunchTemp_*
 
 # MightyMoose
 *.mm.*
@@ -195,9 +192,11 @@ publish/
 # Publish Web Output
 *.[Pp]ublish.xml
 *.azurePubxml
-# TODO: Comment the next line if you want to checkin your web deploy settings 
-# but database connection strings (with potential passwords) will be unencrypted
-*.pubxml
+## TODO: Comment the next line if you want to checkin your
+## web deploy settings but do note that will include unencrypted
+## passwords
+#*.pubxml
+
 *.publishproj
 
 # NuGet Packages
@@ -266,10 +265,7 @@ FakesAssemblies/
 # Visual Studio 6 workspace options file
 *.opt
 
-# Visual Studio LightSwitch build output
-**/*.HTMLClient/GeneratedArtifacts
-**/*.DesktopClient/GeneratedArtifacts
-**/*.DesktopClient/ModelManifest.xml
-**/*.Server/GeneratedArtifacts
-**/*.Server/ModelManifest.xml
-_Pvt_Extensions
+# LightSwitch generated files
+GeneratedArtifacts/
+_Pvt_Extensions/
+ModelManifest.xml
