@@ -118,6 +118,7 @@ class Pixel(object):
         # Create parameter attributes for optional parameters.
         # They will be overwritten by following for loop if they exist.
         self.n_taps = 1799
+        self.Q = 500
         self.filter_bandwidth = 5000
         self.wavelet_analysis = False
         self.wavelet_parameter = 5
@@ -335,24 +336,31 @@ class Pixel(object):
 
             fidx = self.tidx + (self.n_taps - 1) / 2
 
-        cut = self.inst_freq[fidx:(fidx + ridx)]
-        t = np.arange(ridx) / self.sampling_rate
+        cut = self.inst_freq[fidx:(fidx + ridx)] - self.inst_freq[fidx]
+        eidx = np.where(cut[ridx/2:]>cut[0])
+        if eidx[0].shape[0] > 0:
+            eidx[0][:] += ridx/2
+            cut = cut[0:eidx[0][0]]
+        self.cut = cut
+        t = np.arange(cut.shape[0]) / self.sampling_rate
 
         # Define the fit function.
-        def __fit_func__(t, A, tau1, tau2, y0):
+        def __fit_func__(t, A, tau1, tau2):
 
             decay = np.exp(-t / tau1)
             relaxation = np.expm1(-t / tau2)
 
-            return -A * decay * relaxation + y0
+            return -A * decay * relaxation
+
+        # Initial relaxation constant
+        beta = self.Q / (np.pi * self.drive_freq)
 
         # Define the fitting model.
         model = Model(__fit_func__)
         params = model.make_params()
-        params.add('A', value = cut.min() - cut[0], max = -1.0)
-        params.add('tau1', value = 5e-4, min = 1e-7, max = 0.1)
-        params.add('tau2', value = 1e-4, min = 1e-5, max = 0.1)
-        params.add('y0', value = cut[0], vary = False)
+        params.add('A', value = cut.min(), max = -1.0)
+        params.add('tau1', value = 1e-4, min = 5e-7, max = 0.1)
+        params.add('tau2', value = beta, min = 1e-5, max = 0.1)
 
         # Fit the cut to the model.
         self.fit_result = model.fit(cut, params=params, t=t)
@@ -361,13 +369,13 @@ class Pixel(object):
 
         # Analytical minimum of the fit.
         self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
-        self.shift = (self.fit_result.eval(t=self.tfp))
+        self.shift = self.fit_result.eval(t=self.tfp)
 
-        # Check for bad fits
-        if self.fit_result.chisqr > 1e8:
-
+        # If bad fit, default to find_minimum
+        if (self.tfp < 1e-5 or self.tfp > self.total_time-self.roi):
             self.find_minimum()
-
+                
+                
         return
 
     def restore_signal(self):

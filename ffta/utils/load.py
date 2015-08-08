@@ -70,7 +70,8 @@ def configuration(path):
         total_time = float (in seconds)
         sampling_rate = int (in Hz)
         drive_freq = float (in Hz)
-
+        Q = float (default: 500)
+        
         roi = float (in seconds)
         window = string (see documentation of scipy.signal.get_window)
         bandpass_filter = int (0: no filtering, 1: FIR filter, 2: IIR filter)
@@ -88,7 +89,7 @@ def configuration(path):
     parameters = {}
 
     # These are the keys for parameters.
-    paraf_keys = ['trigger', 'total_time', 'drive_freq', 'sampling_rate']
+    paraf_keys = ['trigger', 'total_time', 'drive_freq', 'sampling_rate', 'Q']
     procs_keys = ['window']
     procf_keys = ['roi', 'bandpass_filter', 'n_taps', 'filter_bandwidth',
                   'wavelet_analysis', 'wavelet_parameter', 'recombination']
