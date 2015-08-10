@@ -372,10 +372,9 @@ class Pixel(object):
         self.shift = self.fit_result.eval(t=self.tfp)
 
         # If bad fit, default to find_minimum
-        if (self.tfp < 1e-5 or self.tfp > self.total_time-self.roi):
+        if (self.tfp < 1e-5 or self.tfp > self.total_time-self.trigger):
             self.find_minimum()
-                
-                
+
         return
 
     def restore_signal(self):
