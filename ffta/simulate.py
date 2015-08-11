@@ -97,8 +97,8 @@ class Cantilever(object):
         # Calculate reduced driving force and phase in equilibrium.
         self.f0 = self.amp * np.sqrt((self.w0 ** 2 - self.wd ** 2) ** 2 +
                                      4 * self.beta ** 2 * self.wd ** 2)
-        self.delta = np.arctan(np.divide(2 * self.wd * self.beta,
-                                         (self.w0 ** 2 - self.wd ** 2)))
+        self.delta = np.abs(np.arctan(np.divide(2 * self.wd * self.beta,
+                                                self.w0 ** 2 - self.wd ** 2)))
 
         # Initialize force parameters and calculate some others.
         for key, value in force_params.items():
