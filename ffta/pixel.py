@@ -15,7 +15,7 @@ from scipy import interpolate as spi
 from ffta.utils import noise
 from ffta.utils import cwavelet
 from ffta.utils import parab
-from lmfit import Model
+from ffta.utils import fitting
 
 from numba import autojit
 
@@ -341,35 +341,20 @@ class Pixel(object):
         if eidx[0].shape[0] > 0:
             eidx[0][:] += ridx/2
             cut = cut[0:eidx[0][0]]
+       
         self.cut = cut
         t = np.arange(cut.shape[0]) / self.sampling_rate
 
-        # Define the fit function.
-        def __fit_func__(t, A, tau1, tau2):
-
-            decay = np.exp(-t / tau1)
-            relaxation = np.expm1(-t / tau2)
-
-            return -A * decay * relaxation
-
-        # Initial relaxation constant
-        beta = self.Q / (np.pi * self.drive_freq)
-
-        # Define the fitting model.
-        model = Model(__fit_func__)
-        params = model.make_params()
-        params.add('A', value = cut.min(), max = -1.0)
-        params.add('tau1', value = 1e-4, min = 5e-7, max = 0.1)
-        params.add('tau2', value = beta, min = 1e-5, max = 0.1)
+        p_opt = fitting.fit_tfp(self.Q,self.drive_freq,t,cut)
 
         # Fit the cut to the model.
-        self.fit_result = model.fit(cut, params=params, t=t)
-        tau1 = self.fit_result.best_values['tau1']
-        tau2 = self.fit_result.best_values['tau2']
-
+        A = p_opt[0]
+        tau1 = p_opt[1]
+        tau2 = p_opt[2]
+        
         # Analytical minimum of the fit.
         self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
-        self.shift = self.fit_result.eval(t=self.tfp)
+        self.shift = A * np.exp(-self.tfp/tau1) * np.expm1(-t/tau2)
 
         # If bad fit, default to find_minimum
         if (self.tfp < 1e-5 or self.tfp > self.total_time-self.trigger):
