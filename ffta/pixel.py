@@ -15,7 +15,7 @@ from scipy import interpolate as spi
 from ffta.utils import noise
 from ffta.utils import cwavelet
 from ffta.utils import parab
-from ffta.utils import fitting
+from ffta.utils import fitting_c
 
 from numba import autojit
 
@@ -323,9 +323,9 @@ class Pixel(object):
 
     def fit_minimum(self):
         """Fits the frequency shift to an approximate functional form using
-        lmfit with bounded values."""
+        an analytical fit with bounded values."""
 
-        # Calculate the region of interest and if filtered move the fit idx.
+        # Calculate the region of interest and if filtered move the fit index.
         ridx = int(self.roi * self.sampling_rate)
 
         if self.wavelet_analysis:
@@ -336,28 +336,33 @@ class Pixel(object):
 
             fidx = self.tidx + (self.n_taps - 1) / 2
 
+        # Make sure cut starts from 0 and never goes over.
         cut = self.inst_freq[fidx:(fidx + ridx)] - self.inst_freq[fidx]
-        eidx = np.where(cut[ridx/2:]>cut[0])
-        if eidx[0].shape[0] > 0:
-            eidx[0][:] += ridx/2
-            cut = cut[0:eidx[0][0]]
-       
+        eidx = np.where(cut[(ridx / 2):] > cut[0])[0]
+
+        if eidx.shape[0] > 0:
+
+            eidx[:] += ridx/2
+            cut = cut[0:eidx[0]]
+
+        # For diagnostic purposes.
         self.cut = cut
         t = np.arange(cut.shape[0]) / self.sampling_rate
 
-        p_opt = fitting.fit_tfp(self.Q,self.drive_freq,t,cut)
-
         # Fit the cut to the model.
-        A = p_opt[0]
-        tau1 = p_opt[1]
-        tau2 = p_opt[2]
-        
+        popt = fitting_c.fit_bounded(self.Q, self.drive_freq, t, cut)
+
+        A = popt[0]
+        tau1 = popt[1]
+        tau2 = popt[2]
+
         # Analytical minimum of the fit.
         self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
-        self.shift = A * np.exp(-self.tfp/tau1) * np.expm1(-t/tau2)
+        self.shift = A * np.exp(-self.tfp / tau1) * np.expm1(-t / tau2)
 
-        # If bad fit, default to find_minimum
+        # If fit is bad, default to find_minimum.
         if (self.tfp < 1e-5 or self.tfp > self.total_time-self.trigger):
+
             self.find_minimum()
 
         return

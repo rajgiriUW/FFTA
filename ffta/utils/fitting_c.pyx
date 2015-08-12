@@ -1,19 +1,20 @@
 import numpy as np
+cimport numpy as np
 from scipy.optimize import fmin_tnc
 
 
-def ddho_freq(t, A, tau1, tau2):
+def ddho_freq(np.ndarray t, np.float64_t A, np.float64_t tau1, np.float64_t tau2):
 
-    decay = np.exp(-t / tau1)
-    relaxation = np.expm1(-t / tau2)
+    cdef np.ndarray decay = np.exp(-t / tau1)
+    cdef np.ndarray relaxation = np.expm1(-t / tau2)
+    cdef np.ndarray result = -A * decay * relaxation
 
-    return -A * decay * relaxation
+    return result
 
-
-def fit_bounded(Q, drive_freq, t, inst_freq):
+def fit_bounded(np.float64_t Q, np.float64_t drive_freq, np.ndarray t, np.ndarray inst_freq):
 
         # Initial guess for relaxation constant.
-        inv_beta = Q / (np.pi * drive_freq)
+        cdef np.float64_t inv_beta = Q / (np.pi * drive_freq)
 
         # Cost function to minimize.
         cost = lambda p: np.sum((ddho_freq(t, *p) - inst_freq) ** 2)
