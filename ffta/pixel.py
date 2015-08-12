@@ -15,7 +15,6 @@ from scipy import interpolate as spi
 from ffta.utils import noise
 from ffta.utils import cwavelet
 from ffta.utils import parab
-from ffta.utils import fitting_c
 
 from numba import autojit
 
@@ -113,12 +112,11 @@ class Pixel(object):
 
     """
 
-    def __init__(self, signal_array, params, fit=False):
+    def __init__(self, signal_array, params):
 
         # Create parameter attributes for optional parameters.
         # They will be overwritten by following for loop if they exist.
         self.n_taps = 1799
-        self.Q = 500
         self.filter_bandwidth = 5000
         self.wavelet_analysis = False
         self.wavelet_parameter = 5
@@ -145,9 +143,6 @@ class Pixel(object):
         self.tfp = None
         self.shift = None
         self.cwt_matrix = None
-
-        # Assign the fit parameter.
-        self.fit = fit
 
         return
 
@@ -321,52 +316,6 @@ class Pixel(object):
 
         return
 
-    def fit_minimum(self):
-        """Fits the frequency shift to an approximate functional form using
-        an analytical fit with bounded values."""
-
-        # Calculate the region of interest and if filtered move the fit index.
-        ridx = int(self.roi * self.sampling_rate)
-
-        if self.wavelet_analysis:
-
-            fidx = self.tidx
-
-        else:
-
-            fidx = self.tidx + (self.n_taps - 1) / 2
-
-        # Make sure cut starts from 0 and never goes over.
-        cut = self.inst_freq[fidx:(fidx + ridx)] - self.inst_freq[fidx]
-        eidx = np.where(cut[(ridx / 2):] > cut[0])[0]
-
-        if eidx.shape[0] > 0:
-
-            eidx[:] += ridx/2
-            cut = cut[0:eidx[0]]
-
-        # For diagnostic purposes.
-        self.cut = cut
-        t = np.arange(cut.shape[0]) / self.sampling_rate
-
-        # Fit the cut to the model.
-        popt = fitting_c.fit_bounded(self.Q, self.drive_freq, t, cut)
-
-        A = popt[0]
-        tau1 = popt[1]
-        tau2 = popt[2]
-
-        # Analytical minimum of the fit.
-        self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
-        self.shift = A * np.exp(-self.tfp / tau1) * np.expm1(-t / tau2)
-
-        # If fit is bad, default to find_minimum.
-        if (self.tfp < 1e-5 or self.tfp > self.total_time-self.trigger):
-
-            self.find_minimum()
-
-        return
-
     def restore_signal(self):
         """Restores the signal length and position of trigger to original
         values."""
@@ -508,14 +457,7 @@ class Pixel(object):
                 self.inst_freq = self.inst_freq * -1
 
             # Find where the minimum is.
-
-            if self.fit:
-
-                self.fit_minimum()
-
-            else:
-
-                self.find_minimum()
+            self.find_minimum()
 
             # Restore the length.
             self.restore_signal()
