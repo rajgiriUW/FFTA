@@ -113,7 +113,7 @@ class Pixel(object):
 
     """
 
-    def __init__(self, signal_array, params, fit=True):
+    def __init__(self, signal_array, params, fit=False):
 
         # Create parameter attributes for optional parameters.
         # They will be overwritten by following for loop if they exist.
