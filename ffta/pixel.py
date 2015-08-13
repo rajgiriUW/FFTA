@@ -358,12 +358,12 @@ class Pixel(object):
 
         # Analytical minimum of the fit.
         self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
-        self.shift = A * np.exp(-self.tfp / tau1) * np.expm1(-t / tau2)
+        self.shift = A * np.exp(-self.tfp / tau1) * np.expm1(-self.tfp / tau2)
 
         # If fit is bad, default to find_minimum.
         if (self.tfp < 1e-5 or self.tfp > self.total_time-self.trigger):
-
-            self.find_minimum()
+            pass
+            #self.find_minimum()
 
         return
 
