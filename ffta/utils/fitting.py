@@ -21,9 +21,9 @@ def fit_bounded(Q, drive_freq, t, inst_freq):
         # bounded optimization using scipy.minimize
         pinit = [inst_freq.min(), 1e-4, inv_beta]
 
-        popt, n_eval, rcode = fmin_tnc(cost, pinit, approx_grad=True,
-                                       bounds=[(None, -1.0),
+        popt, n_eval, rcode = fmin_tnc(cost, pinit, approx_grad=True,disp=0,
+                                       bounds=[(-10000, -1.0),
                                                (5e-7, 0.1),
-                                               (1e-5, 0.1)])
+                                               (1e-4, 0.1)])
 
         return popt

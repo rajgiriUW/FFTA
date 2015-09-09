@@ -15,7 +15,7 @@ from scipy import interpolate as spi
 from ffta.utils import noise
 from ffta.utils import cwavelet
 from ffta.utils import parab
-from ffta.utils import fitting_c
+from ffta.utils import fitting
 
 from numba import autojit
 
@@ -345,12 +345,10 @@ class Pixel(object):
             eidx[:] += ridx/2
             cut = cut[0:eidx[0]]
 
-        # For diagnostic purposes.
-        self.cut = cut
         t = np.arange(cut.shape[0]) / self.sampling_rate
 
         # Fit the cut to the model.
-        popt = fitting_c.fit_bounded(self.Q, self.drive_freq, t, cut)
+        popt = fitting.fit_bounded(self.Q, self.drive_freq, t, cut)
 
         A = popt[0]
         tau1 = popt[1]
@@ -358,12 +356,21 @@ class Pixel(object):
 
         # Analytical minimum of the fit.
         self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
-        self.shift = A * np.exp(-self.tfp / tau1) * np.expm1(-self.tfp / tau2)
+        self.shift = -A * np.exp(-self.tfp / tau1) * np.expm1(-self.tfp / tau2)
+
+        # For diagnostic purposes.
+        self.cut = cut
+        self.popt = popt
+        self.best_fit = -A * np.exp(-t / tau1) * np.expm1(-t / tau2 )
+
 
         # If fit is bad, default to find_minimum.
         if (self.tfp < 1e-5 or self.tfp > self.total_time-self.trigger):
-            pass
-            #self.find_minimum()
+            #if (tau1 < 5.5e-7 and tau2 > 0.9e-1):     
+            #    self.tfp = self.total_time - self.trigger         
+            #else:
+                pass
+                #self.find_minimum()
 
         return
 
