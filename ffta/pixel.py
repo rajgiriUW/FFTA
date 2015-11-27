@@ -236,11 +236,11 @@ class Pixel(object):
         freq_high = (self.drive_freq + bw_half) / nyq_rate
 
         # Do a high-pass filtfilt operation.
-        b, a = sps.butter(9, freq_low, btype='high')
+        b, a = sps.butter(5, freq_low, btype='high')
         self.signal = sps.filtfilt(b, a, self.signal)
 
         # Do a low-pass filtfilt operation.
-        b, a = sps.butter(9, freq_high, btype='low')
+        b, a = sps.butter(5, freq_high, btype='low')
         self.signal = sps.filtfilt(b, a, self.signal)
 
         return
@@ -321,8 +321,10 @@ class Pixel(object):
         values."""
 
         # Difference between current and original values.
-        d_trig = self._tidx_orig - self.tidx
-        d_points = self._n_points_orig - self.n_points
+        d_trig = int(self._tidx_orig - self.tidx)
+        d_points = int(self._n_points_orig - self.n_points)
+
+        self.d_trig = d_trig
 
         # Check if the signal length can accomodate the shift or not.
         if d_trig >= d_points:
