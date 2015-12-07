@@ -24,6 +24,6 @@ def fit_bounded(Q, drive_freq, t, inst_freq):
         popt, n_eval, rcode = fmin_tnc(cost, pinit, approx_grad=True,disp=0,
                                        bounds=[(-10000, -1.0),
                                                (5e-7, 0.1),
-                                               (1e-4, 0.1)])
+                                               (1e-5, 0.1)])
 
         return popt

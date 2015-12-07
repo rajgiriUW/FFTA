@@ -15,11 +15,12 @@ import argparse as ap
 import numpy as np
 import ffta.line as line
 from ffta.utils import load
+import badpixels
 from progressbar import ProgressBar, ETA, Percentage
 
 # Plotting imports
 import matplotlib as mpl
-mpl.use('WxAgg')
+#mpl.use('WxAgg')
 from matplotlib import pyplot as plt
 from matplotlib import gridspec as gs
 
@@ -57,6 +58,7 @@ def main(argv=None):
                         version='FFtr-EFM 2.0 Release Candidate')
     args = parser.parse_args(argv)
 
+   
     # Scan the path for .ibw and .cfg files.
     path = args.path
     filelist = os.listdir(path)
@@ -69,6 +71,9 @@ def main(argv=None):
 
     # Load parameters from .cfg file.
     n_pixels, parameters = load.configuration(config_file)
+
+    print 'Recombination: ', parameters['recombination']
+    print 'ROI: ', parameters['roi']
 
     if not args.p:
 
@@ -135,7 +140,7 @@ def main(argv=None):
 
             pbar.update(i + 1)  # Update the progress bar.
 
-        plt.close(fig)
+        #plt.close(fig)
         pbar.finish()  # Finish the progress bar.
 
     elif args.p:
@@ -174,10 +179,15 @@ def main(argv=None):
 
         print 'It took {0:.1f} seconds.'.format(elapsed_time)
 
+    # Filter bad pixels
+    tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)
+    tfp_fixed = np.array(tfp_fixed)
+
     # Save csv files.
     os.chdir(path)
     np.savetxt('tfp.csv', np.fliplr(tfp).T, delimiter=',')
     np.savetxt('shift.csv', np.fliplr(shift).T, delimiter=',')
+    np.savetxt('tfp_fixed.csv', np.fliplr(tfp_fixed).T, delimiter=',')
 
     return
 

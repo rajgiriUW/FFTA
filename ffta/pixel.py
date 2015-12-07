@@ -117,7 +117,7 @@ class Pixel(object):
 
         # Create parameter attributes for optional parameters.
         # They will be overwritten by following for loop if they exist.
-        self.n_taps = 1799
+        self.n_taps = 1499
         self.Q = 500
         self.filter_bandwidth = 5000
         self.wavelet_analysis = False
@@ -136,6 +136,7 @@ class Pixel(object):
 
         # Keep the original values for restoring the signal properties.
         self._tidx_orig = self.tidx
+        self.tidx_orig = self.tidx
         self._n_points_orig = signal_array.shape[0]
 
         # Initialize attributes that are going to be assigned later.
@@ -148,6 +149,9 @@ class Pixel(object):
 
         # Assign the fit parameter.
         self.fit = fit
+        
+        # Used in the improved fitting checks in fit_minimum
+        self.correction_factor = 0
 
         return
 
@@ -224,6 +228,8 @@ class Pixel(object):
                           window='parzen')
 
         self.signal = sps.fftconvolve(self.signal, taps, mode='same')
+        
+        # Shifts trigger due to causal nature of FIR filter        
         self.tidx -= (self.n_taps - 1) / 2
 
         return
@@ -298,6 +304,15 @@ class Pixel(object):
 
         return
 
+    def calculate_amplitude(self):
+        """Calculates the amplitude of the analytic signal. Uses pre-filter
+        signal to do this."""
+        self.signal_orig = self.signal_array.mean(axis=1)
+        self.signal_orig = sps.hilbert(self.signal_orig)
+        self.amp = np.abs(self.signal_orig)
+        
+        return
+
     def find_minimum(self):
         """Finds when the minimum of instantenous frequency happens."""
 
@@ -328,13 +343,7 @@ class Pixel(object):
         # Calculate the region of interest and if filtered move the fit index.
         ridx = int(self.roi * self.sampling_rate)
 
-        if self.wavelet_analysis:
-
-            fidx = self.tidx
-
-        else:
-
-            fidx = self.tidx + (self.n_taps - 1) / 2
+        fidx = self.tidx
 
         # Make sure cut starts from 0 and never goes over.
         cut = self.inst_freq[fidx:(fidx + ridx)] - self.inst_freq[fidx]
@@ -364,14 +373,20 @@ class Pixel(object):
         self.best_fit = -A * np.exp(-t / tau1) * np.expm1(-t / tau2 )
 
 
-        # If fit is bad, default to find_minimum.
-        if (self.tfp < 1e-5 or self.tfp > self.total_time-self.trigger):
-            #if (tau1 < 5.5e-7 and tau2 > 0.9e-1):     
-            #    self.tfp = self.total_time - self.trigger         
-            #else:
-                pass
-                #self.find_minimum()
-
+        # If fit is bad, scale back trigger and try again, sometimes happens
+#        if (self.tfp < 5e-5 or self.tfp > self.total_time-self.trigger):
+#            self.correction_factor = self.correction_factor + 1
+#            if self.correction_factor is 1:
+#                self.tidx = 0.9*self.tidx
+#                self.fit_minimum()
+#            else:
+#                self.tfp = self.total_time - self.trigger
+#                self.tfp = self.tfp + (0.1 * self.tidx / self.sampling_rate)
+#
+#        if self.correction_factor:
+#            self.trigger = self.trigger / 0.9
+#            self.tfp = self.tfp - (0.1 * self.tidx / self.sampling_rate)
+            
         return
 
     def restore_signal(self):
@@ -470,13 +485,13 @@ class Pixel(object):
             self.remove_dc()
 
             # Phase-lock signals.
-            self.phase_lock()
+            #self.phase_lock()
 
             # Average signals.
             self.average()
 
             # Remove DC component again, introduced by phase-locking.
-            self.remove_dc()
+            #self.remove_dc()
 
             # Check the drive frequency.
             self.check_drive_freq()
