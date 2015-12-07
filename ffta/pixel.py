@@ -149,9 +149,6 @@ class Pixel(object):
 
         # Assign the fit parameter.
         self.fit = fit
-        
-        # Used in the improved fitting checks in fit_minimum
-        self.correction_factor = 0
 
         return
 
@@ -371,22 +368,7 @@ class Pixel(object):
         self.cut = cut
         self.popt = popt
         self.best_fit = -A * np.exp(-t / tau1) * np.expm1(-t / tau2 )
-
-
-        # If fit is bad, scale back trigger and try again, sometimes happens
-#        if (self.tfp < 5e-5 or self.tfp > self.total_time-self.trigger):
-#            self.correction_factor = self.correction_factor + 1
-#            if self.correction_factor is 1:
-#                self.tidx = 0.9*self.tidx
-#                self.fit_minimum()
-#            else:
-#                self.tfp = self.total_time - self.trigger
-#                self.tfp = self.tfp + (0.1 * self.tidx / self.sampling_rate)
-#
-#        if self.correction_factor:
-#            self.trigger = self.trigger / 0.9
-#            self.tfp = self.tfp - (0.1 * self.tidx / self.sampling_rate)
-            
+        
         return
 
     def restore_signal(self):
