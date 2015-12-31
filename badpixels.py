@@ -52,6 +52,7 @@ def find_bad_pixels(signal_array, threshold):
     return filtered_array, bad_pixel_list
     
 def remove_bad_pixels(signal_array, filtered_array, bad_pixel_list):
+    """ Removes bad pixels from the array"""
     
     fixed_array = np.copy(signal_array)    
     
