@@ -376,8 +376,8 @@ class Pixel(object):
         values."""
 
         # Difference between current and original values.
-        d_trig = self._tidx_orig - self.tidx
-        d_points = self._n_points_orig - self.n_points
+        d_trig = int(self._tidx_orig - self.tidx)
+        d_points = int(self._n_points_orig - self.n_points)
 
         # Check if the signal length can accomodate the shift or not.
         if d_trig >= d_points:
