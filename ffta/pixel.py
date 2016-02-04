@@ -367,8 +367,42 @@ class Pixel(object):
         # For diagnostic purposes.
         self.cut = cut
         self.popt = popt
+        self.best_fit = -A * np.exp(-t / tau1) * np.expm1(-t / tau2)
+
+        return
+
+    def fit_phase(self):
+        """Fits the phase to an approximate functional form using an
+        analytical fit with bounded values."""
+
+        # Calculate the region of interest and if filtered move the fit index.
+        ridx = int(self.roi * self.sampling_rate)
+
+        fidx = self.tidx
+
+        # Make sure cut starts from 0 and never goes over.
+        # -1 on cut is because of sign error in generating phase
+        cut = -1*(self.phase[fidx:(fidx + ridx)] - self.phase[fidx])
+        t = np.arange(cut.shape[0]) / self.sampling_rate
+
+        # Fit the cut to the model.
+        popt = fitting.fit_bounded_phase(self.Q, self.drive_freq, t, cut)
+
+        A = popt[0]
+        tau1 = popt[1]
+        tau2 = popt[2]
+
+        # Analytical minimum of the fit.
+        self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
+        self.shift = -A * np.exp(-self.tfp / tau1) * np.expm1(-self.tfp / tau2)
+
+        # For diagnostic purposes.
+        self.cut = cut
+        self.popt = popt
         self.best_fit = -A * np.exp(-t / tau1) * np.expm1(-t / tau2 )
-        
+        postfactor = (tau2 / (tau1 + tau2)) * np.exp(-t / tau2) - 1
+        self.best_phase = A * tau1 * np.exp(-t / tau1)*postfactor + A * tau1 * (1 - tau2/(tau1 + tau2))
+
         return
 
     def restore_signal(self):
