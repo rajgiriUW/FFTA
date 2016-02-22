@@ -80,6 +80,7 @@ def configuration(path):
         wavelet_analysis = bool (0: Hilbert method, 1: Wavelet Method)
         wavelet_parameter = int (default: 5)
         recombination = bool (0: FF-trEFMm, 1: Recombination)
+        phase_fitting = bool (0: frequency fitting, 1: phase fitting)
 
     """
 
@@ -92,7 +93,8 @@ def configuration(path):
     paraf_keys = ['trigger', 'total_time', 'drive_freq', 'sampling_rate', 'Q']
     procs_keys = ['window']
     procf_keys = ['roi', 'bandpass_filter', 'n_taps', 'filter_bandwidth',
-                  'wavelet_analysis', 'wavelet_parameter', 'recombination']
+                  'wavelet_analysis', 'wavelet_parameter', 'recombination',
+                  'phase_fitting']
 
     # Check if the configuration file has n_pixel,
     # if not assume single pixel.

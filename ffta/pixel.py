@@ -47,7 +47,8 @@ class Pixel(object):
         n_taps = integer (default: 1799)
         wavelet_analysis = bool (0: Hilbert method, 1: Wavelet Method)
         wavelet_parameter = int (default: 5)
-        recombination = bool (0: FF-trEFMm, 1: Recombination)
+        recombination = bool (0: Data are for Charging up, 1: Recombination)
+        fit_phase = bool (0: fit to frequency, 1: fit to phase)
 
     Attributes
     ----------
@@ -123,6 +124,7 @@ class Pixel(object):
         self.wavelet_analysis = False
         self.wavelet_parameter = 5
         self.recombination = False
+        self.phase_fitting = False
 
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
@@ -282,7 +284,7 @@ class Pixel(object):
 
             # Remove the fit from phase.
             self.phase -= (xfit[0] * np.arange(self.n_points)) + xfit[1]
-
+            
         return
 
     def calculate_inst_freq(self):
@@ -333,7 +335,7 @@ class Pixel(object):
 
         return
 
-    def fit_minimum(self):
+    def fit_freq(self):
         """Fits the frequency shift to an approximate functional form using
         an analytical fit with bounded values."""
 
@@ -394,7 +396,7 @@ class Pixel(object):
 
         # Analytical minimum of the fit.
         self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
-        self.shift = -A * np.exp(-self.tfp / tau1) * np.expm1(-self.tfp / tau2)
+        self.shift = A * np.exp(-self.tfp / tau1) * np.expm1(-self.tfp / tau2)
 
         # For diagnostic purposes.
         self.cut = cut
@@ -546,11 +548,16 @@ class Pixel(object):
                 self.inst_freq = self.inst_freq * -1
 
             # Find where the minimum is.
-
             if self.fit:
 
-                self.fit_minimum()
-
+                if self.phase_fitting:
+                    
+                    self.fit_phase()
+                
+                else:
+                    
+                    self.fit_freq()
+                
             else:
 
                 self.find_minimum()
@@ -567,4 +574,10 @@ class Pixel(object):
 
             logging.exception(exception, exc_info=True)
 
-        return self.tfp, self.shift, self.inst_freq
+        if self.phase_fitting:
+
+            return self.tfp, self.shift, self.phase
+            
+        else:
+
+            return self.tfp, self.shift, self.inst_freq

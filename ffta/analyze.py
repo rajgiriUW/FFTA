@@ -58,7 +58,7 @@ def main(argv=None):
                         version='FFtr-EFM 2.0 Release Candidate')
     args = parser.parse_args(argv)
 
-   
+
     # Scan the path for .ibw and .cfg files.
     path = args.path
     filelist = os.listdir(path)
@@ -73,6 +73,8 @@ def main(argv=None):
     n_pixels, parameters = load.configuration(config_file)
 
     print 'Recombination: ', parameters['recombination']
+    if parameters.has_key('phase_fitting'):    
+        print 'Phase fitting: ', parameters['phase_fitting']
     print 'ROI: ', parameters['roi']
 
     if not args.p:
@@ -80,6 +82,7 @@ def main(argv=None):
         # Initialize arrays.
         tfp = np.zeros((len(data_files), n_pixels))
         shift = np.zeros((len(data_files), n_pixels))
+        tfpphase = np.zeros((len(data_files), n_pixels))
 
         # Initialize plotting.
         plt.ion()
@@ -114,6 +117,8 @@ def main(argv=None):
             signal_array = load.signal(data_file)
             line_inst = line.Line(signal_array, parameters, n_pixels)
             tfp[i, :], shift[i, :], _ = line_inst.analyze()
+#            line_inst = line.Line(signal_array, parameters, n_pixels,fitphase=True)
+#            tfpphase[i, :], _, _ = line_inst.analyze()
 
             tfp_image = tfp_ax.imshow(tfp * 1e6, cmap='afmhot', **kwargs)
             shift_image = shift_ax.imshow(shift, cmap='cubehelix', **kwargs)
