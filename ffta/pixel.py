@@ -1,9 +1,9 @@
 """pixel.py: Contains pixel class."""
 # pylint: disable=E1101,R0902,C0103
-__author__ = "Durmus U. Karatay"
-__copyright__ = "Copyright 2014, Ginger Lab"
-__maintainer__ = "Durmus U. Karatay"
-__email__ = "ukaratay@uw.edu"
+__author__ = "Durmus U. Karatay, Rajiv Giridharagopal"
+__copyright__ = "Copyright 2016, Ginger Lab"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 __status__ = "Development"
 
 import logging
@@ -16,6 +16,7 @@ from ffta.utils import noise
 from ffta.utils import cwavelet
 from ffta.utils import parab
 from ffta.utils import fitting
+from ffta.utils import dwavelet
 
 from numba import autojit
 
@@ -209,6 +210,11 @@ class Pixel(object):
         self.signal *= sps.get_window(self.window, self.n_points)
 
         return
+        
+    def dwt_denoise(self):
+        """Uses DWT to denoise the signal prior to processing."""
+        
+        self.signal = dwavelet.dwt_denoise(self.signal,13e3,5e6,10e6)
 
     def fir_filter(self):
         """Filters signal with a FIR bandpass filter."""
@@ -224,7 +230,7 @@ class Pixel(object):
 
         # Create taps using window method.
         taps = sps.firwin(self.n_taps, band, pass_zero=False,
-                          window='parzen')
+                          window='blackman')
 
         self.signal = sps.fftconvolve(self.signal, taps, mode='same')
         
@@ -272,8 +278,8 @@ class Pixel(object):
         if correct_slope:
 
             # Remove the drive from phase.
-            self.phase -= (2 * np.pi * self.drive_freq *
-                           np.arange(self.n_points) / self.sampling_rate)
+            #self.phase -= (2 * np.pi * self.drive_freq *
+            #               np.arange(self.n_points) / self.sampling_rate)
 
             # A curve fit on the initial part to make sure that it worked.
             start = int(0.3 * self.tidx)
@@ -299,6 +305,7 @@ class Pixel(object):
                                            delta=dtime)
 
         # Bring trigger to zero.
+        self.tidx = int(self.tidx)
         self.inst_freq -= self.inst_freq[self.tidx]
 
         return
@@ -346,12 +353,13 @@ class Pixel(object):
 
         # Make sure cut starts from 0 and never goes over.
         cut = self.inst_freq[fidx:(fidx + ridx)] - self.inst_freq[fidx]
+
         eidx = np.where(cut[(ridx / 2):] > cut[0])[0]
 
         if eidx.shape[0] > 0:
 
             eidx[:] += ridx/2
-            cut = cut[0:eidx[0]]
+  #          cut = cut[0:eidx[0]]
 
         t = np.arange(cut.shape[0]) / self.sampling_rate
 
@@ -399,10 +407,11 @@ class Pixel(object):
         self.shift = A * np.exp(-self.tfp / tau1) * np.expm1(-self.tfp / tau2)
 
         # For diagnostic purposes.
+        postfactor = (tau2 / (tau1 + tau2)) * np.exp(-t / tau2) - 1
+
         self.cut = cut
         self.popt = popt
         self.best_fit = -A * np.exp(-t / tau1) * np.expm1(-t / tau2 )
-        postfactor = (tau2 / (tau1 + tau2)) * np.exp(-t / tau2) - 1
         self.best_phase = A * tau1 * np.exp(-t / tau1)*postfactor + A * tau1 * (1 - tau2/(tau1 + tau2))
 
         return
@@ -510,6 +519,9 @@ class Pixel(object):
 
             # Remove DC component again, introduced by phase-locking.
             #self.remove_dc()
+
+            # DWT Denoise
+            self.dwt_denoise()
 
             # Check the drive frequency.
             self.check_drive_freq()
