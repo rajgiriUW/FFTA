@@ -214,7 +214,9 @@ class Pixel(object):
     def dwt_denoise(self):
         """Uses DWT to denoise the signal prior to processing."""
         
-        self.signal = dwavelet.dwt_denoise(self.signal,13e3,5e6,10e6)
+        rate = self.sampling_rate
+        lpf = self.drive_freq * 0.1
+        self.signal = dwavelet.dwt_denoise(self.signal,lpf,rate/2,rate)
 
     def fir_filter(self):
         """Filters signal with a FIR bandpass filter."""
@@ -520,11 +522,11 @@ class Pixel(object):
             # Remove DC component again, introduced by phase-locking.
             #self.remove_dc()
 
-            # DWT Denoise
-            self.dwt_denoise()
-
             # Check the drive frequency.
             self.check_drive_freq()
+
+            # DWT Denoise
+            self.dwt_denoise()
 
             if self.wavelet_analysis:
 
