@@ -18,7 +18,8 @@ setup(
     install_requires=['numpy>=1.9.2',
                       'scipy>=0.15.1',
                       'igor>=0.2',
-                      'progressbar>=2.2'],
+                      'progressbar>=2.2',
+					  'pywavelets>=0.3.0'],
 
     entry_points={
         'console_scripts': [
