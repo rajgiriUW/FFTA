@@ -74,7 +74,9 @@ def main(argv=None):
 
     print 'Recombination: ', parameters['recombination']
     if parameters.has_key('phase_fitting'):    
+
         print 'Phase fitting: ', parameters['phase_fitting']
+
     print 'ROI: ', parameters['roi']
 
     if not args.p:
@@ -82,7 +84,6 @@ def main(argv=None):
         # Initialize arrays.
         tfp = np.zeros((len(data_files), n_pixels))
         shift = np.zeros((len(data_files), n_pixels))
-        tfpphase = np.zeros((len(data_files), n_pixels))
 
         # Initialize plotting.
         plt.ion()
