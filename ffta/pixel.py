@@ -19,7 +19,7 @@ from ffta.utils import fitting
 from ffta.utils import dwavelet
 
 from numba import autojit
-
+from utils.peakdetect import get_peaks
 
 class Pixel(object):
     """
@@ -126,7 +126,7 @@ class Pixel(object):
         self.wavelet_parameter = 5
         self.recombination = False
         self.phase_fitting = False
-
+        self.EMD_analysis = True
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
 
@@ -486,6 +486,45 @@ class Pixel(object):
         self.inst_freq = inst_freq - inst_freq[self.tidx]
 
         return
+        
+    def EMD_inst_freq(self):
+        """ Generates the instantaneous frequency via Empirical Mode 
+        Decomposiiton"""
+        x= self.signal
+        imfs = []
+        n=0
+        tt = np.arange(0,len(x),1)
+        while n < 1:
+            x1 = x
+            sd = 1
+            while sd > .1:
+                maxpeaks, minpeaks = get_peaks(x1)
+                
+                maxpeaks = list(maxpeaks)
+                minpeaks = list(minpeaks)
+                
+                fmax = spi.UnivariateSpline(maxpeaks, x1[maxpeaks],k=3)
+                fmin = spi.UnivariateSpline(minpeaks, x1[minpeaks],k=3)
+                fmax.set_smoothing_factor(0)
+                fmin.set_smoothing_factor(0)
+                          
+                
+                smax = fmax(tt)
+                smin = fmin(tt) 
+                smean = (smax + smin) / 2.0
+                        
+                x2 = x1 - smean
+                
+                sd = np.sum((x1 - x2)**2) / np.sum(x1**2)
+
+                x1 = x2
+            
+            imfs.append(x1)
+            x = x - x1
+            n += 1
+        hbert = np.unwrap(np.angle(sps.hilbert(imfs[0])))
+        
+        self.inst_freq = sps.savgol_filter(hbert, 1999, 1, deriv=1, delta=1/self.sampling_rate) / (2*np.pi)
 
     def analyze(self):
         """
@@ -527,8 +566,12 @@ class Pixel(object):
 
             # DWT Denoise
             self.dwt_denoise()
+            
+            if self.EMD_analysis:
+                
+                self.EMD_inst_freq()
 
-            if self.wavelet_analysis:
+            elif self.wavelet_analysis:
 
                 # Calculate instantenous frequency using wavelet transform.
                 self.calculate_cwt_freq()
