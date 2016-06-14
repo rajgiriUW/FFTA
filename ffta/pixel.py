@@ -331,6 +331,7 @@ class Pixel(object):
         # Define a spline to be used in finding minimum.
         x = np.arange(ridx)
         y = cut
+
         func = spi.UnivariateSpline(x, y, k=4, ext=3)
 
         # Find the minimum of the spline using TNC method.
@@ -493,15 +494,13 @@ class Pixel(object):
         x= self.signal
         imfs = []
         n=0
+        savgolc = self.n_taps
         tt = np.arange(0,len(x),1)
         while n < 1:
             x1 = x
             sd = 1
             while sd > .1:
-                maxpeaks, minpeaks = get_peaks(x1)
-                
-                maxpeaks = list(maxpeaks)
-                minpeaks = list(minpeaks)
+                maxpeaks, minpeaks = get_peaks(x1,2)
                 
                 fmax = spi.UnivariateSpline(maxpeaks, x1[maxpeaks],k=3)
                 fmin = spi.UnivariateSpline(minpeaks, x1[minpeaks],k=3)
@@ -523,9 +522,16 @@ class Pixel(object):
             x = x - x1
             n += 1
         hbert = np.unwrap(np.angle(sps.hilbert(imfs[0])))
-        
-        self.inst_freq = sps.savgol_filter(hbert, 1999, 1, deriv=1, delta=1/self.sampling_rate) / (2*np.pi)
 
+        diff= sps.savgol_filter(hbert, savgolc, 1, deriv=1, delta=1/self.sampling_rate) / (2*np.pi)
+        diff-= self.drive_freq
+
+        diff = np.pad(diff, ((savgolc-1)/2,0),'constant')
+        diff = diff[:len(self.signal)]
+
+        self.inst_freq = diff
+
+        
     def analyze(self):
         """
         Analyzes the pixel with the given method.
@@ -559,16 +565,16 @@ class Pixel(object):
             self.average()
 
             # Remove DC component again, introduced by phase-locking.
-            #self.remove_dc()
+            self.remove_dc()
 
             # Check the drive frequency.
             self.check_drive_freq()
 
             # DWT Denoise
-            self.dwt_denoise()
+            #self.dwt_denoise()
             
             if self.EMD_analysis:
-                
+
                 self.EMD_inst_freq()
 
             elif self.wavelet_analysis:
@@ -622,9 +628,8 @@ class Pixel(object):
             # Restore the length.
             self.restore_signal()
 
-        # If caught any exception, set everything to zero and log it.
+            # If caught any exception, set everything to zero and log it.
         except Exception as exception:
-
             self.tfp = 0
             self.shift = 0
             self.inst_freq = np.zeros(self._n_points_orig)
