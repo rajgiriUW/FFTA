@@ -494,13 +494,13 @@ class Pixel(object):
         x= self.signal
         imfs = []
         n=0
-        savgolc = self.n_taps
+        savgolc = int(self.n_taps)
         tt = np.arange(0,len(x),1)
         while n < 1:
             x1 = x
             sd = 1
             while sd > .1:
-                maxpeaks, minpeaks = get_peaks(x1,2)
+                maxpeaks, minpeaks = get_peaks(x1)
                 
                 fmax = spi.UnivariateSpline(maxpeaks, x1[maxpeaks],k=3)
                 fmin = spi.UnivariateSpline(minpeaks, x1[minpeaks],k=3)
