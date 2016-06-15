@@ -26,8 +26,11 @@ class Pixel(object):
     Signal Processing to Extract Time-to-First-Peak.
 
     Extracts Time-to-First-Peak (tFP) from digitized Fast-Free Time-Resolved
-    Electrostatic Force Microscopy (FF-trEFM) signals [1]_. It includes two
-    types of frequency analysis: Hilbert Transform and Wavelet Transform.
+    Electrostatic Force Microscopy (FF-trEFM) signals [1-2]. It includes a few
+    types of frequency analysis:
+        a) Hilbert Transform
+        b) Wavelet Transform
+        c) Hilbert-Huang Transform (EMD)
 
     Parameters
     ----------
@@ -99,6 +102,9 @@ class Pixel(object):
     .. [1] Giridharagopal R, Rayermann GE, Shao G, et al. Submicrosecond time
        resolution atomic force microscopy for probing nanoscale dynamics.
        Nano Lett. 2012;12(2):893-8.
+       [2] Karatay D, Harrison JA, et al. Fast time-resolved electrostatic
+       force microscopy: Achieving sub-cycle time resolution. Rev Sci Inst.
+       2016;87(5):053702
 
     Examples
     --------
@@ -127,6 +133,7 @@ class Pixel(object):
         self.recombination = False
         self.phase_fitting = False
         self.EMD_analysis = True
+
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
 
@@ -210,10 +217,10 @@ class Pixel(object):
         self.signal *= sps.get_window(self.window, self.n_points)
 
         return
-        
+
     def dwt_denoise(self):
         """Uses DWT to denoise the signal prior to processing."""
-        
+
         rate = self.sampling_rate
         lpf = self.drive_freq * 0.1
         self.signal = dwavelet.dwt_denoise(self.signal,lpf,rate/2,rate)
@@ -235,8 +242,8 @@ class Pixel(object):
                           window='blackman')
 
         self.signal = sps.fftconvolve(self.signal, taps, mode='same')
-        
-        # Shifts trigger due to causal nature of FIR filter        
+
+        # Shifts trigger due to causal nature of FIR filter
         self.tidx -= (self.n_taps - 1) / 2
 
         return
@@ -292,7 +299,7 @@ class Pixel(object):
 
             # Remove the fit from phase.
             self.phase -= (xfit[0] * np.arange(self.n_points)) + xfit[1]
-            
+
         return
 
     def calculate_inst_freq(self):
@@ -318,7 +325,7 @@ class Pixel(object):
         self.signal_orig = self.signal_array.mean(axis=1)
         self.signal_orig = sps.hilbert(self.signal_orig)
         self.amp = np.abs(self.signal_orig)
-        
+
         return
 
     def find_minimum(self):
@@ -369,9 +376,7 @@ class Pixel(object):
         # Fit the cut to the model.
         popt = fitting.fit_bounded(self.Q, self.drive_freq, t, cut)
 
-        A = popt[0]
-        tau1 = popt[1]
-        tau2 = popt[2]
+        A, tau1, tau2 = popt
 
         # Analytical minimum of the fit.
         self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
@@ -401,9 +406,7 @@ class Pixel(object):
         # Fit the cut to the model.
         popt = fitting.fit_bounded_phase(self.Q, self.drive_freq, t, cut)
 
-        A = popt[0]
-        tau1 = popt[1]
-        tau2 = popt[2]
+        A, tau1, tau2 = popt
 
         # Analytical minimum of the fit.
         self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
@@ -487,43 +490,50 @@ class Pixel(object):
         self.inst_freq = inst_freq - inst_freq[self.tidx]
 
         return
-        
+
     def EMD_inst_freq(self):
-        """ Generates the instantaneous frequency via Empirical Mode 
-        Decomposiiton"""
+        """Generates the instantaneous frequency via Empirical Mode
+        Decomposition"""
+
         x= self.signal
         imfs = []
         n=0
         savgolc = int(self.n_taps)
-        tt = np.arange(0,len(x),1)
+        tt = np.arange(0, len(x), 1)
+
         while n < 1:
+
             x1 = x
             sd = 1
+
             while sd > .1:
+
                 maxpeaks, minpeaks = get_peaks(x1)
-                
-                fmax = spi.UnivariateSpline(maxpeaks, x1[maxpeaks],k=3)
-                fmin = spi.UnivariateSpline(minpeaks, x1[minpeaks],k=3)
+
+                fmax = spi.UnivariateSpline(maxpeaks, x1[maxpeaks], k=3)
+                fmin = spi.UnivariateSpline(minpeaks, x1[minpeaks], k=3)
                 fmax.set_smoothing_factor(0)
                 fmin.set_smoothing_factor(0)
-                          
-                
+
+
                 smax = fmax(tt)
-                smin = fmin(tt) 
+                smin = fmin(tt)
                 smean = (smax + smin) / 2.0
-                        
+
                 x2 = x1 - smean
-                
+
                 sd = np.sum((x1 - x2)**2) / np.sum(x1**2)
 
                 x1 = x2
-            
+
             imfs.append(x1)
             x = x - x1
             n += 1
+
         hbert = np.unwrap(np.angle(sps.hilbert(imfs[0])))
 
-        diff= sps.savgol_filter(hbert, savgolc, 1, deriv=1, delta=1/self.sampling_rate) / (2*np.pi)
+        diff= sps.savgol_filter(hbert, savgolc, 1, deriv=1,
+                                delta=1/self.sampling_rate) / (2*np.pi)
         diff-= self.drive_freq
 
         diff = np.pad(diff, ((savgolc-1)/2,0),'constant')
@@ -531,7 +541,7 @@ class Pixel(object):
 
         self.inst_freq = diff
 
-        
+
     def analyze(self):
         """
         Analyzes the pixel with the given method.
@@ -572,9 +582,10 @@ class Pixel(object):
 
             # DWT Denoise
             #self.dwt_denoise()
-            
+
             if self.EMD_analysis:
 
+                # Calculate instantenous frequency by Hilbert-Huang transform.
                 self.EMD_inst_freq()
 
             elif self.wavelet_analysis:
@@ -583,6 +594,7 @@ class Pixel(object):
                 self.calculate_cwt_freq()
 
             else:
+                # Hilbert transform method
 
                 # Apply window.
                 self.apply_window()
@@ -614,13 +626,13 @@ class Pixel(object):
             if self.fit:
 
                 if self.phase_fitting:
-                    
+
                     self.fit_phase()
-                
+
                 else:
-                    
+
                     self.fit_freq()
-                
+
             else:
 
                 self.find_minimum()
@@ -639,7 +651,7 @@ class Pixel(object):
         if self.phase_fitting:
 
             return self.tfp, self.shift, self.phase
-            
+
         else:
 
             return self.tfp, self.shift, self.inst_freq
