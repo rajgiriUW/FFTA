@@ -495,52 +495,51 @@ class Pixel(object):
         """Generates the instantaneous frequency via Empirical Mode
         Decomposition"""
 
-        x= self.signal
+        x = self.signal
         imfs = []
-        n=0
+
         savgolc = int(self.n_taps)
         tt = np.arange(0, len(x), 1)
 
-        while n < 1:
+        x1 = x
+        sd = 1
 
-            x1 = x
-            sd = 1
+        # loop controls how many EMD modes
+        modes = 1        
+        for i in xrange(modes):
 
             while sd > .1:
-
+    
                 maxpeaks, minpeaks = get_peaks(x1)
-
+    
                 fmax = spi.UnivariateSpline(maxpeaks, x1[maxpeaks], k=3)
                 fmin = spi.UnivariateSpline(minpeaks, x1[minpeaks], k=3)
                 fmax.set_smoothing_factor(0)
                 fmin.set_smoothing_factor(0)
-
-
-                smax = fmax(tt)
-                smin = fmin(tt)
-                smean = (smax + smin) / 2.0
-
+                
+                smean = (fmax(tt) + fmin(tt)) / 2.0
+    
                 x2 = x1 - smean
-
+    
                 sd = np.sum((x1 - x2)**2) / np.sum(x1**2)
-
+    
                 x1 = x2
-
+    
             imfs.append(x1)
             x = x - x1
-            n += 1
 
         hbert = np.unwrap(np.angle(sps.hilbert(imfs[0])))
 
-        diff= sps.savgol_filter(hbert, savgolc, 1, deriv=1,
+        diff = sps.savgol_filter(hbert, savgolc, 1, deriv=1,
                                 delta=1/self.sampling_rate) / (2*np.pi)
-        diff-= self.drive_freq
+        diff -= self.drive_freq
 
         diff = np.pad(diff, ((savgolc-1)/2,0),'constant')
         diff = diff[:len(self.signal)]
 
         self.inst_freq = diff
 
+        return
 
     def analyze(self):
         """
