@@ -203,6 +203,7 @@ class Pixel(object):
 
         # Difference between given and calculated drive frequencies.
         difference = np.abs(drive_freq - self.drive_freq)
+        
 
         # If difference is too big, reassign. Otherwise, continue.
         if difference >= dfreq:
@@ -223,11 +224,11 @@ class Pixel(object):
 
         rate = self.sampling_rate
         lpf = self.drive_freq * 0.1
-        self.signal = dwavelet.dwt_denoise(self.signal,lpf,rate/2,rate)
+        self.signal, _, _ = dwavelet.dwt_denoise(self.signal,lpf,rate/2,rate)
 
     def fir_filter(self):
-        """Filters signal with a FIR bandpass filter."""
 
+        """Filters signal with a FIR bandpass filter."""
         # Calculate bandpass region from given parameters.
         nyq_rate = 0.5 * self.sampling_rate
         bw_half = self.filter_bandwidth / 2
@@ -495,19 +496,20 @@ class Pixel(object):
         """Generates the instantaneous frequency via Empirical Mode
         Decomposition"""
 
-        x = self.signal
+        signal = self.signal
         imfs = []
 
         savgolc = int(self.n_taps)
-        tt = np.arange(0, len(x), 1)
+        tt = np.arange(0, len(signal), 1)
 
-        x1 = x
+        x1 = signal
         sd = 1
 
         # loop controls how many EMD modes
         modes = 1        
         for i in xrange(modes):
 
+            # Continuously adjusts signal until offset within 0.1 f.o.m.
             while sd > .1:
     
                 maxpeaks, minpeaks = get_peaks(x1)
@@ -526,19 +528,27 @@ class Pixel(object):
                 x1 = x2
     
             imfs.append(x1)
-            x = x - x1
+            signal = signal - x1
 
-        hbert = np.unwrap(np.angle(sps.hilbert(imfs[0])))
+        self.signal = imfs[0]
+        
+        self.phase = np.unwrap(np.angle(sps.hilbert(imfs[0])))
 
-        diff = sps.savgol_filter(hbert, savgolc, 1, deriv=1,
-                                delta=1/self.sampling_rate) / (2*np.pi)
-        diff -= self.drive_freq
+        self.inst_freq = sps.savgol_filter(self.phase, savgolc, 1, deriv=1,
+                                           delta=1/self.sampling_rate)  
+        self.inst_freq = self.inst_freq/(2*np.pi) - self.drive_freq
 
-        diff = np.pad(diff, ((savgolc-1)/2,0),'constant')
-        diff = diff[:len(self.signal)]
+        # Restores length
+        self.inst_freq = np.pad(self.inst_freq, ((savgolc-1)/2,0),'constant')
+        self.inst_freq = self.inst_freq[:len(self.signal)]
 
-        self.inst_freq = diff
+        # Bring trigger to zero.
+        self.tidx = int(self.tidx)
+        self.inst_freq -= self.inst_freq[self.tidx]        
 
+        # Corrected phaes
+        self.calculate_phase()
+        
         return
 
     def analyze(self):
@@ -580,7 +590,7 @@ class Pixel(object):
             self.check_drive_freq()
 
             # DWT Denoise
-            #self.dwt_denoise()
+            self.dwt_denoise()
 
             if self.EMD_analysis:
 
