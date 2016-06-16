@@ -492,14 +492,13 @@ class Pixel(object):
 
         return
 
-    def EMD_inst_freq(self):
-        """Generates the instantaneous frequency via Empirical Mode
-        Decomposition"""
+    def EMD_signal(self):
+        """Uses Empirical Mode Decomposition to denoise and analyze the
+        input signal."""
 
         signal = self.signal
         imfs = []
 
-        savgolc = int(self.n_taps)
         tt = np.arange(0, len(signal), 1)
 
         x1 = signal
@@ -523,6 +522,7 @@ class Pixel(object):
     
                 x2 = x1 - smean
     
+                # figure of merit for EMD decomposition
                 sd = np.sum((x1 - x2)**2) / np.sum(x1**2)
     
                 x1 = x2
@@ -532,7 +532,12 @@ class Pixel(object):
 
         self.signal = imfs[0]
         
-        self.phase = np.unwrap(np.angle(sps.hilbert(imfs[0])))
+        return
+
+    def EMD_inst_freq(self):
+        """Calculates instantaneous frequency from EMD Mode 0."""      
+        
+        savgolc = int(self.n_taps)
 
         self.inst_freq = sps.savgol_filter(self.phase, savgolc, 1, deriv=1,
                                            delta=1/self.sampling_rate)  
@@ -541,15 +546,13 @@ class Pixel(object):
         # Restores length
         self.inst_freq = np.pad(self.inst_freq, ((savgolc-1)/2,0),'constant')
         self.inst_freq = self.inst_freq[:len(self.signal)]
-
+        
         # Bring trigger to zero.
         self.tidx = int(self.tidx)
-        self.inst_freq -= self.inst_freq[self.tidx]        
+        self.inst_freq -= self.inst_freq[self.tidx]    
 
-        # Corrected phaes
-        self.calculate_phase()
-        
         return
+
 
     def analyze(self):
         """
@@ -594,7 +597,16 @@ class Pixel(object):
 
             if self.EMD_analysis:
 
-                # Calculate instantenous frequency by Hilbert-Huang transform.
+                # Calculate signal by Hilbert-Huang transform.
+                self.EMD_signal()
+                
+                # Get the analytical signal doing a Hilbert transform.
+                self.hilbert_transform()
+
+                # Calculate the phase from analytic signal.
+                self.calculate_phase()           
+                
+                # Calculate the instantaneous frequency             
                 self.EMD_inst_freq()
 
             elif self.wavelet_analysis:
