@@ -593,7 +593,7 @@ class Pixel(object):
             self.check_drive_freq()
 
             # DWT Denoise
-            self.dwt_denoise()
+            # self.dwt_denoise()
 
             if self.EMD_analysis:
 
