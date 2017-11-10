@@ -17,6 +17,8 @@ from ffta.utils import cwavelet
 from ffta.utils import parab
 from ffta.utils import fitting
 from ffta.utils import dwavelet
+import nitime.timeseries as ts
+from nitime.analysis.spectral import MorletWaveletAnalyzer, SpectralAnalyzer
 
 from numba import autojit
 from utils.peakdetect import get_peaks
@@ -132,7 +134,7 @@ class Pixel(object):
         self.wavelet_parameter = 5
         self.recombination = False
         self.phase_fitting = False
-        self.EMD_analysis = True
+        self.EMD_analysis = False
 
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
@@ -159,7 +161,7 @@ class Pixel(object):
 
         # Assign the fit parameter.
         self.fit = fit
-
+        print self.wavelet_analysis
         return
 
     def remove_dc(self):
@@ -386,7 +388,7 @@ class Pixel(object):
         # For diagnostic purposes.
         self.cut = cut
         self.popt = popt
-        self.best_fit = -A * np.exp(-t / tau1) * np.expm1(-t / tau2)
+        self.best_fit = -A*(np.exp(-t/tau1)-1) - A*(1-np.exp(-t/tau2))
 
         return
 
@@ -474,22 +476,13 @@ class Pixel(object):
         frequency."""
 
         # Generate necessary tools for wavelet transform.
-        w0, wavelet_increment, cwt_scale = self.__get_cwt__()
+        t1 = ts.TimeSeries(self.signal,sampling_rate=self.sampling_rate)
+        a1 = MorletWaveletAnalyzer(t1, freqs=self.drive_freq, sd_rel=(self.filter_bandwidth / self.drive_freq))
+        phase = np.unwrap(a1.phase.data)
 
-        _, n_points = np.shape(self.cwt_matrix)
-        inst_freq = np.empty(n_points)
-
-        for i in xrange(n_points):
-
-            cut = self.cwt_matrix[:, i]
-            inst_freq[i], _ = parab.fit(cut, np.argmax(cut))
-
-        inst_freq = (inst_freq * wavelet_increment + 0.9 * cwt_scale)
-        inst_freq = ((w0 + np.sqrt(2 + w0 ** 2)) /
-                     (4 * np.pi * inst_freq[:] / self.sampling_rate))
-
-        self.inst_freq = inst_freq - inst_freq[self.tidx]
-
+        freq = sps.savgol_filter(phase, int(self.n_taps), 1, deriv=1, delta=1e-7)
+        
+        self.inst_freq = freq- freq[299:self.tidx].mean()
         return
 
     def EMD_signal(self):
@@ -593,7 +586,7 @@ class Pixel(object):
             self.check_drive_freq()
 
             # DWT Denoise
-            # self.dwt_denoise()
+            self.dwt_denoise()
 
             if self.EMD_analysis:
 
@@ -659,7 +652,7 @@ class Pixel(object):
                 self.find_minimum()
 
             # Restore the length.
-            self.restore_signal()
+            # self.restore_signal()
 
             # If caught any exception, set everything to zero and log it.
         except Exception as exception:
@@ -675,4 +668,4 @@ class Pixel(object):
 
         else:
 
-            return self.tfp, self.shift, self.inst_freq
+            return self.tfp, self.shift, self.inst_freq, self.best_fit

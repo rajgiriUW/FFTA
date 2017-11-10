@@ -19,7 +19,9 @@ setup(
                       'scipy>=0.15.1',
                       'igor>=0.2',
                       'progressbar>=2.2',
-					  'pywavelets>=0.3.0'],
+					  'pywavelets>=0.3.0',
+                      'nitime',
+                      'numexpr'],
 
     entry_points={
         'console_scripts': [

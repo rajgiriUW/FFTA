@@ -121,7 +121,7 @@ def main(argv=None):
 #            line_inst = line.Line(signal_array, parameters, n_pixels,fitphase=True)
 #            tfpphase[i, :], _, _ = line_inst.analyze()
 
-            tfp_image = tfp_ax.imshow(tfp * 1e6, cmap='afmhot', **kwargs)
+            tfp_image = tfp_ax.imshow(tfp * 1e6, cmap='inferno', **kwargs)
             shift_image = shift_ax.imshow(shift, cmap='cubehelix', **kwargs)
 
             tfp_sc = tfp[tfp.nonzero()] * 1e6
