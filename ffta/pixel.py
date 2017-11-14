@@ -161,7 +161,7 @@ class Pixel(object):
 
         # Assign the fit parameter.
         self.fit = fit
-        print self.wavelet_analysis
+
         return
 
     def remove_dc(self):
@@ -355,7 +355,7 @@ class Pixel(object):
 
         return
 
-    def fit_freq(self):
+    def fit_freq_product(self):
         """Fits the frequency shift to an approximate functional form using
         an analytical fit with bounded values."""
 
@@ -377,18 +377,52 @@ class Pixel(object):
         t = np.arange(cut.shape[0]) / self.sampling_rate
 
         # Fit the cut to the model.
-        popt = fitting.fit_bounded(self.Q, self.drive_freq, t, cut)
+        popt = fitting.fit_bounded_product(self.Q, self.drive_freq, t, cut)
 
+        #A, tau1, tau2 = popt
         A, tau1, tau2 = popt
 
         # Analytical minimum of the fit.
-        self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
-        self.shift = -A * np.exp(-self.tfp / tau1) * np.expm1(-self.tfp / tau2)
+        #self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
+        #self.shift = -A * np.exp(-self.tfp / tau1) * np.expm1(-self.tfp / tau2)
 
         # For diagnostic purposes.
         self.cut = cut
         self.popt = popt
-        self.best_fit = -A*(np.exp(-t/tau1)-1) - A*(1-np.exp(-t/tau2))
+        self.best_fit = -A*(np.exp(-t/tau1)-1)*np.exp(-t/tau2)
+        
+        self.tfp = np.argmin(self.best_fit)/self.sampling_rate
+        self.shift = np.min(self.best_fit)
+
+
+        return
+    
+    def fit_freq_sum(self):
+        """Fits the frequency shift to an approximate functional form using
+        an analytical fit with bounded values."""
+
+        # Calculate the region of interest and if filtered move the fit index.
+        ridx = int(self.roi * self.sampling_rate)
+        fidx = self.tidx
+
+        # Make sure cut starts from 0 and never goes over.
+        cut = self.inst_freq[fidx:(fidx + ridx)] - self.inst_freq[fidx]
+
+        t = np.arange(cut.shape[0]) / self.sampling_rate
+
+        # Fit the cut to the model.
+        popt = fitting.fit_bounded_sum(self.Q, self.drive_freq, t, cut)
+
+        #A, tau1, tau2 = popt
+        A1, A2, tau1, tau2 = popt
+
+        # For diagnostic purposes.
+        self.cut = cut
+        self.popt = popt
+        self.best_fit = A1*(np.exp(-t/tau1)-1) - A2*np.exp(-t/tau2)
+        
+        self.tfp = np.argmin(self.best_fit)/self.sampling_rate
+        self.shift = np.min(self.best_fit)
 
         return
 
@@ -483,6 +517,27 @@ class Pixel(object):
         freq = sps.savgol_filter(phase, int(self.n_taps), 1, deriv=1, delta=1e-7)
         
         self.inst_freq = freq- freq[299:self.tidx].mean()
+        
+        return
+    
+    def calculate_cwt_freq_old(self):
+        
+        w0, wavelet_increment, cwt_scale = self.__get_cwt__()
+
+        _, n_points = np.shape(self.cwt_matrix)
+        inst_freq = np.empty(n_points)
+
+        for i in xrange(n_points):
+
+            cut = self.cwt_matrix[:, i]
+            inst_freq[i], _ = parab.fit(cut, np.argmax(cut))
+
+        inst_freq = (inst_freq * wavelet_increment + 0.9 * cwt_scale)
+        inst_freq = ((w0 + np.sqrt(2 + w0 ** 2)) /
+                     (4 * np.pi * inst_freq[:] / self.sampling_rate))
+
+        self.inst_freq = inst_freq - inst_freq[self.tidx]
+        
         return
 
     def EMD_signal(self):
@@ -586,7 +641,7 @@ class Pixel(object):
             self.check_drive_freq()
 
             # DWT Denoise
-            self.dwt_denoise()
+            #self.dwt_denoise()
 
             if self.EMD_analysis:
 
@@ -645,14 +700,14 @@ class Pixel(object):
 
                 else:
 
-                    self.fit_freq()
+                    self.fit_freq_product()
 
             else:
 
                 self.find_minimum()
 
             # Restore the length.
-            # self.restore_signal()
+            self.restore_signal()
 
             # If caught any exception, set everything to zero and log it.
         except Exception as exception:
@@ -668,4 +723,4 @@ class Pixel(object):
 
         else:
 
-            return self.tfp, self.shift, self.inst_freq, self.best_fit
+            return self.tfp, self.shift, self.inst_freq
