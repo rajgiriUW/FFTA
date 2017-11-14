@@ -93,7 +93,8 @@ def configuration(path):
     # These are the keys for parameters.
     paraf_keys = ['trigger', 'total_time', 'drive_freq', 'sampling_rate', 'Q']
     procs_keys = ['window']
-    procf_keys = ['roi', 'bandpass_filter', 'n_taps', 'filter_bandwidth',
+    procf_keys = ['roi']
+    proci_keys = ['n_taps', 'filter_bandwidth', 'bandpass_filter', 
                   'wavelet_analysis', 'wavelet_parameter', 'recombination',
                   'phase_fitting', 'EMD_analysis']
 
@@ -125,6 +126,12 @@ def configuration(path):
         if config.has_option('Processing', key):
 
             parameters[key] = config.get('Processing', key)
+               
+    for key in proci_keys:
+
+        if config.has_option('Processing', key):
+
+            parameters[key] = config.getint('Processing', key)
 
     return n_pixels, parameters
 
