@@ -497,7 +497,7 @@ class Pixel(object):
         cwt_scale = ((w0 + np.sqrt(2 + w0 ** 2)) /
                      (4 * np.pi * self.drive_freq / self.sampling_rate))
 
-        widths = np.arange(cwt_scale * 0.9, cwt_scale * 1.1,
+        widths = np.arange(cwt_scale * 0.5, cwt_scale * 1.5,
                            wavelet_increment)
 
         cwt_matrix = cwavelet.cwt(self.signal, dt=1, scales=widths, p=w0)
@@ -505,23 +505,8 @@ class Pixel(object):
 
         return w0, wavelet_increment, cwt_scale
 
-    def calculate_cwt_freq(self):
-        """Fits a curve to each column in the CWT matrix to generate the
-        frequency."""
-
-        # Generate necessary tools for wavelet transform.
-        t1 = ts.TimeSeries(self.signal,sampling_rate=self.sampling_rate)
-        a1 = MorletWaveletAnalyzer(t1, freqs=self.drive_freq, sd_rel=(self.filter_bandwidth / self.drive_freq))
-        phase = np.unwrap(a1.phase.data)
-
-        freq = sps.savgol_filter(phase, int(self.n_taps), 1, deriv=1, delta=1e-7)
-        
-        self.inst_freq = freq- freq[299:self.tidx].mean()
-        
-        return
-    
     def calculate_cwt_freq_old(self):
-        
+        """Conventional ridge-finding spectrogram approach"""
         w0, wavelet_increment, cwt_scale = self.__get_cwt__()
 
         _, n_points = np.shape(self.cwt_matrix)
@@ -540,6 +525,23 @@ class Pixel(object):
         
         return
 
+    def calculate_cwt_freq(self):
+        """Neuroimaging package Morlet analyzer version. Does not yield
+            a spectrogram at the end, though, just analytic signal.
+        """
+
+        # Generate necessary tools for wavelet transform.
+        t1 = ts.TimeSeries(self.signal,sampling_rate=self.sampling_rate)
+        self.wavelet = MorletWaveletAnalyzer(t1, freqs=self.drive_freq, 
+                                   sd_rel=(self.filter_bandwidth / 
+                                           self.drive_freq))
+        phase = np.unwrap(self.wavelet.phase.data)
+
+        self.inst_freq = sps.savgol_filter(phase, int(self.n_taps), 
+                                           1, deriv=1, delta=1e-7)
+        
+        return
+    
     def EMD_signal(self):
         """Uses Empirical Mode Decomposition to denoise and analyze the
         input signal."""
