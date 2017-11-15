@@ -241,7 +241,7 @@ class Pixel(object):
         band = [freq_low, freq_high]
 
         # Create taps using window method.
-        taps = sps.firwin(self.n_taps, band, pass_zero=False,
+        taps = sps.firwin(int(self.n_taps), band, pass_zero=False,
                           window='blackman')
 
         self.signal = sps.fftconvolve(self.signal, taps, mode='same')
@@ -625,6 +625,8 @@ class Pixel(object):
         from C API.
 
         """
+
+        #logging.basicConfig(filename=r'C:\Users\Asylum User\Documents\ffta\ffta\error.log', level=logging.DEBUG)
 
         try:
             # Remove DC component, first.
