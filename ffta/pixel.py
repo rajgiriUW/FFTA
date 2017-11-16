@@ -161,6 +161,7 @@ class Pixel(object):
 
         # Assign the fit parameter.
         self.fit = fit
+        self.fit_form = 'PRODUCT'
 
         return
 
@@ -704,7 +705,13 @@ class Pixel(object):
 
                 else:
 
-                    self.fit_freq_product()
+                    if self.fit_form is 'PRODUCT':
+                                            
+                        self.fit_freq_product()
+                    
+                    else:
+                        
+                        self.fit_freq_sum()
 
             else:
 
