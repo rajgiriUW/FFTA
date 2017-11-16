@@ -1,9 +1,9 @@
 """pixel.py: Contains pixel class."""
 # pylint: disable=E1101,R0902,C0103
-__author__ = "Durmus U. Karatay"
-__copyright__ = "Copyright 2014, Ginger Lab"
-__maintainer__ = "Durmus U. Karatay"
-__email__ = "ukaratay@uw.edu"
+__author__ = "Durmus U. Karatay, Rajiv Giridharagopal"
+__copyright__ = "Copyright 2016, Ginger Lab"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 __status__ = "Development"
 
 import logging
@@ -15,17 +15,24 @@ from scipy import interpolate as spi
 from ffta.utils import noise
 from ffta.utils import cwavelet
 from ffta.utils import parab
+from ffta.utils import fitting
+from ffta.utils import dwavelet
+import nitime.timeseries as ts
+from nitime.analysis.spectral import MorletWaveletAnalyzer, SpectralAnalyzer
 
 from numba import autojit
-
+from utils.peakdetect import get_peaks
 
 class Pixel(object):
     """
     Signal Processing to Extract Time-to-First-Peak.
 
     Extracts Time-to-First-Peak (tFP) from digitized Fast-Free Time-Resolved
-    Electrostatic Force Microscopy (FF-trEFM) signals [1]_. It includes two
-    types of frequency analysis: Hilbert Transform and Wavelet Transform.
+    Electrostatic Force Microscopy (FF-trEFM) signals [1-2]. It includes a few
+    types of frequency analysis:
+        a) Hilbert Transform
+        b) Wavelet Transform
+        c) Hilbert-Huang Transform (EMD)
 
     Parameters
     ----------
@@ -46,7 +53,8 @@ class Pixel(object):
         n_taps = integer (default: 1799)
         wavelet_analysis = bool (0: Hilbert method, 1: Wavelet Method)
         wavelet_parameter = int (default: 5)
-        recombination = bool (0: FF-trEFMm, 1: Recombination)
+        recombination = bool (0: Data are for Charging up, 1: Recombination)
+        fit_phase = bool (0: fit to frequency, 1: fit to phase)
 
     Attributes
     ----------
@@ -96,6 +104,9 @@ class Pixel(object):
     .. [1] Giridharagopal R, Rayermann GE, Shao G, et al. Submicrosecond time
        resolution atomic force microscopy for probing nanoscale dynamics.
        Nano Lett. 2012;12(2):893-8.
+       [2] Karatay D, Harrison JA, et al. Fast time-resolved electrostatic
+       force microscopy: Achieving sub-cycle time resolution. Rev Sci Inst.
+       2016;87(5):053702
 
     Examples
     --------
@@ -112,15 +123,18 @@ class Pixel(object):
 
     """
 
-    def __init__(self, signal_array, params):
+    def __init__(self, signal_array, params, fit=True):
 
         # Create parameter attributes for optional parameters.
         # They will be overwritten by following for loop if they exist.
-        self.n_taps = 1799
+        self.n_taps = 1499
+        self.Q = 500
         self.filter_bandwidth = 5000
         self.wavelet_analysis = False
         self.wavelet_parameter = 5
         self.recombination = False
+        self.phase_fitting = False
+        self.EMD_analysis = False
 
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
@@ -134,6 +148,7 @@ class Pixel(object):
 
         # Keep the original values for restoring the signal properties.
         self._tidx_orig = self.tidx
+        self.tidx_orig = self.tidx
         self._n_points_orig = signal_array.shape[0]
 
         # Initialize attributes that are going to be assigned later.
@@ -143,6 +158,9 @@ class Pixel(object):
         self.tfp = None
         self.shift = None
         self.cwt_matrix = None
+
+        # Assign the fit parameter.
+        self.fit = fit
 
         return
 
@@ -187,6 +205,7 @@ class Pixel(object):
 
         # Difference between given and calculated drive frequencies.
         difference = np.abs(drive_freq - self.drive_freq)
+        
 
         # If difference is too big, reassign. Otherwise, continue.
         if difference >= dfreq:
@@ -202,9 +221,16 @@ class Pixel(object):
 
         return
 
-    def fir_filter(self):
-        """Filters signal with a FIR bandpass filter."""
+    def dwt_denoise(self):
+        """Uses DWT to denoise the signal prior to processing."""
 
+        rate = self.sampling_rate
+        lpf = self.drive_freq * 0.1
+        self.signal, _, _ = dwavelet.dwt_denoise(self.signal,lpf,rate/2,rate)
+
+    def fir_filter(self):
+
+        """Filters signal with a FIR bandpass filter."""
         # Calculate bandpass region from given parameters.
         nyq_rate = 0.5 * self.sampling_rate
         bw_half = self.filter_bandwidth / 2
@@ -215,10 +241,12 @@ class Pixel(object):
         band = [freq_low, freq_high]
 
         # Create taps using window method.
-        taps = sps.firwin(self.n_taps, band, pass_zero=False,
-                          window='parzen')
+        taps = sps.firwin(int(self.n_taps), band, pass_zero=False,
+                          window='blackman')
 
         self.signal = sps.fftconvolve(self.signal, taps, mode='same')
+
+        # Shifts trigger due to causal nature of FIR filter
         self.tidx -= (self.n_taps - 1) / 2
 
         return
@@ -236,11 +264,11 @@ class Pixel(object):
         freq_high = (self.drive_freq + bw_half) / nyq_rate
 
         # Do a high-pass filtfilt operation.
-        b, a = sps.butter(5, freq_low, btype='high')
+        b, a = sps.butter(9, freq_low, btype='high')
         self.signal = sps.filtfilt(b, a, self.signal)
 
         # Do a low-pass filtfilt operation.
-        b, a = sps.butter(5, freq_high, btype='low')
+        b, a = sps.butter(9, freq_high, btype='low')
         self.signal = sps.filtfilt(b, a, self.signal)
 
         return
@@ -262,8 +290,8 @@ class Pixel(object):
         if correct_slope:
 
             # Remove the drive from phase.
-            self.phase -= (2 * np.pi * self.drive_freq *
-                           np.arange(self.n_points) / self.sampling_rate)
+            #self.phase -= (2 * np.pi * self.drive_freq *
+            #               np.arange(self.n_points) / self.sampling_rate)
 
             # A curve fit on the initial part to make sure that it worked.
             start = int(0.3 * self.tidx)
@@ -289,7 +317,17 @@ class Pixel(object):
                                            delta=dtime)
 
         # Bring trigger to zero.
+        self.tidx = int(self.tidx)
         self.inst_freq -= self.inst_freq[self.tidx]
+
+        return
+
+    def calculate_amplitude(self):
+        """Calculates the amplitude of the analytic signal. Uses pre-filter
+        signal to do this."""
+        self.signal_orig = self.signal_array.mean(axis=1)
+        self.signal_orig = sps.hilbert(self.signal_orig)
+        self.amp = np.abs(self.signal_orig)
 
         return
 
@@ -303,6 +341,7 @@ class Pixel(object):
         # Define a spline to be used in finding minimum.
         x = np.arange(ridx)
         y = cut
+
         func = spi.UnivariateSpline(x, y, k=4, ext=3)
 
         # Find the minimum of the spline using TNC method.
@@ -316,6 +355,110 @@ class Pixel(object):
 
         return
 
+    def fit_freq_product(self):
+        """Fits the frequency shift to an approximate functional form using
+        an analytical fit with bounded values."""
+
+        # Calculate the region of interest and if filtered move the fit index.
+        ridx = int(self.roi * self.sampling_rate)
+
+        fidx = self.tidx
+
+        # Make sure cut starts from 0 and never goes over.
+        cut = self.inst_freq[fidx:(fidx + ridx)] - self.inst_freq[fidx]
+
+        eidx = np.where(cut[(ridx / 2):] > cut[0])[0]
+
+        if eidx.shape[0] > 0:
+
+            eidx[:] += ridx/2
+  #          cut = cut[0:eidx[0]]
+
+        t = np.arange(cut.shape[0]) / self.sampling_rate
+
+        # Fit the cut to the model.
+        popt = fitting.fit_bounded_product(self.Q, self.drive_freq, t, cut)
+
+        #A, tau1, tau2 = popt
+        A, tau1, tau2 = popt
+
+        # Analytical minimum of the fit.
+        #self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
+        #self.shift = -A * np.exp(-self.tfp / tau1) * np.expm1(-self.tfp / tau2)
+
+        # For diagnostic purposes.
+        self.cut = cut
+        self.popt = popt
+        self.best_fit = -A*(np.exp(-t/tau1)-1)*np.exp(-t/tau2)
+        
+        self.tfp = np.argmin(self.best_fit)/self.sampling_rate
+        self.shift = np.min(self.best_fit)
+
+
+        return
+    
+    def fit_freq_sum(self):
+        """Fits the frequency shift to an approximate functional form using
+        an analytical fit with bounded values."""
+
+        # Calculate the region of interest and if filtered move the fit index.
+        ridx = int(self.roi * self.sampling_rate)
+        fidx = self.tidx
+
+        # Make sure cut starts from 0 and never goes over.
+        cut = self.inst_freq[fidx:(fidx + ridx)] - self.inst_freq[fidx]
+
+        t = np.arange(cut.shape[0]) / self.sampling_rate
+
+        # Fit the cut to the model.
+        popt = fitting.fit_bounded_sum(self.Q, self.drive_freq, t, cut)
+
+        #A, tau1, tau2 = popt
+        A1, A2, tau1, tau2 = popt
+
+        # For diagnostic purposes.
+        self.cut = cut
+        self.popt = popt
+        self.best_fit = A1*(np.exp(-t/tau1)-1) - A2*np.exp(-t/tau2)
+        
+        self.tfp = np.argmin(self.best_fit)/self.sampling_rate
+        self.shift = np.min(self.best_fit)
+
+        return
+
+    def fit_phase(self):
+        """Fits the phase to an approximate functional form using an
+        analytical fit with bounded values."""
+
+        # Calculate the region of interest and if filtered move the fit index.
+        ridx = int(self.roi * self.sampling_rate)
+
+        fidx = self.tidx
+
+        # Make sure cut starts from 0 and never goes over.
+        # -1 on cut is because of sign error in generating phase
+        cut = -1*(self.phase[fidx:(fidx + ridx)] - self.phase[fidx])
+        t = np.arange(cut.shape[0]) / self.sampling_rate
+
+        # Fit the cut to the model.
+        popt = fitting.fit_bounded_phase(self.Q, self.drive_freq, t, cut)
+
+        A, tau1, tau2 = popt
+
+        # Analytical minimum of the fit.
+        self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
+        self.shift = A * np.exp(-self.tfp / tau1) * np.expm1(-self.tfp / tau2)
+
+        # For diagnostic purposes.
+        postfactor = (tau2 / (tau1 + tau2)) * np.exp(-t / tau2) - 1
+
+        self.cut = cut
+        self.popt = popt
+        self.best_fit = -A * np.exp(-t / tau1) * np.expm1(-t / tau2 )
+        self.best_phase = A * tau1 * np.exp(-t / tau1)*postfactor + A * tau1 * (1 - tau2/(tau1 + tau2))
+
+        return
+
     def restore_signal(self):
         """Restores the signal length and position of trigger to original
         values."""
@@ -323,8 +466,6 @@ class Pixel(object):
         # Difference between current and original values.
         d_trig = int(self._tidx_orig - self.tidx)
         d_points = int(self._n_points_orig - self.n_points)
-
-        self.d_trig = d_trig
 
         # Check if the signal length can accomodate the shift or not.
         if d_trig >= d_points:
@@ -356,7 +497,7 @@ class Pixel(object):
         cwt_scale = ((w0 + np.sqrt(2 + w0 ** 2)) /
                      (4 * np.pi * self.drive_freq / self.sampling_rate))
 
-        widths = np.arange(cwt_scale * 0.9, cwt_scale * 1.1,
+        widths = np.arange(cwt_scale * 0.5, cwt_scale * 1.5,
                            wavelet_increment)
 
         cwt_matrix = cwavelet.cwt(self.signal, dt=1, scales=widths, p=w0)
@@ -364,11 +505,8 @@ class Pixel(object):
 
         return w0, wavelet_increment, cwt_scale
 
-    def calculate_cwt_freq(self):
-        """Fits a curve to each column in the CWT matrix to generate the
-        frequency."""
-
-        # Generate necessary tools for wavelet transform.
+    def calculate_cwt_freq_old(self):
+        """Conventional ridge-finding spectrogram approach"""
         w0, wavelet_increment, cwt_scale = self.__get_cwt__()
 
         _, n_points = np.shape(self.cwt_matrix)
@@ -384,8 +522,87 @@ class Pixel(object):
                      (4 * np.pi * inst_freq[:] / self.sampling_rate))
 
         self.inst_freq = inst_freq - inst_freq[self.tidx]
+        
+        return
+
+    def calculate_cwt_freq(self):
+        """Neuroimaging package Morlet analyzer version. Does not yield
+            a spectrogram at the end, though, just analytic signal.
+        """
+
+        # Generate necessary tools for wavelet transform.
+        t1 = ts.TimeSeries(self.signal,sampling_rate=self.sampling_rate)
+        self.wavelet = MorletWaveletAnalyzer(t1, freqs=self.drive_freq, 
+                                   sd_rel=(self.filter_bandwidth / 
+                                           self.drive_freq))
+        phase = np.unwrap(self.wavelet.phase.data)
+
+        self.inst_freq = sps.savgol_filter(phase, int(self.n_taps), 
+                                           1, deriv=1, delta=1e-7)
+        
+        return
+    
+    def EMD_signal(self):
+        """Uses Empirical Mode Decomposition to denoise and analyze the
+        input signal."""
+
+        signal = self.signal
+        imfs = []
+
+        tt = np.arange(0, len(signal), 1)
+
+        x1 = signal
+        sd = 1
+
+        # loop controls how many EMD modes
+        modes = 1        
+        for i in xrange(modes):
+
+            # Continuously adjusts signal until offset within 0.1 f.o.m.
+            while sd > .1:
+    
+                maxpeaks, minpeaks = get_peaks(x1)
+    
+                fmax = spi.UnivariateSpline(maxpeaks, x1[maxpeaks], k=3)
+                fmin = spi.UnivariateSpline(minpeaks, x1[minpeaks], k=3)
+                fmax.set_smoothing_factor(0)
+                fmin.set_smoothing_factor(0)
+                
+                smean = (fmax(tt) + fmin(tt)) / 2.0
+    
+                x2 = x1 - smean
+    
+                # figure of merit for EMD decomposition
+                sd = np.sum((x1 - x2)**2) / np.sum(x1**2)
+    
+                x1 = x2
+    
+            imfs.append(x1)
+            signal = signal - x1
+
+        self.signal = imfs[0]
+        
+        return
+
+    def EMD_inst_freq(self):
+        """Calculates instantaneous frequency from EMD Mode 0."""      
+        
+        savgolc = int(self.n_taps)
+
+        self.inst_freq = sps.savgol_filter(self.phase, savgolc, 1, deriv=1,
+                                           delta=1/self.sampling_rate)  
+        self.inst_freq = self.inst_freq/(2*np.pi) - self.drive_freq
+
+        # Restores length
+        self.inst_freq = np.pad(self.inst_freq, ((savgolc-1)/2,0),'constant')
+        self.inst_freq = self.inst_freq[:len(self.signal)]
+        
+        # Bring trigger to zero.
+        self.tidx = int(self.tidx)
+        self.inst_freq -= self.inst_freq[self.tidx]    
 
         return
+
 
     def analyze(self):
         """
@@ -409,12 +626,14 @@ class Pixel(object):
 
         """
 
+        #logging.basicConfig(filename=r'C:\Users\Asylum User\Documents\ffta\ffta\error.log', level=logging.DEBUG)
+
         try:
             # Remove DC component, first.
             self.remove_dc()
 
             # Phase-lock signals.
-            self.phase_lock()
+            #self.phase_lock()
 
             # Average signals.
             self.average()
@@ -425,12 +644,30 @@ class Pixel(object):
             # Check the drive frequency.
             self.check_drive_freq()
 
-            if self.wavelet_analysis:
+            # DWT Denoise
+            #self.dwt_denoise()
+
+            if self.EMD_analysis:
+
+                # Calculate signal by Hilbert-Huang transform.
+                self.EMD_signal()
+                
+                # Get the analytical signal doing a Hilbert transform.
+                self.hilbert_transform()
+
+                # Calculate the phase from analytic signal.
+                self.calculate_phase()           
+                
+                # Calculate the instantaneous frequency             
+                self.EMD_inst_freq()
+
+            elif self.wavelet_analysis:
 
                 # Calculate instantenous frequency using wavelet transform.
                 self.calculate_cwt_freq()
 
             else:
+                # Hilbert transform method
 
                 # Apply window.
                 self.apply_window()
@@ -459,18 +696,35 @@ class Pixel(object):
                 self.inst_freq = self.inst_freq * -1
 
             # Find where the minimum is.
-            self.find_minimum()
+            if self.fit:
+
+                if self.phase_fitting:
+
+                    self.fit_phase()
+
+                else:
+
+                    self.fit_freq_product()
+
+            else:
+
+                self.find_minimum()
 
             # Restore the length.
             self.restore_signal()
 
-        # If caught any exception, set everything to zero and log it.
+            # If caught any exception, set everything to zero and log it.
         except Exception as exception:
-
             self.tfp = 0
             self.shift = 0
             self.inst_freq = np.zeros(self._n_points_orig)
 
             logging.exception(exception, exc_info=True)
 
-        return self.tfp, self.shift, self.inst_freq
+        if self.phase_fitting:
+
+            return self.tfp, self.shift, self.phase
+
+        else:
+
+            return self.tfp, self.shift, self.inst_freq

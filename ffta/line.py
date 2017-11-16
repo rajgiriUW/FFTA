@@ -79,13 +79,13 @@ class Line(object):
 
         # Pass inputs to the object.
         self.signal_array = signal_array
-        self.n_pixels = n_pixels
+        self.n_pixels = int(n_pixels)
         self.params = params
 
         # Initialize tFP and shift arrays.
-        self.tfp = np.empty(n_pixels)
-        self.shift = np.empty(n_pixels)
-        self.inst_freq = np.empty((signal_array.shape[0], n_pixels))
+        self.tfp = np.empty(self.n_pixels)
+        self.shift = np.empty(self.n_pixels)
+        self.inst_freq = np.empty((signal_array.shape[0], self.n_pixels))
 
         return
 
