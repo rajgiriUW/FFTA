@@ -82,6 +82,8 @@ def configuration(path):
         recombination = bool (0: FF-trEFMm, 1: Recombination)
         phase_fitting = bool (0: frequency fitting, 1: phase fitting)
         EMD_analysis = bool (0: Hilbert method, 1: Hilbert-Huang fitting)
+        
+        fit_form = string (EXP, PRODUCT, SUM for type of fit function)
 
     """
 
@@ -92,7 +94,7 @@ def configuration(path):
 
     # These are the keys for parameters.
     paraf_keys = ['trigger', 'total_time', 'drive_freq', 'sampling_rate', 'Q']
-    procs_keys = ['window']
+    procs_keys = ['window', 'fit_form']
     procf_keys = ['roi']
     proci_keys = ['n_taps', 'filter_bandwidth', 'bandpass_filter', 
                   'wavelet_analysis', 'wavelet_parameter', 'recombination',
