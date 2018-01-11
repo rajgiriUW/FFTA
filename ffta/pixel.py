@@ -386,6 +386,8 @@ class Pixel(object):
 
         self.tfp = np.argmin(self.best_fit)/self.sampling_rate
         self.shift = np.min(self.best_fit)
+        
+        self.rms = np.sqrt(np.mean(np.square(self.best_fit - cut)))
 
         return
 
@@ -549,8 +551,9 @@ class Pixel(object):
         # Generate necessary tools for wavelet transform.
         t1 = ts.TimeSeries(self.signal,sampling_rate=self.sampling_rate)
         self.wavelet = MorletWaveletAnalyzer(t1, freqs=self.drive_freq,
-                                   sd_rel=(self.filter_bandwidth /
-                                           self.drive_freq))
+                                             sd_rel=(self.filter_bandwidth /
+                                             self.drive_freq))
+              
         phase = np.unwrap(self.wavelet.phase.data)
 
         self.inst_freq = sps.savgol_filter(phase, int(self.n_taps),
@@ -753,4 +756,7 @@ class Pixel(object):
 
         else:
 
+            if self.tfp == 5e-7:
+                return np.NaN, np.NaN, self.inst_freq
+                
             return self.tfp, self.shift, self.inst_freq
