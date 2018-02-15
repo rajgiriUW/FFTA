@@ -72,12 +72,12 @@ def main(argv=None):
     # Load parameters from .cfg file.
     n_pixels, parameters = load.configuration(config_file)
 
-    print 'Recombination: ', parameters['recombination']
+    print('Recombination: ', parameters['recombination'])
     if parameters.has_key('phase_fitting'):    
 
-        print 'Phase fitting: ', parameters['phase_fitting']
+        print('Phase fitting: ', parameters['phase_fitting'])
 
-    print 'ROI: ', parameters['roi']
+    print( 'ROI: ', parameters['roi'])
 
     if not args.p:
 
@@ -151,8 +151,8 @@ def main(argv=None):
 
     elif args.p:
 
-        print 'Starting parallel processing, using {0:1d} \
-               CPUs.'.format(args.p)
+        print('Starting parallel processing, using {0:1d} \
+               CPUs.'.format(args.p))
         start_time = time.time()  # Keep when it's started.
 
         # Create a pool of workers.
@@ -183,7 +183,7 @@ def main(argv=None):
 
         elapsed_time = time.time() - start_time
 
-        print 'It took {0:.1f} seconds.'.format(elapsed_time)
+        print ('It took {0:.1f} seconds.'.format(elapsed_time))
 
     # Filter bad pixels
     tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)
