@@ -42,7 +42,7 @@ def signal(path, skiprows=1):
 
     else:
 
-        print "Unrecognized file type!"
+        print ("Unrecognized file type!")
         sys.exit(0)
 
     signal_array.flags.writeable = True  # Make array writable.
