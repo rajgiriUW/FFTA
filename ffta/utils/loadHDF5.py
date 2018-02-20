@@ -141,7 +141,6 @@ def createHDF5_image(data_files, parm_dict, h5_path):
 
     # To do: Fix the labels/atrtibutes on the relevant data sets
     hdf = px.ioHDF5(h5_path)
-    px.hdf_utils.print_tree(hdf.file)
     ff_group = px.MicroDataGroup('FFtrEFM_Group', parent='/')
     root_group = px.MicroDataGroup('/')
     
@@ -154,6 +153,7 @@ def createHDF5_image(data_files, parm_dict, h5_path):
     h5_refs = hdf.writeData(ff_group, print_log=True)
     h5_FFraw = px.io.hdf_utils.getH5DsetRefs(['0000'], h5_refs)[0]
 
+    # Cycles through the remaining files. This takes a while (~few minutes)
     for k, num in zip(data_files[1:], np.arange(1,len(data_files))):
         
         fname = k.replace('/','\\')
@@ -161,10 +161,11 @@ def createHDF5_image(data_files, parm_dict, h5_path):
         fname = str(num).rjust(4,'0')
         
         line_file = load.signal(k)
-        
         hdf.file[ff_group.name+'/'+fname] = line_file
         
     px.hdf_utils.print_tree(hdf.file)
+    
+    hdf.flush()
     
     return h5_path
     
@@ -215,3 +216,81 @@ def createHDF5_file(signal, parm_dict, h5_path=''):
     
     hdf.flush()
     
+    
+def createHDF5_large(data_files, parm_dict, h5_path):
+    """
+    Generates the HDF5 file given path to files_list and parameters dictionary
+    
+    Creates a Datagroup FFtrEFM_Group with a single dataset in chunks
+    
+    Parameters
+    ----------
+    h5_path : string
+        Path to H5 file
+    
+    data_files : list
+        List of the *.ibw files to be invidually scanned
+        
+    parm_dict : dict
+        Scan parameters to be saved as attributes
+
+    Returns
+    -------
+    h5_path: str
+        The filename path to the H5 file created
+    
+    """
+    
+    # Uses first data set to determine parameters
+    line_file = load.signal(data_files[0])
+    if 'pnts_per_pixel' not in parm_dict.keys():
+        parm_dict['pnts_per_avg'] = line_file.shape[0]
+        parm_dict['pnts_per_pixel'] = line_file.shape[1] / parm_dict['num_cols']
+        parm_dict['pnts_per_line'] = line_file.shape[1]    
+
+    # Prepare data for writing to HDF
+    dt = 1/parm_dict['sampling_rate']
+    def_vec= np.arange(0, parm_dict['total_time'], dt)
+    if def_vec.shape[0] != parm_dict['pnts_per_avg']:
+        raise Exception('Time-per-point calculation error')
+
+    # This takes a very long time but creates a giant NxM matrix of the data
+    data_size = [line_file.shape[0], line_file.shape[1]*parm_dict['num_rows'] ]
+
+    # To do: Fix the labels/atrtibutes on the relevant data sets
+    hdf = px.ioHDF5(h5_path)
+    ff_group = px.MicroDataGroup('FFtrEFM_Group', parent='/')
+    root_group = px.MicroDataGroup('/')
+    
+    ds_raw = px.MicroDataset('FF_raw', data=[], dtype=np.float32,
+                             parent=ff_group, maxshape=data_size, 
+                             chunking=(1, parm_dict['pnts_per_line']))
+
+    # Get reference for writing the data
+    ff_group.addChildren([ds_raw])
+    ff_group.attrs = parm_dict
+    h5_refs = hdf.writeData(ff_group, print_log=True)
+    
+    num_rows = parm_dict['num_rows']
+    num_cols = parm_dict['num_cols']
+    pnts_per_line = parm_dict['pnts_per_line']
+
+    h5_file = px.hdf_utils.getDataSet(hdf.file, 'FF_raw')[0]
+
+    # Cycles through the remaining files. This takes a while (~few minutes)
+    for k, num in zip(data_files,np.arange(0,len(data_files))):
+        
+        fname = k.replace('/','\\')
+        print('####',fname.split('\\')[-1],'####')
+        fname = str(num).rjust(4,'0')
+        
+        line_file = load.signal(k)
+
+        f = hdf.file[h5_file.name]
+        f[:, pnts_per_line*num:pnts_per_line*(num+1)] = line_file[:,:]
+        
+    px.hdf_utils.print_tree(hdf.file)
+    
+    hdf.flush()
+    
+    return h5_path
