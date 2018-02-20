@@ -6,7 +6,7 @@ __maintainer__ = "Durmus U. Karatay"
 __email__ = "ukaratay@uw.edu"
 __status__ = "Production"
 
-import ConfigParser
+import configparser
 import sys
 from igor.binarywave import load as loadibw
 from numpy.lib.npyio import loadtxt
@@ -88,14 +88,14 @@ def configuration(path):
     """
 
     # Create a parser for configuration file and parse it.
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     config.read(path)
     parameters = {}
 
     # These are the keys for parameters.
     paraf_keys = ['trigger', 'total_time', 'drive_freq', 'sampling_rate', 'Q']
     procs_keys = ['window', 'fit_form']
-    procf_keys = ['roi']
+    procf_keys = ['roi', 'width', 'height']
     proci_keys = ['n_taps', 'filter_bandwidth', 'bandpass_filter', 
                   'wavelet_analysis', 'wavelet_parameter', 'recombination',
                   'phase_fitting', 'EMD_analysis']
@@ -177,7 +177,7 @@ def simulation_configuration(path):
     """
 
     # Create a parser for configuration file and parse it.
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     config.read(path)
 
     sim_params = {}
