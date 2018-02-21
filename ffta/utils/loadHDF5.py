@@ -13,23 +13,72 @@ import sys
 from igor.binarywave import load as loadibw
 from numpy.lib.npyio import loadtxt
 import numpy as np
-from os.path import splitext
 import os
 
 import pycroscopy as px
 import h5py
 
 from ffta.utils import load
+from ffta.utils import gl_ibw
 
+def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False, subfolder='/'):
+    """
+    Loads .ibw single file an HDF5 format. Then appends the FF data to that HDF5
 
-def loadHDF5(path='', xy_scansize=[0,0], file_name='FF_H5'):
+    Parameters
+    ----------
+    ibw_file_path : string, optional
+        Path to signal file IBW with images to add.
+
+    ff_file_path : string, optional
+        Path to folder containing the FF-trEFM files. If empty prompts dialogue
+           
+    ftype : str, optional
+        Delineates Ginger Lab imaging file type to be imported (not case-sensitive)
+        'FF' : FF-trEFM
+        'SKPM' : FM-SKPM
+        'ringdown' : Ringdown
+        'trEFM' : normal trEFM
+        
+    verbose : Boolean (Optional)
+        Whether or not to show  print statements for debugging
+    
+    subfolder : str, optional
+        Specifies folder under root (/) to save data in. Default is standard pycroscopy format
+    
+    Returns
+    -------
+    h5_path: str
+        The filename path to the H5 file created
+    
+    parm_dict: dict
+        Dictionary of relevant scan parameters
+
+    """
+    
+    if not any(ibw_file_path):
+        ibw_file_path = px.io_utils.uiGetFile(caption='Select IBW Image ',
+                                                file_filter='IBW Files (*.ibw)')
+    
+    tran = gl_ibw.GLIBWTranslator()
+    h5_path = tran.translate(ibw_file_path, ftype=ftype, 
+                             verbose=verbose, subfolder=subfolder)
+    
+    hdf = px.ioHDF5(h5_path)
+    xy_scansize = [hdf.file.attrs['FastScanSize'],hdf.file.attrs['SlowScanSize']]
+    
+    h5_path, _, parm_dict = loadHDF5_folder(ff_file_path, xy_scansize, file_name=h5_path)
+    
+    return h5_path, parm_dict
+
+def loadHDF5_folder(path='', xy_scansize=[0,0], file_name='FF_H5'):
     """
     Loads .ibw folder into an HDF5 format.
 
     Parameters
     ----------
     path : string
-        Path to signal file.
+        Path to signal file folder
     
     xy_sscansize : 2-float array
         Width by Height in meters (e.g. [8e-6, 4e-6])
@@ -93,10 +142,13 @@ def loadHDF5(path='', xy_scansize=[0,0], file_name='FF_H5'):
         file_name = 'FF_H5'
         
     folder_path = folder_path.replace('/','\\')
-    h5_path = os.path.join(folder_path, file_name) + '.h5'
+    if os.path.exists(file_name) == False:
+        h5_path = os.path.join(folder_path, file_name) + '.h5'
+    else:
+        h5_path = file_name
     
-    createHDF5_image(data_files, parm_dict, h5_path)
-    
+    createHDF5_single_dataset(data_files, parm_dict, h5_path)
+
     return h5_path, data_files, parm_dict
     
 def createHDF5_image(data_files, parm_dict, h5_path):
@@ -217,7 +269,7 @@ def createHDF5_file(signal, parm_dict, h5_path=''):
     hdf.flush()
     
     
-def createHDF5_large(data_files, parm_dict, h5_path):
+def createHDF5_single_dataset(data_files, parm_dict, h5_path):
     """
     Generates the HDF5 file given path to files_list and parameters dictionary
     
@@ -271,8 +323,6 @@ def createHDF5_large(data_files, parm_dict, h5_path):
     ff_group.attrs = parm_dict
     h5_refs = hdf.writeData(ff_group, print_log=True)
     
-    num_rows = parm_dict['num_rows']
-    num_cols = parm_dict['num_cols']
     pnts_per_line = parm_dict['pnts_per_line']
 
     h5_file = px.hdf_utils.getDataSet(hdf.file, 'FF_raw')[0]
@@ -294,3 +344,6 @@ def createHDF5_large(data_files, parm_dict, h5_path):
     hdf.flush()
     
     return h5_path
+
+#def addImage(h5_path, img):
+    
