@@ -34,7 +34,8 @@ class GLIBWTranslator(Translator):
     Translates Ginger Lab Igor Binary Wave (.ibw) files containing images or force curves to .h5
     """
 
-    def translate(self, file_path, verbose=False, parm_encoding='utf-8', ftype='FF', subfolder='Measurement_0000'):
+    def translate(self, file_path, verbose=False, parm_encoding='utf-8', ftype='FF', 
+                  subfolder='Measurement_0000', h5_path = ''):
         """
         Translates the provided file to .h5
         Adapted heavily from pycroscopy IBW file, modified to work with Ginger format
@@ -56,6 +57,8 @@ class GLIBWTranslator(Translator):
             'trEFM' : normal trEFM
         subfolder : str, optional
             Specifies folder under root (/) to save data in. Default is standard pycroscopy format
+        h5_path : str, optional
+            Existing H5 file to append to
 
         Returns
         -------
@@ -132,11 +135,12 @@ class GLIBWTranslator(Translator):
             print('Finished preparing tree trunk')
 
         # Prepare the .h5 file:
-        folder_path, base_name = path.split(file_path)
-        base_name = base_name[:-4]
-        h5_path = path.join(folder_path, base_name + '.h5')
-        if path.exists(h5_path):
-            remove(h5_path)
+        if not any(h5_path):
+            folder_path, base_name = path.split(file_path)
+            base_name = base_name[:-4]
+            h5_path = path.join(folder_path, base_name + '.h5')
+            if path.exists(h5_path):
+                remove(h5_path)
 
         # Write head of tree to file:
         hdf = ioHDF5(h5_path)
