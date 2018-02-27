@@ -694,7 +694,9 @@ class Pixel(object):
                 # Hilbert transform method
 
                 # Apply window.
-                self.apply_window()
+                if self.window != None:
+                    
+                    self.apply_window()
 
                 # Filter the signal with a filter, if wanted.
                 if self.bandpass_filter == 1:

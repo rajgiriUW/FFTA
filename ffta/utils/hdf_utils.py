@@ -78,7 +78,7 @@ def get_line(h5_path, line_num, array_form=False):
     pnts = p.attrs['pnts_per_line']
     
     if array_form == True:
-        return d[:, line_num*c:line_num*(c+1) , ]
+        return d[:, line_num*pnts:(line_num+1)*pnts ]
     
     signal_array = d[:, line_num*pnts:(line_num+1)*pnts ]
     
@@ -118,7 +118,7 @@ def get_pixel(h5_path, rc, array_form=False, avg=False):
     pnts = int(p.attrs['pnts_per_pixel'])
     
     if array_form == True:
-        return d[:, rc[0]*c + rc[1]]
+        return d[:, rc[0]*c + rc[1]:rc[0]*c + rc[1]+pnts]
     
     signal_pixel = d[:, rc[0]*c + rc[1]:rc[0]*c + rc[1]+pnts]
     parameters = get_params(p)
