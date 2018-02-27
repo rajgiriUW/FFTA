@@ -19,7 +19,7 @@ def FFT_filter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = True,
         Use ndarray.flatten() to ensure correct dimensions
         
     DC : bool, optional
-        Determines whether to add a DC filtering component
+        Determines whether to remove mean (DC-offset)
         
     parameters : dict, optional
         Contains parameters in FF-raw file for constructing filters
@@ -63,13 +63,12 @@ def FFT_filter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = True,
                                             [10E3, 50E3, 100E3, 150E3, 200E3],
                                             [20E3, 1E3, 1E3, 1E3, 1E3])
 
-    # Allow DC to passthrough
-    if DC == False:
-        nbf = px.processing.fft.NoiseBandFilter(num_pts, samp_rate, 
-                                            [50E3, 100E3, 150E3, 200E3],
-                                            [1E3, 1E3, 1E3, 1E3])
-    
     freq_filts = [lpf, nbf]
+    
+    # Remove DC Offset
+    if DC == True:
+        
+        hdf_file -= hdf_file.mean(axis=0)
     
     # Generate narrowband signal
     if narrowband == True:
