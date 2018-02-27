@@ -35,7 +35,7 @@ def load_csv(path):
 
     else:
 
-        print "Unrecognized file type!"
+        print("Unrecognized file type!")
         sys.exit(0)    
       
     return signal_array

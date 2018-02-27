@@ -148,7 +148,12 @@ class Pixel(object):
         # Assign values from inputs.
         self.signal_array = signal_array
         self.tidx = int(self.trigger * self.sampling_rate)
-        self.n_points, self.n_signals = signal_array.shape
+        
+        if len(signal_array.shape) == 2:
+            self.n_points, self.n_signals = signal_array.shape
+        else:
+            self.n_signals = 1
+            self.n_points = signal_array.shape
 
         # Keep the original values for restoring the signal properties.
         self._tidx_orig = self.tidx
