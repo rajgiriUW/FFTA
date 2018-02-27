@@ -153,7 +153,7 @@ class Pixel(object):
             self.n_points, self.n_signals = signal_array.shape
         else:
             self.n_signals = 1
-            self.n_points = signal_array.shape
+            self.n_points = signal_array.shape[0]
 
         # Keep the original values for restoring the signal properties.
         self._tidx_orig = self.tidx
@@ -193,8 +193,11 @@ class Pixel(object):
     def average(self):
         """Averages signals."""
 
-        self.signal = self.signal_array.mean(axis=1)
-
+        try: # if not multi-signal, don't average
+            self.signal = self.signal_array.mean(axis=1)
+        except:
+            self.signal = self.signal_array
+            
         return
 
     def check_drive_freq(self):

@@ -43,6 +43,8 @@ def FFT_filter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = True,
         Only functional if show_plots is on
     """
     
+    reshape = False
+    
     if 'h5py' in str(type(hdf_file)):   #hdf file
         parameters = hdf_utils.get_params(hdf_file)
         hdf_file = hdf_utils.get_line(hdf_file, linenum, array_form=True)
@@ -50,6 +52,7 @@ def FFT_filter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = True,
     
     if len(hdf_file.shape) == 2:
         sh = hdf_file.shape
+        reshape = True
         hdf_file = hdf_file.transpose().flatten() # transpose because of way signals generated
     
     num_pts = hdf_file.shape[0]
@@ -88,7 +91,7 @@ def FFT_filter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = True,
                                                                            show_plots=show_plots)
     
     # If need to reshape
-    if any(sh):
+    if reshape == True:
         filt_line = np.reshape(filt_line, sh)
         
     return filt_line, fig_filt, axes_filt
