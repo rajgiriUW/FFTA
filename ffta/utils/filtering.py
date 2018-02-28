@@ -9,7 +9,8 @@ import pycroscopy as px
 from ffta.utils import hdf_utils
 import numpy as np
 
-def FFT_filter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = True, narrowband = False):
+def FFT_filter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = True, 
+               narrowband = False, noise_tolerance = 5e-7):
     """
     Applies FFT Filter to the file and displays the result
     
@@ -33,6 +34,9 @@ def FFT_filter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = True,
     
     narrowband : bool, optional
         Sets noiseband filter to be a narrow pass filter centered on the drive_frequency
+    
+    noise_tolerance : float 0 to 1
+        Amount of noise below which signal is set to 0
     
     Returns:
     
@@ -79,10 +83,10 @@ def FFT_filter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = True,
             bw = parameters['filter_bandwidth']
         except:
             bw = 2500
-        nbf = px.processing.fft.HarmonicPassFilter(num_pts, samp_rate, drive, bw, 3)
+        nbf = px.processing.fft.HarmonicPassFilter(num_pts, samp_rate, drive, bw, 5)
         freq_filts = [nbf]
 
-    noise_tolerance = 5e-7
+#    noise_tolerance = 5e-7
 
     # Test filter on a single line:
     filt_line, fig_filt, axes_filt = px.processing.gmode_utils.test_filter(hdf_file,
