@@ -80,16 +80,16 @@ class GLIBWTranslator(Translator):
             print(chan_labels)
             print(chan_units)
         
-        if verbose:
-            print('Processing image type', ftype, 'with channels', chan_labels)
-
         # Get the data to figure out if this is an image or a force curve
         images = ibw_wave.get('wData')
 
         # Check if a Ginger Lab format ibw (has 'UserIn' in channel labels)
         _is_gl_type = any(['UserIn0' in str(s) for s in chan_labels])
         if _is_gl_type == True:
-            chan_labels = self._get_image_type(ibw_wave, ftype)        
+            chan_labels = self._get_image_type(ibw_wave, ftype)   
+            
+        if verbose:
+            print('Processing image type', ftype, 'with channels', chan_labels)
         
         if images.shape[2] != len(chan_labels):
             chan_labels = chan_labels[1:] # for weird null set errors in older AR software
