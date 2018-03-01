@@ -144,7 +144,6 @@ class GLIBWTranslator(Translator):
 
         # Write head of tree to file:
         hdf = ioHDF5(h5_path)
-        # spm_data.showTree()
         hdf.writeData(spm_data, print_log=verbose)
 
         if verbose:
@@ -155,7 +154,6 @@ class GLIBWTranslator(Translator):
 
         # Create Channels, populate and then link:
         for chan_index, raw_dset in enumerate(chan_raw_dsets):
-            #chan_grp = MicroDataGroup('{:s}{:03d}'.format('Channel_', chan_index), '/Measurement_000/')
             chan_grp = MicroDataGroup(chan_labels[chan_index], '/'+subfolder+'/')
             chan_grp.attrs['name'] = raw_dset.attrs['quantity']
             chan_grp.addChildren([ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals, raw_dset])
@@ -189,7 +187,10 @@ class GLIBWTranslator(Translator):
         """
         parm_string = ibw_wave.get('note')
         if type(parm_string) == bytes:
-            parm_string = parm_string.decode(codec)
+            try:
+                parm_string = parm_string.decode(codec)
+            except:
+                parm_string = parm_string.decode('ISO-8859-1')
         parm_string = parm_string.rstrip('\r')
         parm_list = parm_string.split('\r')
         parm_dict = dict()
@@ -313,4 +314,7 @@ class GLIBWTranslator(Translator):
         
         if unit.lower() in fc.keys():
             return fc[unit]
+
+        elif unit[0] in fc.keys():
+            return fc[unit[0]]
         
