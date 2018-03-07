@@ -35,7 +35,7 @@ class GLIBWTranslator(Translator):
     """
 
     def translate(self, file_path, verbose=False, parm_encoding='utf-8', ftype='FF', 
-                  subfolder='Measurement_0000', h5_path = ''):
+                  subfolder='Measurement_000', h5_path = '', channel_label_name = True):
         """
         Translates the provided file to .h5
         Adapted heavily from pycroscopy IBW file, modified to work with Ginger format
@@ -59,6 +59,8 @@ class GLIBWTranslator(Translator):
             Specifies folder under root (/) to save data in. Default is standard pycroscopy format
         h5_path : str, optional
             Existing H5 file to append to
+        channel_label_name : bool, optional
+            If True, uses the Channel as the subfolder name (e.g. Height, Phase, Amplitude, Charging)
 
         Returns
         -------
@@ -161,7 +163,13 @@ class GLIBWTranslator(Translator):
 
         # Create Channels, populate and then link:
         for chan_index, raw_dset in enumerate(chan_raw_dsets):
-            chan_grp = MicroDataGroup(chan_labels[chan_index], '/'+subfolder+'/')
+            
+            if channel_label_name == True:
+                chan_grp = MicroDataGroup(chan_labels[chan_index], '/'+subfolder+'/')
+            else:
+                #chan_grp = MicroDataGroup('{:s}{:03d}'.format('Channel_', chan_index), '/Measurement_000/')
+                chan_grp = MicroDataGroup('{:s}{:03d}'.format('Channel_', chan_index), '/'+subfolder+'/')
+            
             chan_grp.attrs['name'] = raw_dset.attrs['quantity']
             chan_grp.addChildren([ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals, raw_dset])
             h5_refs = hdf.writeData(chan_grp, print_log=verbose)

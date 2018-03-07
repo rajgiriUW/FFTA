@@ -16,10 +16,14 @@ import numpy as np
 import os
 
 import pycroscopy as px
+from pycroscopy.io.translators.utils import build_ind_val_dsets
 import h5py
 
 from ffta.utils import load
 from ffta.utils import gl_ibw
+
+import warnings
+
 
 def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False, subfolder='/'):
     """
@@ -31,7 +35,7 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False, s
         Path to signal file IBW with images to add.
 
     ff_file_path : string, optional
-        Path to folder containing the FF-trEFM files. If empty prompts dialogue
+        Path to folder containing the FF-trEFM files and config file. If empty prompts dialogue
            
     ftype : str, optional
         Delineates Ginger Lab imaging file type to be imported (not case-sensitive)
@@ -59,6 +63,11 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False, s
     if not any(ibw_file_path):
         ibw_file_path = px.io_utils.uiGetFile(caption='Select IBW Image ',
                                                 file_filter='IBW Files (*.ibw)')
+
+    if not any(ff_file_path):
+        ff_file_path = px.io_utils.uiGetFile(caption='Select FF config in folder',
+                                                file_filter='Config File (*.cfg)')
+        ff_file_path = '/'.join(ff_file_path.split('/')[:-1])
     
     tran = gl_ibw.GLIBWTranslator()
     h5_path = tran.translate(ibw_file_path, ftype=ftype, 
@@ -67,18 +76,19 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False, s
     hdf = px.ioHDF5(h5_path)
     xy_scansize = [hdf.file.attrs['FastScanSize'],hdf.file.attrs['SlowScanSize']]
     
-    h5_path, _, parm_dict = loadHDF5_folder(ff_file_path, xy_scansize, file_name=h5_path)
+    h5_path, _, parm_dict = loadHDF5_folder(folder_path=ff_file_path, 
+                                            xy_scansize=xy_scansize, file_name=h5_path)
     
     return h5_path, parm_dict
 
-def loadHDF5_folder(path='', xy_scansize=[0,0], file_name='FF_H5'):
+def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5'):
     """
     Loads .ibw folder into an HDF5 format.
 
     Parameters
     ----------
-    path : string
-        Path to signal file folder
+    folder_path : string
+        Path to folder you want to process
     
     xy_sscansize : 2-float array
         Width by Height in meters (e.g. [8e-6, 4e-6])
@@ -99,14 +109,15 @@ def loadHDF5_folder(path='', xy_scansize=[0,0], file_name='FF_H5'):
 
     """
     
-    if any(xy_scansize ) and len(xy_scansize) != 2:
+    if any(xy_scansize) and len(xy_scansize) != 2:
         raise Exception('XY Scan Size must be either empty (in .cfg) or length-2')
     
-    if not any(path):
+    if not any(folder_path):
         folder_path = px.io_utils.uiGetFile(caption='Select Config File in FF-trEFM folder',
                                                 file_filter='Config Files (*.cfg)')
         folder_path = '/'.join(folder_path.split('/')[:-1])
     
+    print(folder_path, 'folder path')    
     filelist = os.listdir(folder_path)
     
     data_files = [os.path.join(folder_path, name)
@@ -119,9 +130,9 @@ def loadHDF5_folder(path='', xy_scansize=[0,0], file_name='FF_H5'):
     parm_dict['num_rows'] = len(data_files)
     parm_dict['num_cols'] = n_pixels
     
-
+    
     # Add dimensions if not in the config file
-    if 'width' not in parm_dict.keys():
+    if 'FastScanSize' not in parm_dict.keys():
         if not any(xy_scansize):
             raise Exception('Need XY Scan Size! Save "Width" and "Height" in Config or pass xy_scansize')
             
@@ -130,13 +141,18 @@ def loadHDF5_folder(path='', xy_scansize=[0,0], file_name='FF_H5'):
             width = width*1e-6
             height = height*1e-6
             
-        parm_dict['width'] = width
-        parm_dict['height'] = height
-        
+        parm_dict['FastScanSize'] = width
+        parm_dict['SlowScanSize'] = height
+    
+    # sometimes use width/height in config files
+    if 'width' in parm_dict.keys():
+        parm_dict['FastScanSize'] = width
+        parm_dict['SlowScanSize'] = height
+    
     # Check ratio is correct
-    ratio = parm_dict['width'] / parm_dict['height']
+    ratio = parm_dict['FastScanSize'] / parm_dict['SlowScanSize']
     if n_pixels/len(data_files) != ratio:
-        raise Exception('X-Y Dimensions do not match filelist')
+        raise Exception('X-Y Dimensions do not match filelist. Add manually to config file')
     
     if not any(file_name):
         file_name = 'FF_H5'
@@ -189,6 +205,7 @@ def createHDF5_image(data_files, parm_dict, h5_path):
         raise Exception('Time-per-point calculation error')
 
     # This takes a very long time but creates a giant NxM matrix of the data
+    #data_size = [line_file.shape[1]*parm_dict['num_rows'], line_file.shape[0]]
     data_size = [line_file.shape[1]*parm_dict['num_rows'], line_file.shape[0]]
 
     # To do: Fix the labels/atrtibutes on the relevant data sets
@@ -213,7 +230,7 @@ def createHDF5_image(data_files, parm_dict, h5_path):
         fname = str(num).rjust(4,'0')
         
         line_file = load.signal(k)
-        hdf.file[ff_group.name+'/'+fname] = line_file
+        hdf.file[ff_group.name+'/'+fname] = line_file.transpose()
         
     px.hdf_utils.print_tree(hdf.file)
     
@@ -225,7 +242,6 @@ def createHDF5_image(data_files, parm_dict, h5_path):
 def createHDF5_file(signal, parm_dict, h5_path=''):
     """
     Generates the HDF5 file given path to a specific file and a parameters dictionary
-
 
     Parameters
     ----------
@@ -269,7 +285,7 @@ def createHDF5_file(signal, parm_dict, h5_path=''):
     hdf.flush()
     
     
-def createHDF5_single_dataset(data_files, parm_dict, h5_path):
+def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     """
     Generates the HDF5 file given path to files_list and parameters dictionary
     
@@ -286,6 +302,9 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path):
     parm_dict : dict
         Scan parameters to be saved as attributes
 
+    verbose : bool, optional
+        Display outputs of each function or not
+
     Returns
     -------
     h5_path: str
@@ -296,27 +315,49 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path):
     # Uses first data set to determine parameters
     line_file = load.signal(data_files[0])
     if 'pnts_per_pixel' not in parm_dict.keys():
-        parm_dict['pnts_per_avg'] = line_file.shape[0]
-        parm_dict['pnts_per_pixel'] = line_file.shape[1] / parm_dict['num_cols']
-        parm_dict['pnts_per_line'] = line_file.shape[1]    
+        parm_dict['pnts_per_avg'] = int(line_file.shape[0])
+        parm_dict['pnts_per_pixel'] = int(line_file.shape[1] / parm_dict['num_cols'])
+        parm_dict['pnts_per_line'] = int(line_file.shape[1])
+
+    num_rows = parm_dict['num_rows']
+    num_cols = parm_dict['num_cols']
+    pnts_per_avg = parm_dict['pnts_per_avg']
 
     # Prepare data for writing to HDF
     dt = 1/parm_dict['sampling_rate']
     def_vec= np.arange(0, parm_dict['total_time'], dt)
     if def_vec.shape[0] != parm_dict['pnts_per_avg']:
-        raise Exception('Time-per-point calculation error')
+        def_vec = def_vec[:-1]
+        warnings.warn('Time-per-point calculation error')
 
     # This takes a very long time but creates a giant NxM matrix of the data
-    data_size = [line_file.shape[0], line_file.shape[1]*parm_dict['num_rows'] ]
+    # N = number of points in each spectra, M = number of rows * columns
+    #data_size = [line_file.shape[0], line_file.shape[1]*parm_dict['num_rows'] ]
+    data_size = [line_file.shape[1]*parm_dict['num_rows'], line_file.shape[0] ]
 
     # To do: Fix the labels/atrtibutes on the relevant data sets
     hdf = px.ioHDF5(h5_path)
     ff_group = px.MicroDataGroup('FFtrEFM_Group', parent='/')
     root_group = px.MicroDataGroup('/')
     
+    # Set up the position vectors for the data
+    ds_pos_ind, ds_pos_val = build_ind_val_dsets([num_cols, num_rows], is_spectral=False,
+                                                  steps=[1.0 * parm_dict['FastScanSize'] / num_cols,
+                                                         1.0 * parm_dict['SlowScanSize'] / num_rows],
+                                                  labels=['X', 'Y'], units=['m', 'm'], verbose=verbose)
+
+    ds_spec_inds, ds_spec_vals = build_ind_val_dsets([pnts_per_avg], is_spectral=True,
+                                                     labels=['Deflection'], units=['V'])
+    
     ds_raw = px.MicroDataset('FF_raw', data=[], dtype=np.float32,
                              parent=ff_group, maxshape=data_size, 
                              chunking=(1, parm_dict['pnts_per_line']))
+
+    # Standard list of auxiliary datasets that get linked with the raw dataset:
+    aux_ds_names = ['Position_Indices', 'Position_Values', 
+                    'Spectroscopic_Indices', 'Spectroscopic_Values']
+
+    ff_group.addChildren([ds_raw, ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals])
 
     # Get reference for writing the data
     ff_group.addChildren([ds_raw])
@@ -334,16 +375,17 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path):
         print('####',fname.split('\\')[-1],'####')
         fname = str(num).rjust(4,'0')
         
-        line_file = load.signal(k)
+        line_file = load.signal(k).transpose()
 
         f = hdf.file[h5_file.name]
-        f[:, pnts_per_line*num:pnts_per_line*(num+1)] = line_file[:,:]
-        
+        f[pnts_per_line*num:pnts_per_line*(num+1), :] = line_file[:,:]
+    
+    h5_main = px.hdf_utils.getH5DsetRefs(['FF_raw'], h5_refs)[0] 
+    px.hdf_utils.linkRefs(h5_main, px.hdf_utils.getH5DsetRefs(aux_ds_names, h5_refs))
+    
     px.hdf_utils.print_tree(hdf.file)
     
     hdf.flush()
     
     return h5_path
 
-#def addImage(h5_path, img):
-    

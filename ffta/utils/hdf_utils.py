@@ -8,7 +8,29 @@ import pycroscopy as px
 
 from ffta.line import Line
 from ffta.pixel import Pixel
-import numpy as np
+
+def _which_h5(h5_path):
+    """
+    h5_path : str, HDF group, HDF file
+    
+    Used internally in get_ functions to indentify type of H5_path parameter.
+    H5_path can be passed as string (to h5 location), or as an existing
+    variable in the workspace
+    
+    """
+    if type(h5_path)== str:
+        hdf = px.ioHDF5(h5_path)
+        p = px.hdf_utils.findH5group(hdf.file, 'FF')[0]
+    
+    # h5_path is an HDF Group
+    elif 'Group' in str(type(h5_path)):
+        p = h5_path
+    
+    # h5_path is an HDF File
+    else:
+        p = px.hdf_utils.findH5group(h5_path, 'FF')[0]
+    
+    return p
 
 def get_params(h5_path, key='', verbose=False):
     """
@@ -25,18 +47,20 @@ def get_params(h5_path, key='', verbose=False):
         Prints all parameters to console
     """
     
-    # path to HDF5
-    if type(h5_path)== str:
-        hdf = px.ioHDF5(h5_path)
-        p = px.hdf_utils.findH5group(hdf.file, 'FF')[0]
+#    # path to HDF5
+#    if type(h5_path)== str:
+#        hdf = px.ioHDF5(h5_path)
+#        p = px.hdf_utils.findH5group(hdf.file, 'FF')[0]
+#    
+#    # h5_path is an HDF Group
+#    elif 'Group' in str(type(h5_path)):
+#        p = h5_path
+#    
+#    # h5_path is an HDF File
+#    else:
+#        p = px.hdf_utils.findH5group(h5_path, 'FF')[0]
     
-    # h5_path is an HDF Group
-    elif 'Group' in str(type(h5_path)):
-        p = h5_path
-    
-    # h5_path is an HDF File
-    else:
-        p = px.hdf_utils.findH5group(h5_path, 'FF')[0]
+    p = _which_h5(h5_path)
     
     parm_dict = {}
     
@@ -67,20 +91,22 @@ def get_line(h5_path, line_num, array_form=False):
         Returns the raw array contents rather than Line class
     """
     
-    if type(h5_path)== str:
-        hdf = px.ioHDF5(h5_path)
-        p = px.hdf_utils.findH5group(hdf.file, 'FF')[0]
-    else:
-        p = px.hdf_utils.findH5group(h5_path, 'FF')[0]
+#    if type(h5_path)== str:
+#        hdf = px.ioHDF5(h5_path)
+#        p = px.hdf_utils.findH5group(hdf.file, 'FF')[0]
+#    else:
+#        p = px.hdf_utils.findH5group(h5_path, 'FF')[0]
+
+    p = _which_h5(h5_path)
 
     d = p['FF_raw']
     c = p.attrs['num_cols']
     pnts = p.attrs['pnts_per_line']
     
     if array_form == True:
-        return d[:, line_num*pnts:(line_num+1)*pnts ]
+        return d[line_num*pnts:(line_num+1)*pnts, : ]
     
-    signal_array = d[:, line_num*pnts:(line_num+1)*pnts ]
+    signal_array = d[line_num*pnts:(line_num+1)*pnts, : ]
     
     parameters = get_params(p)
     
@@ -107,20 +133,22 @@ def get_pixel(h5_path, rc, array_form=False, avg=False):
         Averages the pixels of n_pnts_per_pixel and then creates Pixel of that
     """
     
-    if type(h5_path)== str:
-        hdf = px.ioHDF5(h5_path)
-        p = px.hdf_utils.findH5group(hdf.file, 'FF')[0]
-    else:
-        p = px.hdf_utils.findH5group(h5_path, 'FF')[0]
-        
+#    if type(h5_path)== str:
+#        hdf = px.ioHDF5(h5_path)
+#        p = px.hdf_utils.findH5group(hdf.file, 'FF')[0]
+#    else:
+#        p = px.hdf_utils.findH5group(h5_path, 'FF')[0]
+     
+    p = _which_h5(h5_path)
+    
     d = p['FF_raw']
     c = p.attrs['num_cols']
     pnts = int(p.attrs['pnts_per_pixel'])
     
     if array_form == True:
-        return d[:, rc[0]*c + rc[1]:rc[0]*c + rc[1]+pnts]
+        return d[rc[0]*c + rc[1]:rc[0]*c + rc[1]+pnts, :]
     
-    signal_pixel = d[:, rc[0]*c + rc[1]:rc[0]*c + rc[1]+pnts]
+    signal_pixel = d[rc[0]*c + rc[1]:rc[0]*c + rc[1]+pnts, :]
     parameters = get_params(p)
     
     if avg == True:
