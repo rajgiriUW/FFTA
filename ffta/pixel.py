@@ -1,7 +1,7 @@
 """pixel.py: Contains pixel class."""
 # pylint: disable=E1101,R0902,C0103
-__author__ = "Durmus U. Karatay, Rajiv Giridharagopal"
-__copyright__ = "Copyright 2016, Ginger Lab"
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2018, Ginger Lab"
 __maintainer__ = "Rajiv Giridharagopal"
 __email__ = "rgiri@uw.edu"
 __status__ = "Development"
@@ -215,9 +215,8 @@ class Pixel(object):
         # Difference between given and calculated drive frequencies.
         difference = np.abs(drive_freq - self.drive_freq)
 
-
-        # If difference is too big, reassign. Otherwise, continue.
-        if difference >= dfreq:
+        # If difference is too big, reassign. Otherwise, continue. != 0 for accidental DC errors
+        if difference >= dfreq and drive_freq != 0:
 
             self.drive_freq = drive_freq
 
@@ -250,8 +249,13 @@ class Pixel(object):
         band = [freq_low, freq_high]
 
         # Create taps using window method.
-        taps = sps.firwin(int(self.n_taps), band, pass_zero=False,
+        try:
+            taps = sps.firwin(int(self.n_taps), band, pass_zero=False,
                           window='blackman')
+        except:
+            print('band=', band)
+            print('nyq=',nyq_rate)
+            print('drive=',self.drive_freq)
 
         self.signal = sps.fftconvolve(self.signal, taps, mode='same')
 

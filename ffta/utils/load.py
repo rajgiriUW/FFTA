@@ -95,7 +95,7 @@ def configuration(path):
     # These are the keys for parameters.
     paraf_keys = ['trigger', 'total_time', 'drive_freq', 'sampling_rate', 'Q']
     procs_keys = ['window', 'fit_form']
-    procf_keys = ['roi', 'width', 'height']
+    procf_keys = ['roi', 'width', 'height', 'FastScanSize', 'SlowScanSize', 'liftheight']
     proci_keys = ['n_taps', 'filter_bandwidth', 'bandpass_filter', 
                   'wavelet_analysis', 'wavelet_parameter', 'recombination',
                   'phase_fitting', 'EMD_analysis']

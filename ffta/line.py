@@ -105,12 +105,31 @@ class Line(object):
         """
 
         # Split the signal array into pixels.
-        pixel_signals = np.split(self.signal_array, self.n_pixels, axis=1)
+
+        # for normal trEFM the array is arranged differently (n_pixels, n_points). 
+        # This code preserves existing functionality but the format should be deprecated
+        try:
+            pixel_signals = np.split(self.signal_array, self.n_pixels, axis=1)
+
+        # exception = pycroscopy format
+        except:
+
+            self.inst_freq = np.empty((self.signal_array.shape[1], self.n_pixels))
+            pixel_signals = np.split(self.signal_array.transpose(), self.n_pixels, axis=1)
+
+            # Iterate over pixels and return tFP and shift arrays.
+            for i, pixel_signal in enumerate(pixel_signals):
+
+                p = pixel.Pixel(pixel_signal, self.params)
+                (self.tfp[i], self.shift[i], self.inst_freq[:, i]) = p.analyze()
+
+            return (self.tfp, self.shift, self.inst_freq)
 
         # Iterate over pixels and return tFP and shift arrays.
         for i, pixel_signal in enumerate(pixel_signals):
 
             p = pixel.Pixel(pixel_signal, self.params)
+            
             (self.tfp[i], self.shift[i], self.inst_freq[:, i]) = p.analyze()
 
         return (self.tfp, self.shift, self.inst_freq)
