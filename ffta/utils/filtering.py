@@ -50,14 +50,16 @@ def FFT_filter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = True,
     reshape = False
     
     if 'h5py' in str(type(hdf_file)):   #hdf file
+        
         parameters = hdf_utils.get_params(hdf_file)
-        hdf_file = hdf_utils.get_line(hdf_file, linenum, array_form=True)
-        hdf_file = hdf_file.transpose().flatten()
+        hdf_file = hdf_utils.get_line(hdf_file, linenum, array_form=True, transpose=False)
+        hdf_file = hdf_file.flatten()
     
     if len(hdf_file.shape) == 2:
+    
         sh = hdf_file.shape
         reshape = True
-        hdf_file = hdf_file.transpose().flatten() # transpose because of way signals generated
+        hdf_file = hdf_file.flatten() 
     
     num_pts = hdf_file.shape[0]
     drive = parameters['drive_freq']
@@ -79,10 +81,12 @@ def FFT_filter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = True,
     
     # Generate narrowband signal
     if narrowband == True:
+        
         try:
             bw = parameters['filter_bandwidth']
         except:
             bw = 2500
+            
         nbf = px.processing.fft.HarmonicPassFilter(num_pts, samp_rate, drive, bw, 5)
         freq_filts = [nbf]
 
