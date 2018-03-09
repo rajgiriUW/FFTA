@@ -118,9 +118,9 @@ class Line(object):
         # exception = non-pycroscopy format
         except:
 
-            self.inst_freq = np.empty((self.n_pixels, signal_array.shape[0]))
+            self.inst_freq = np.empty((self.n_pixels, self.signal_array.shape[0]))
             self.avgs_per_pixel = int(self.signal_array.shape[1]/self.n_pixels)
-            self.n_signals = signal_array.shape[0]
+            self.n_signals = self.signal_array.shape[0]
             
             pixel_signals = np.split(self.signal_array.transpose(), self.n_pixels, axis=0)
 
