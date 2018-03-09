@@ -140,4 +140,4 @@ def FFT_filter(h5_main, freq_filts, noise_tolerance=5e-7):
 #                                                                 scan_width / num_cols)
 #h5_resh_grp = h5_resh.parent
 #h5_resh.shape
-    return
+    return h5_filt
