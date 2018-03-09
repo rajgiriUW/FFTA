@@ -349,6 +349,8 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     ds_spec_inds, ds_spec_vals = build_ind_val_dsets([pnts_per_avg], is_spectral=True,
                                                      labels=['Deflection'], units=['V'])
     
+    ds_spec_vals.data = ds_spec_vals.data * dt # correct the values to be right timescale
+    
     ds_raw = px.MicroDataset('FF_raw', data=[], dtype=np.float32,
                              parent=ff_group, maxshape=data_size, 
                              chunking=(1, parm_dict['pnts_per_line']))
