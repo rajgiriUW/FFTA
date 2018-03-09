@@ -20,7 +20,7 @@ class Line(object):
 
     Parameters
     ----------
-    signal_array : (n_points, n_signals) array_like
+    signal_array : (n_signals, n_points) array_like
         2D real-valued signal array, corresponds to a line
     params : dict
         Includes parameters for processing. The list of parameters is:
@@ -85,7 +85,9 @@ class Line(object):
         # Initialize tFP and shift arrays.
         self.tfp = np.empty(self.n_pixels)
         self.shift = np.empty(self.n_pixels)
-        self.inst_freq = np.empty((signal_array.shape[0], self.n_pixels))
+        self.inst_freq = np.empty((signal_array.shape[1], self.n_pixels))
+        
+        self.avgs_per_pixel = int(signal_array.shape[0]/self.n_pixels)
 
         return
 
@@ -106,24 +108,19 @@ class Line(object):
 
         # Split the signal array into pixels.
 
-        # for normal trEFM the array is arranged differently (n_pixels, n_points). 
+        # for pycroscopy the array is arranged differently (n_pixels, n_points). 
         # This code preserves existing functionality but the format should be deprecated
         try:
-            pixel_signals = np.split(self.signal_array, self.n_pixels, axis=1)
+      
+            pixel_signals = np.split(self.signal_array, self.n_pixels, axis=0)
 
-        # exception = pycroscopy format
+        # exception = non-pycroscopy format
         except:
 
-            self.inst_freq = np.empty((self.signal_array.shape[1], self.n_pixels))
-            pixel_signals = np.split(self.signal_array.transpose(), self.n_pixels, axis=1)
-
-            # Iterate over pixels and return tFP and shift arrays.
-            for i, pixel_signal in enumerate(pixel_signals):
-
-                p = pixel.Pixel(pixel_signal, self.params)
-                (self.tfp[i], self.shift[i], self.inst_freq[:, i]) = p.analyze()
-
-            return (self.tfp, self.shift, self.inst_freq)
+            self.inst_freq = np.empty((self.signal_array.shape[0], self.n_pixels))
+            self.avgs_per_pixel = int(self.signal_array.shape[1]/self.n_pixels)
+            
+            pixel_signals = np.split(self.signal_array.transpose(), self.n_pixels, axis=0)
 
         # Iterate over pixels and return tFP and shift arrays.
         for i, pixel_signal in enumerate(pixel_signals):
@@ -133,3 +130,17 @@ class Line(object):
             (self.tfp[i], self.shift[i], self.inst_freq[:, i]) = p.analyze()
 
         return (self.tfp, self.shift, self.inst_freq)
+
+    def pixel_wise_avg(self, avgs_per_pixel=1):
+        """
+        Averages the line per pixel and saves the result as signal_avg_array
+        
+        Returns
+        -------
+        signal_avg_array : (n_points, n_pixels) numpy array
+            Returns signal_averaged time-domain signal at each pixel
+        """
+        
+        #avgs_per_pixel 
+        
+        return #signal_avg_array

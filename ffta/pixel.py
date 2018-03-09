@@ -62,7 +62,7 @@ class Pixel(object):
         Number of points in a signal.
     n_signals : int
         Number of signals to be averaged in a pixel.
-    signal_array : (n_points, n_signals) array_like
+    signal_array : (n_signals, n_points) array_like
         Array that contains original signals.
     signal : (n_points,) array_like
         Signal after phase-locking and averaging.
@@ -150,15 +150,15 @@ class Pixel(object):
         self.tidx = int(self.trigger * self.sampling_rate)
         
         if len(signal_array.shape) == 2:
-            self.n_points, self.n_signals = signal_array.shape
+            self.n_signals, self.n_points = signal_array.shape
         else:
             self.n_signals = 1
-            self.n_points = signal_array.shape[0]
+            self.n_points = signal_array.shape[1]
 
         # Keep the original values for restoring the signal properties.
         self._tidx_orig = self.tidx
         self.tidx_orig = self.tidx
-        self._n_points_orig = signal_array.shape[0]
+        self._n_points_orig = signal_array.shape[1]
 
         # Initialize attributes that are going to be assigned later.
         self.signal = None
@@ -173,7 +173,9 @@ class Pixel(object):
     def remove_dc(self):
         """Removes DC components from signals."""
 
-        self.signal_array -= self.signal_array.mean(axis=0)
+        for i in range(self.n_signals):
+        
+            self.signal_array[i] -= self.signal_array[i,:].mean()
 
         return
 
@@ -194,7 +196,7 @@ class Pixel(object):
         """Averages signals."""
 
         try: # if not multi-signal, don't average
-            self.signal = self.signal_array.mean(axis=1)
+            self.signal = self.signal_array.mean(axis=0)
         except:
             self.signal = self.signal_array
             
@@ -338,7 +340,7 @@ class Pixel(object):
     def calculate_amplitude(self):
         """Calculates the amplitude of the analytic signal. Uses pre-filter
         signal to do this."""
-        self.signal_orig = self.signal_array.mean(axis=1)
+        self.signal_orig = self.signal_array.mean(axis=0)
         self.signal_orig = sps.hilbert(self.signal_orig)
         self.amp = np.abs(self.signal_orig)
 

@@ -64,7 +64,7 @@ def get_params(h5_path, key='', verbose=False):
     return parm_dict
 
 
-def get_line(h5_path, line_num, array_form=False, avg=False, transpose=True):    
+def get_line(h5_path, line_num, array_form=False, avg=False, transpose=False):    
     """
     Gets a line of data 
     Returns a specific key if requested
@@ -83,6 +83,14 @@ def get_line(h5_path, line_num, array_form=False, avg=False, transpose=True):
         
     transpose : bool, optional
         For legacy FFtrEFM code, pixel is required in (n_points, n_signals) format
+        
+    Returns
+    -------
+    signal_line : numpy 2D array, iff array_form == True
+        ndarray containing the line 
+        
+    line_inst : Line, iff array_form == False
+        Line class containing the signal_array object and parameters
     """
     
     p = _which_h5(h5_path)
@@ -112,7 +120,7 @@ def get_line(h5_path, line_num, array_form=False, avg=False, transpose=True):
     return line_inst
     
 
-def get_pixel(h5_path, rc, array_form=False, avg=False, transpose=True):    
+def get_pixel(h5_path, rc, array_form=False, avg=False, transpose=False):    
     """
     Gets a pixel of data, returns all the averages within that pixel
     Returns a specific key if requested
@@ -131,6 +139,14 @@ def get_pixel(h5_path, rc, array_form=False, avg=False, transpose=True):
         
     transpose : bool, optional
         For legacy FFtrEFM code, pixel is required in (n_points, n_signals) format
+        
+    Returns
+    -------
+    signal_pixel : 1D numpy array, iff array_form == True
+        Ndarray of the (n_points) in specific pixel    
+    
+    pixel_inst : Pixel, iff array_form == False
+        Line class containing the signal_array object and parameters
     """
     
     p = _which_h5(h5_path)
