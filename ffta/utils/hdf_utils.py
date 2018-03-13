@@ -18,16 +18,17 @@ def _which_h5_group(h5_path):
     variable in the workspace
     
     """
+
+    ftype = str(type(h5_path))
+
     # h5_path is a file path
-    if type(h5_path)== str:
+    if 'str' in ftype:
         
         hdf = px.ioHDF5(h5_path)
         p = px.hdf_utils.findH5group(hdf.file, 'FF_Group')[0]
     
         return p
-    
-    ftype = str(type(h5_path))
-    
+
     # h5_path is an HDF Group
     if 'Group' in ftype:
         p = h5_path
