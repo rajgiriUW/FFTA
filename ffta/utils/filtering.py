@@ -89,6 +89,7 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
         try:
             bw = parameters['filter_bandwidth']
         except:
+            print ('No bandwidth parameters')
             bw = 2500
             
         nbf = px.processing.fft.HarmonicPassFilter(num_pts, samp_rate, drive, bw, 5)
@@ -123,6 +124,7 @@ def FFT_filter(h5_main, freq_filts, noise_tolerance=5e-7):
                                               noise_threshold=noise_tolerance,
                                               write_filtered=True, write_condensed=False, 
                                               num_pix=1,verbose=True, cores=2, max_mem_mb=512)
+        
         h5_filt_grp = sig_filt.compute()
         
     else:
@@ -141,3 +143,4 @@ def FFT_filter(h5_main, freq_filts, noise_tolerance=5e-7):
 #h5_resh_grp = h5_resh.parent
 #h5_resh.shape
     return h5_filt
+
