@@ -392,7 +392,7 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     
     return h5_path
 
-def create_HDF_pixel_wise_averaged(h5_path):
+def create_HDF_pixel_wise_averaged(h5_file):
     """
     Creates a new group FF_avg where the FF_raw file is averaged together.
     
@@ -400,12 +400,45 @@ def create_HDF_pixel_wise_averaged(h5_path):
     
     This Dataset is (n_pixels*n_rows, n_pnts_per_avg)
     
-    Creates a Datagroup FFtrEFM_Group with a single dataset in chunks
+    h5_file : h5py File
+        H5 File to be examined. File typically set as h5_file = hdf.file
+        hdf = px.ioHDF5(h5_path), h5_path = path to disk
+    
+    
     """
     
-    hdf = px.ioHDF5(h5_path)
-    ff_group = px.MicroDataGroup('FF_Avg', parent='/FF_Group')
+    h5_ff = px.hdf_utils.getDataSet(h5_file, 'FF_Raw' )[0]
+    
+    ff_avg_group = px.MicroDataGroup('FF_Avg', parent=h5_ff.parent.name)
     root_group = px.MicroDataGroup('/')
+    parm_dict = hdf_utils.get_params(h5_file)
+
+    
+    num_rows = parm_dict['num_rows']
+    num_cols = parm_dict['num_cols']
+    pnts_per_avg = parm_dict['pnts_per_avg']
+    pnts_per_pixel = parm_dict['pnts_per_pixel']
+    
+        # Set up the position vectors for the data
+    ds_pos_ind, ds_pos_val = build_ind_val_dsets([num_cols, num_rows], is_spectral=False,
+                                                  steps=[1.0 * parm_dict['FastScanSize'] / num_cols,
+                                                         1.0 * parm_dict['SlowScanSize'] / num_rows],
+                                                  labels=['X', 'Y'], units=['m', 'm'], verbose=verbose)
+
+    ds_spec_inds, ds_spec_vals = build_ind_val_dsets([pnts_per_avg], is_spectral=True,
+                                                     labels=['Deflection'], units=['V'])
+    
+    ds_spec_vals.data = ds_spec_vals.data * dt # correct the values to be right timescale
+    
+    ds_raw = px.MicroDataset('FF_Avg', data=[], dtype=np.float32,
+                             parent=ff_avg_group, maxshape=data_size, 
+                             chunking=(1, parm_dict['pnts_per_line']))
+
+    # Standard list of auxiliary datasets that get linked with the raw dataset:
+    aux_ds_names = ['Position_Indices', 'Position_Values', 
+                    'Spectroscopic_Indices', 'Spectroscopic_Values']
+
+    ff_avg_group.addChildren([ds_raw, ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals])
     
    # h5_raw = px.hdf_utils.findDataset()
    # ff_avg_group = hdf_utils.get_params()
