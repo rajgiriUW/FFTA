@@ -36,6 +36,9 @@ def _which_h5_group(h5_path):
     elif 'File' in ftype:
         p = px.hdf_utils.findH5group(h5_path, 'FF_Group')[0]
         
+    elif 'Dataset' in ftype:
+        p = h5_path.parent
+        
     return p
 
 def get_params(h5_path, key='', verbose=False):
@@ -72,8 +75,10 @@ def get_params(h5_path, key='', verbose=False):
 def get_line(h5_path, line_num, pnts=1, 
              array_form=False, avg=False, transpose=False):    
     """
-    Gets a line of data 
-    Returns a specific key if requested
+    Gets a line of data.
+    
+    If h5_path is a dataset it processes based on user-defined pnts_avg
+    If h5_path is a group/file/string_path then it can be a Line class or array
     
     h5_path : str or h5py
         Can pass either an h5_path to a file or a file already in use
@@ -106,15 +111,17 @@ def get_line(h5_path, line_num, pnts=1,
     if 'Dataset' not in str(type(h5_path)):
     
         p = _which_h5_group(h5_path)
+        parameters = get_params(p)
 
         d = p['FF_Raw']
         c = p.attrs['num_cols']
         pnts = p.attrs['pnts_per_line']
      
-    else: # if a Dataset, extract parameters from the shape
+    else: # if a Dataset, extract parameters from the shape. 
         
         d = h5_path
         c = d.shape[0]
+        parameters = get_params(h5_path.parent)
     
     signal_line = d[line_num*pnts:(line_num+1)*pnts, : ]
     
@@ -129,8 +136,6 @@ def get_line(h5_path, line_num, pnts=1,
     
     if avg == True and array_form == False:
         raise ValueError('Cannot use Line to return an averaged array')
-    
-    parameters = get_params(p)
     
     line_inst = Line(signal_line, parameters, c)
     
@@ -177,16 +182,16 @@ def get_pixel(h5_path, rc, pnts = 1,
         d = p['FF_Raw']
         c = p.attrs['num_cols']
         pnts = int(p.attrs['pnts_per_pixel'])
+        parameters = get_params(p)
         
     else:
         
         d = h5_path
         c = h5_path.shape[0]
+        parameters = get_params(h5_path.parent)
 
     signal_pixel = d[rc[0]*c + rc[1]:rc[0]*c + rc[1]+pnts, :]    
 
-    parameters = get_params(p)
-    
     if avg == True:
         signal_pixel = signal_pixel.mean(axis=0)
 
