@@ -20,6 +20,7 @@ def _which_h5_group(h5_path):
     """
     # h5_path is a file path
     if type(h5_path)== str:
+        
         hdf = px.ioHDF5(h5_path)
         p = px.hdf_utils.findH5group(hdf.file, 'FF_Group')[0]
     
@@ -34,7 +35,7 @@ def _which_h5_group(h5_path):
     # h5_path is an HDF File
     elif 'File' in ftype:
         p = px.hdf_utils.findH5group(h5_path, 'FF_Group')[0]
-    
+        
     return p
 
 def get_params(h5_path, key='', verbose=False):
@@ -68,7 +69,8 @@ def get_params(h5_path, key='', verbose=False):
     return parm_dict
 
 
-def get_line(h5_path, line_num, array_form=False, avg=False, transpose=False):    
+def get_line(h5_path, line_num, pnts=1, 
+             array_form=False, avg=False, transpose=False):    
     """
     Gets a line of data 
     Returns a specific key if requested
@@ -78,7 +80,10 @@ def get_line(h5_path, line_num, array_form=False, avg=False, transpose=False):
     
     line_num : int
         Returns specific line in the dataset
-        
+    
+    pnts : int, optional
+        Number of points in a line. Same as parm_dict['pnts_per_line']
+    
     array_form : bool, optional
         Returns the raw array contents rather than Line class
         
@@ -97,11 +102,19 @@ def get_line(h5_path, line_num, array_form=False, avg=False, transpose=False):
         Line class containing the signal_array object and parameters
     """
     
-    p = _which_h5_group(h5_path)
+    # If not a dataset, then find the associated Group
+    if 'Dataset' not in str(type(h5_path)):
+    
+        p = _which_h5_group(h5_path)
 
-    d = p['FF_Raw']
-    c = p.attrs['num_cols']
-    pnts = p.attrs['pnts_per_line']
+        d = p['FF_Raw']
+        c = p.attrs['num_cols']
+        pnts = p.attrs['pnts_per_line']
+     
+    else: # if a Dataset, extract parameters from the shape
+        
+        d = h5_path
+        c = d.shape[0]
     
     signal_line = d[line_num*pnts:(line_num+1)*pnts, : ]
     
@@ -124,7 +137,8 @@ def get_line(h5_path, line_num, array_form=False, avg=False, transpose=False):
     return line_inst
     
 
-def get_pixel(h5_path, rc, array_form=False, avg=False, transpose=False):    
+def get_pixel(h5_path, rc, pnts = 1, 
+              array_form=False, avg=False, transpose=False):    
     """
     Gets a pixel of data, returns all the averages within that pixel
     Returns a specific key if requested
@@ -135,6 +149,9 @@ def get_pixel(h5_path, rc, array_form=False, avg=False, transpose=False):
     rc : list [r, c]
         Pixel location in terms of ROW, COLUMN
         
+    pnts : int
+        Number of signals to average together. By default is extracted from parm_dict/attributes    
+    
     array_form : bool, optional
         Returns the raw array contents rather than Pixel class
     
@@ -153,11 +170,18 @@ def get_pixel(h5_path, rc, array_form=False, avg=False, transpose=False):
         Line class containing the signal_array object and parameters
     """
     
-    p = _which_h5_group(h5_path)
+    # If not a dataset, then find the associated Group
+    if 'Dataset' not in str(type(h5_path)):
+        p = _which_h5_group(h5_path)
     
-    d = p['FF_Raw']
-    c = p.attrs['num_cols']
-    pnts = int(p.attrs['pnts_per_pixel'])
+        d = p['FF_Raw']
+        c = p.attrs['num_cols']
+        pnts = int(p.attrs['pnts_per_pixel'])
+        
+    else:
+        
+        d = h5_path
+        c = h5_path.shape[0]
 
     signal_pixel = d[rc[0]*c + rc[1]:rc[0]*c + rc[1]+pnts, :]    
 

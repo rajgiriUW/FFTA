@@ -294,14 +294,14 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     
     Parameters
     ----------
-    h5_path : string
-        Path to H5 file
-    
     data_files : list
         List of the *.ibw files to be invidually scanned
         
     parm_dict : dict
         Scan parameters to be saved as attributes
+
+    h5_path : string
+        Path to H5 file on disk
 
     verbose : bool, optional
         Display outputs of each function or not
@@ -363,7 +363,6 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     ff_group.addChildren([ds_raw, ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals])
 
     # Get reference for writing the data
-    ff_group.addChildren([ds_raw])
     ff_group.attrs = parm_dict
     h5_refs = hdf.writeData(ff_group, print_log=True)
     
@@ -386,13 +385,14 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     h5_main = px.hdf_utils.getH5DsetRefs(['FF_Raw'], h5_refs)[0] 
     px.hdf_utils.linkRefs(h5_main, px.hdf_utils.getH5DsetRefs(aux_ds_names, h5_refs))
     
-    px.hdf_utils.print_tree(hdf.file)
+    if verbose == True:
+        px.hdf_utils.print_tree(hdf.file)
     
     hdf.flush()
     
     return h5_path
 
-def create_HDF_pixel_wise_averaged(h5_file):
+def create_HDF_pixel_wise_averaged(h5_file, verbose=False):
     """
     Creates a new group FF_avg where the FF_raw file is averaged together.
     
@@ -404,22 +404,30 @@ def create_HDF_pixel_wise_averaged(h5_file):
         H5 File to be examined. File typically set as h5_file = hdf.file
         hdf = px.ioHDF5(h5_path), h5_path = path to disk
     
+    verbose : bool, optional
+        Display outputs of each function or not
     
+    Returns
+    -------
+    h5_avg : Dataset
+        The new averaged Dataset
+        
     """
     
-    h5_ff = px.hdf_utils.getDataSet(h5_file, 'FF_Raw' )[0]
+    hdf = px.ioHDF5(h5_file)
+    h5_main = px.hdf_utils.getDataSet(h5_file, 'FF_Raw' )[0]
     
-    ff_avg_group = px.MicroDataGroup('FF_Avg', parent=h5_ff.parent.name)
+    ff_avg_group = px.MicroDataGroup('FF_Avg', parent=h5_main.parent.name)
     root_group = px.MicroDataGroup('/')
     parm_dict = hdf_utils.get_params(h5_file)
 
-    
     num_rows = parm_dict['num_rows']
     num_cols = parm_dict['num_cols']
     pnts_per_avg = parm_dict['pnts_per_avg']
     pnts_per_pixel = parm_dict['pnts_per_pixel']
+    dt = 1/parm_dict['sampling_rate']
     
-        # Set up the position vectors for the data
+    # Set up the position vectors for the data
     ds_pos_ind, ds_pos_val = build_ind_val_dsets([num_cols, num_rows], is_spectral=False,
                                                   steps=[1.0 * parm_dict['FastScanSize'] / num_cols,
                                                          1.0 * parm_dict['SlowScanSize'] / num_rows],
@@ -431,7 +439,7 @@ def create_HDF_pixel_wise_averaged(h5_file):
     ds_spec_vals.data = ds_spec_vals.data * dt # correct the values to be right timescale
     
     ds_raw = px.MicroDataset('FF_Avg', data=[], dtype=np.float32,
-                             parent=ff_avg_group, maxshape=data_size, 
+                             parent=ff_avg_group, maxshape=[num_cols, pnts_per_avg], 
                              chunking=(1, parm_dict['pnts_per_line']))
 
     # Standard list of auxiliary datasets that get linked with the raw dataset:
@@ -440,7 +448,28 @@ def create_HDF_pixel_wise_averaged(h5_file):
 
     ff_avg_group.addChildren([ds_raw, ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals])
     
-   # h5_raw = px.hdf_utils.findDataset()
-   # ff_avg_group = hdf_utils.get_params()
+    ff_avg_group.attrs = parm_dict
+    h5_refs = hdf.writeData(ff_avg_group, print_log=True)
+
+    h5_avg = px.hdf_utils.getDataSet(h5_file, 'FF_Avg')[0]
     
-    return
+    # Uses get_line to extract line. Averages and returns to the Dataset FF_Avg
+    # We can operate on the dataset array directly, get_line is used for future_proofing if
+    #  we want to add additional operation (such as create an Image class)
+    for i in range(num_cols):   
+        
+        if verbose == True:
+            print('#### Pixel:',i,'####')
+                  
+        _ll = hdf_utils.get_line(h5_main, pnts=pnts_per_pixel, line_num=i, array_form=True, avg=True)  
+        h5_avg[i,:] = _ll[:]
+    
+    h5_avg = px.hdf_utils.getH5DsetRefs(['FF_Avg'], h5_refs)[0] 
+    px.hdf_utils.linkRefs(h5_main, px.hdf_utils.getH5DsetRefs(aux_ds_names, h5_refs))
+    
+    if verbose == True:
+        px.hdf_utils.print_tree(hdf.file)
+    
+    hdf.flush()
+
+    return h5_avg
