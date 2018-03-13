@@ -21,6 +21,7 @@ import h5py
 
 from ffta.utils import load
 from ffta.utils import gl_ibw
+from ffta.utils import hdf_utils
 
 import warnings
 
@@ -337,7 +338,7 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
 
     # To do: Fix the labels/atrtibutes on the relevant data sets
     hdf = px.ioHDF5(h5_path)
-    ff_group = px.MicroDataGroup('FFtrEFM_Group', parent='/')
+    ff_group = px.MicroDataGroup('FF_Group', parent='/')
     root_group = px.MicroDataGroup('/')
     
     # Set up the position vectors for the data
@@ -351,7 +352,7 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     
     ds_spec_vals.data = ds_spec_vals.data * dt # correct the values to be right timescale
     
-    ds_raw = px.MicroDataset('FF_raw', data=[], dtype=np.float32,
+    ds_raw = px.MicroDataset('FF_Raw', data=[], dtype=np.float32,
                              parent=ff_group, maxshape=data_size, 
                              chunking=(1, parm_dict['pnts_per_line']))
 
@@ -368,10 +369,10 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     
     pnts_per_line = parm_dict['pnts_per_line']
 
-    h5_file = px.hdf_utils.getDataSet(hdf.file, 'FF_raw')[0]
+    h5_file = px.hdf_utils.getDataSet(hdf.file, 'FF_Raw')[0]
 
     # Cycles through the remaining files. This takes a while (~few minutes)
-    for k, num in zip(data_files,np.arange(0,len(data_files))):
+    for k, num in zip(data_files, np.arange(0,len(data_files))):
         
         fname = k.replace('/','\\')
         print('####',fname.split('\\')[-1],'####')
@@ -382,7 +383,7 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
         f = hdf.file[h5_file.name]
         f[pnts_per_line*num:pnts_per_line*(num+1), :] = line_file[:,:]
     
-    h5_main = px.hdf_utils.getH5DsetRefs(['FF_raw'], h5_refs)[0] 
+    h5_main = px.hdf_utils.getH5DsetRefs(['FF_Raw'], h5_refs)[0] 
     px.hdf_utils.linkRefs(h5_main, px.hdf_utils.getH5DsetRefs(aux_ds_names, h5_refs))
     
     px.hdf_utils.print_tree(hdf.file)
@@ -391,3 +392,22 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     
     return h5_path
 
+def create_HDF_pixel_wise_averaged(h5_path):
+    """
+    Creates a new group FF_avg where the FF_raw file is averaged together.
+    
+    This is more useful as pixel-wise averages are more relevant in FF-processing
+    
+    This Dataset is (n_pixels*n_rows, n_pnts_per_avg)
+    
+    Creates a Datagroup FFtrEFM_Group with a single dataset in chunks
+    """
+    
+    hdf = px.ioHDF5(h5_path)
+    ff_group = px.MicroDataGroup('FF_Avg', parent='/FF_Group')
+    root_group = px.MicroDataGroup('/')
+    
+   # h5_raw = px.hdf_utils.findDataset()
+   # ff_avg_group = hdf_utils.get_params()
+    
+    return

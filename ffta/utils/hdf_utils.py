@@ -9,7 +9,7 @@ import pycroscopy as px
 from ffta.line import Line
 from ffta.pixel import Pixel
 
-def _which_h5(h5_path):
+def _which_h5_group(h5_path):
     """
     h5_path : str, HDF group, HDF file
     
@@ -21,15 +21,19 @@ def _which_h5(h5_path):
     # h5_path is a file path
     if type(h5_path)== str:
         hdf = px.ioHDF5(h5_path)
-        p = px.hdf_utils.findH5group(hdf.file, 'FF')[0]
+        p = px.hdf_utils.findH5group(hdf.file, 'FF_Group')[0]
+    
+        return p
+    
+    ftype = str(type(h5_path))
     
     # h5_path is an HDF Group
-    elif 'Group' in str(type(h5_path)):
+    if 'Group' in ftype:
         p = h5_path
     
     # h5_path is an HDF File
-    else:
-        p = px.hdf_utils.findH5group(h5_path, 'FF')[0]
+    elif 'File' in ftype:
+        p = px.hdf_utils.findH5group(h5_path, 'FF_Group')[0]
     
     return p
 
@@ -48,7 +52,7 @@ def get_params(h5_path, key='', verbose=False):
         Prints all parameters to console
     """
     
-    p = _which_h5(h5_path)
+    p = _which_h5_group(h5_path)
     
     parm_dict = {}
     
@@ -93,9 +97,9 @@ def get_line(h5_path, line_num, array_form=False, avg=False, transpose=False):
         Line class containing the signal_array object and parameters
     """
     
-    p = _which_h5(h5_path)
+    p = _which_h5_group(h5_path)
 
-    d = p['FF_raw']
+    d = p['FF_Raw']
     c = p.attrs['num_cols']
     pnts = p.attrs['pnts_per_line']
     
@@ -149,9 +153,9 @@ def get_pixel(h5_path, rc, array_form=False, avg=False, transpose=False):
         Line class containing the signal_array object and parameters
     """
     
-    p = _which_h5(h5_path)
+    p = _which_h5_group(h5_path)
     
-    d = p['FF_raw']
+    d = p['FF_Raw']
     c = p.attrs['num_cols']
     pnts = int(p.attrs['pnts_per_pixel'])
 
