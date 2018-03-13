@@ -151,14 +151,16 @@ class Pixel(object):
         
         if len(signal_array.shape) == 2:
             self.n_signals, self.n_points = signal_array.shape
+            self._n_points_orig = signal_array.shape[1]
         else:
             self.n_signals = 1
-            self.n_points = signal_array.shape[1]
+            self.n_points = signal_array.shape[0]
+            self._n_points_orig = signal_array.shape[0]
 
         # Keep the original values for restoring the signal properties.
         self._tidx_orig = self.tidx
         self.tidx_orig = self.tidx
-        self._n_points_orig = signal_array.shape[1]
+
 
         # Initialize attributes that are going to be assigned later.
         self.signal = None
@@ -173,9 +175,11 @@ class Pixel(object):
     def remove_dc(self):
         """Removes DC components from signals."""
 
-        for i in range(self.n_signals):
+        if self.n_signals != 1:
         
-            self.signal_array[i] -= self.signal_array[i,:].mean()
+            for i in range(self.n_signals):
+            
+                self.signal_array[i] -= self.signal_array[i,:].mean()
 
         return
 
@@ -183,9 +187,8 @@ class Pixel(object):
         """Phase-locks signals in the signal array. This also cuts signals."""
 
         # Phase-lock signals.
-        self.signal_array, self.tidx = noise.phase_lock(
-            self.signal_array, self.tidx,
-            np.ceil(self.sampling_rate / self.drive_freq))
+        self.signal_array, self.tidx = noise.phase_lock(self.signal_array, self.tidx,
+                                                        np.ceil(self.sampling_rate / self.drive_freq))
 
         # Update number of points after phase-locking.
         self.n_points = self.signal_array.shape[0]
@@ -195,9 +198,10 @@ class Pixel(object):
     def average(self):
         """Averages signals."""
 
-        try: # if not multi-signal, don't average
+        if self.n_signals != 1: # if not multi-signal, don't average
             self.signal = self.signal_array.mean(axis=0)
-        except:
+            
+        else:
             self.signal = self.signal_array
             
         return
