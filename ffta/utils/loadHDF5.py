@@ -419,7 +419,7 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=False):
     
     ff_avg_group = px.MicroDataGroup('FF_Avg', parent=h5_main.parent.name)
     root_group = px.MicroDataGroup('/')
-    parm_dict = hdf_utils.get_params(h5_file)
+    parm_dict = px.hdf_utils.get_attributes(h5_main.parent)
 
     num_rows = parm_dict['num_rows']
     num_cols = parm_dict['num_cols']
@@ -434,12 +434,12 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=False):
                                                   labels=['X', 'Y'], units=['m', 'm'], verbose=verbose)
 
     ds_spec_inds, ds_spec_vals = build_ind_val_dsets([pnts_per_avg], is_spectral=True,
-                                                     labels=['Deflection'], units=['V'])
+                                                     labels=['Deflection'], units=['V'], verbose=verbose)
     
     ds_spec_vals.data = ds_spec_vals.data * dt # correct the values to be right timescale
     
     ds_raw = px.MicroDataset('FF_Avg', data=[], dtype=np.float32,
-                             parent=ff_avg_group, maxshape=[num_cols, pnts_per_avg], 
+                             parent=ff_avg_group, maxshape=[num_cols*4, pnts_per_avg], 
                              chunking=(1, parm_dict['pnts_per_line']))
 
     # Standard list of auxiliary datasets that get linked with the raw dataset:
@@ -465,7 +465,7 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=False):
         h5_avg[i,:] = _ll[:]
     
     h5_avg = px.hdf_utils.getH5DsetRefs(['FF_Avg'], h5_refs)[0] 
-    px.hdf_utils.linkRefs(h5_main, px.hdf_utils.getH5DsetRefs(aux_ds_names, h5_refs))
+    px.hdf_utils.linkRefs(h5_avg, px.hdf_utils.getH5DsetRefs(aux_ds_names, h5_refs))
     
     if verbose == True:
         px.hdf_utils.print_tree(hdf.file)

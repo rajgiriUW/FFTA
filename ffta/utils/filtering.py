@@ -108,17 +108,33 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
     return filt_line, freq_filts, fig_filt, axes_filt
 
 
-def FFT_filter(h5_main, freq_filts, noise_tolerance=5e-7):
+def FFT_filter(h5_main, freq_filts, noise_tolerance=5e-7, make_new=False):
     """
     Stub for applying filter above to the entire FF image set
     
     h5_main : h5py.Dataset object
         Dataset to work on, e.g. h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_raw')[0]
     
+    freq_filts : list
+        List of frequency filters usually generated in test_line above
+        
+    noise_tolerance : float, optional
+        Level below which data are set to 0. Higher values = more noise (more tolerant)
+    
+    make_new : bool, optional
+        Allows for re-filtering the data by creating a new folder
+    
+    Returns
+    -------
+    
+    h5_filt : Dataset
+        Filtered dataset within latest -FFT_Filtering Group
+        
     """
+    
     h5_filt_grp = px.hdf_utils.check_for_old(h5_main, 'FFT_Filtering')
     
-    if h5_filt_grp == None:
+    if h5_filt_grp == None or make_new == True:
         
         sig_filt = px.processing.SignalFilter(h5_main, frequency_filters=freq_filts, 
                                               noise_threshold=noise_tolerance,
@@ -131,16 +147,7 @@ def FFT_filter(h5_main, freq_filts, noise_tolerance=5e-7):
         print('Taking previously computed results')
     
     h5_filt = h5_filt_grp['Filtered_Data']
+    px.hdf_utils.copyAttributes(h5_main.parent, h5_filt)
 
-## Reshapes the filtered response into a matrix per-pixel instead of in lines (as recorded by NI box)
-#
-#print('\n','#### Done! Now reshaping... ####')
-#h5_main_filt = px.hdf_utils.getDataSet(hdf.file,'Filtered_Data')[0]
-#
-#scan_width=1
-#h5_resh = px.processing.gmode_utils.reshape_from_lines_to_pixels(h5_filt, pixel_ex_wfm.size,
-#                                                                 scan_width / num_cols)
-#h5_resh_grp = h5_resh.parent
-#h5_resh.shape
     return h5_filt
 

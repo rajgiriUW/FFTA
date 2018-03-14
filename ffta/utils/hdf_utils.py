@@ -9,6 +9,8 @@ import pycroscopy as px
 from ffta.line import Line
 from ffta.pixel import Pixel
 
+import numpy as np
+
 def _which_h5_group(h5_path):
     """
     h5_path : str, HDF group, HDF file
@@ -57,22 +59,20 @@ def get_params(h5_path, key='', verbose=False):
         Prints all parameters to console
     """
     
-    p = _which_h5_group(h5_path)
-    
-    parm_dict = {}
-    
-    for k in p.attrs:
-        parm_dict[k] = p.attrs[k]
-        
-    if verbose == True:
-        print(parm_dict)
-        
     if any(key):
-        return parm_dict[key]
+        return px.hdf_utils.get_attributes(h5_path, attr_names=key)
     
-    return parm_dict
-
-
+    return px.hdf_utils.get_attributes(h5_path)
+    
+#    for k in p.attrs:
+#        parm_dict[k] = p.attrs[k]
+#        
+#    if verbose == True:
+#        print(parm_dict)
+#        
+#    if any(key):
+#        return parm_dict[key]
+    
 def get_line(h5_path, line_num, pnts=1, 
              array_form=False, avg=False, transpose=False):    
     """
@@ -112,7 +112,7 @@ def get_line(h5_path, line_num, pnts=1,
     if 'Dataset' not in str(type(h5_path)):
     
         p = _which_h5_group(h5_path)
-        parameters = get_params(p)
+        parameters =  px.hdf_utils.get_attributes(p)
 
         d = p['FF_Raw']
         c = p.attrs['num_cols']
@@ -122,9 +122,12 @@ def get_line(h5_path, line_num, pnts=1,
         
         d = h5_path
         c = d.shape[0]
-        parameters = get_params(h5_path.parent)
+        parameters =  px.hdf_utils.get_attributes(h5_path)
+        
+        if 'trigger' not in parameters:
+            parameters =  px.hdf_utils.get_attributes(h5_path.parent)
     
-    signal_line = d[line_num*pnts:(line_num+1)*pnts, : ]
+    signal_line = d[line_num*pnts:(line_num+1)*pnts, :]
     
     if avg == True:
         signal_line = signal_line.mean(axis=0)
@@ -183,13 +186,16 @@ def get_pixel(h5_path, rc, pnts = 1,
         d = p['FF_Raw']
         c = p.attrs['num_cols']
         pnts = int(p.attrs['pnts_per_pixel'])
-        parameters = get_params(p)
+        parameters =  px.hdf_utils.get_attributes(p)
         
     else:
         
         d = h5_path
         c = h5_path.shape[0]
-        parameters = get_params(h5_path.parent)
+        parameters =  px.hdf_utils.get_attributes(h5_path)
+        
+        if 'trigger' not in parameters:
+            parameters =  px.hdf_utils.get_attributes(h5_path.parent)
 
     signal_pixel = d[rc[0]*c + rc[1]:rc[0]*c + rc[1]+pnts, :]    
 
@@ -201,6 +207,10 @@ def get_pixel(h5_path, rc, pnts = 1,
         
     if array_form == True:
         return signal_pixel
+    
+    if signal_pixel.shape[0] == 1:
+        
+        signal_pixel = np.reshape(signal_pixel, [signal_pixel.shape[1]])
         
     pixel_inst = Pixel(signal_pixel, parameters)
     

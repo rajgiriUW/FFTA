@@ -149,6 +149,8 @@ class Pixel(object):
         self.signal_array = signal_array
         self.tidx = int(self.trigger * self.sampling_rate)
         
+        # Set dimensions correctly
+        # Three cases: 1) 2D (has many averages) 2) 1D (but set as 1xN) and 3) True 1D
         if len(signal_array.shape) == 2:
             self.n_signals, self.n_points = signal_array.shape
             self._n_points_orig = signal_array.shape[1]
@@ -170,6 +172,14 @@ class Pixel(object):
         self.shift = None
         self.cwt_matrix = None
 
+        return
+
+    def clear_filter_flags(self):
+        """Removes flags from parameters for setting filters"""
+        
+        self.window = None
+        self.bandpass_filter = 0
+        
         return
 
     def remove_dc(self):
@@ -344,7 +354,10 @@ class Pixel(object):
     def calculate_amplitude(self):
         """Calculates the amplitude of the analytic signal. Uses pre-filter
         signal to do this."""
-        self.signal_orig = self.signal_array.mean(axis=0)
+#       
+        if self.n_signals != 1:
+            self.signal_orig = self.signal_array.mean(axis=0)
+        
         self.signal_orig = sps.hilbert(self.signal_orig)
         self.amp = np.abs(self.signal_orig)
 

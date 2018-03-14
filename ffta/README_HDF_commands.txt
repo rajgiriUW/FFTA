@@ -24,11 +24,11 @@ Quick example:
 -------------
 import pycroscopy as px
 from ffta.utils import hdf_utils, filtering
-h5_path = 'E:/Data/20180216_BAPI_IDep/FF1_x10_test3.h5'
+h5_path = 'E:/Data/20180216_BAPI_IDep/FF1_x10_test9.h5'
 hdf = px.ioHDF5(h5_path)
 h5_file = hdf.file
-parameters = hdf_utils.get_params(hdf.file)
 h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_Raw')[0]
+parameters = px.hdf_utils.get_attributes(h5_main.parent)
 
-h5_ll =  hdf_utils.get_line(h5ff_path, line_num=0)
+h5_ll =  hdf_utils.get_line(h5_path, line_num=0)
 filt_sig, freq_filts, _,_ = filtering.FFT_testfilter(h5_ll.pixel_wise_avg(), parameters, narrowband=True, noise_tolerance=1e-10)

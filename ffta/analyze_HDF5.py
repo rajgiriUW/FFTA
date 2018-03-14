@@ -31,24 +31,7 @@ Analyzes an HDF_5 format trEFM data set and writes the result into that file
 
 def process(h5_path):
     """Main function of the executable file."""
-    logging.basicConfig(filename='error.log', level=logging.INFO)
-
-#    if argv is None:
-#        argv = sys.argv[1:]
-
-    # Parse arguments from the command line, and print out help.
-#    parser = ap.ArgumentParser(description='Analysis software for FF-trEFM')
-#    parser.add_argument('h5_path', nargs='?', default=os.getcwd(),
-#                        help='path to HDF5')
-#    parser.add_argument('-p', help='parallel computing option should be'
-#                        'followed by the number of CPUs.', type=int,
-#                        choices=range(2, cpu_count + 1))
-#    parser.add_argument('-v', action='version',
-#                        version='FFtr-EFM 2.0 Release Candidate')
-#    args = parser.parse_args(argv)
-
-    # Scan the path for .ibw and .cfg files.
-    #path = args.path
+#    logging.basicConfig(filename='error.log', level=logging.INFO)
 
     # Initialize file and read parameters
 #    h5_path = args.h5_path
