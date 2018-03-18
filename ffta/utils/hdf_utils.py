@@ -59,19 +59,17 @@ def get_params(h5_path, key='', verbose=False):
         Prints all parameters to console
     """
     
+    gp = _which_h5_group(h5_path)
+    
+    parameters =  px.hdf_utils.get_attributes(gp)
+    
+    if 'trigger' not in parameters:
+        parameters =  px.hdf_utils.get_attributes(h5_path.parent)
+    
     if any(key):
-        return px.hdf_utils.get_attributes(h5_path, attr_names=key)
+        return parameters[key]
     
-    return px.hdf_utils.get_attributes(h5_path)
-    
-#    for k in p.attrs:
-#        parm_dict[k] = p.attrs[k]
-#        
-#    if verbose == True:
-#        print(parm_dict)
-#        
-#    if any(key):
-#        return parm_dict[key]
+    return parameters
     
 def get_line(h5_path, line_num, pnts=1, 
              array_form=False, avg=False, transpose=False):    
