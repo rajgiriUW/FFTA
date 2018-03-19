@@ -13,14 +13,15 @@ import numpy as np
 
 def _which_h5_group(h5_path):
     """
-    h5_path : str, HDF group, HDF file
-    
     Used internally in get_ functions to indentify type of H5_path parameter.
     H5_path can be passed as string (to h5 location), or as an existing
     variable in the workspace
     
+    h5_path : str, HDF group, HDF file
+    
+    Returns: h5Py Group
+        h5Py group corresponding to "FF_Group" typically at hdf.file['/FF_Group']
     """
-
     ftype = str(type(h5_path))
 
     # h5_path is a file path

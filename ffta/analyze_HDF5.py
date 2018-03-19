@@ -29,17 +29,27 @@ from pycroscopy.io.io_utils import getTimeStamp
 Analyzes an HDF_5 format trEFM data set and writes the result into that file
 """
 
+def find_FF(h5_path):
+    
+    h5_gp = hdf_utils._which_h5_group(h5_path)
+    parameters = hdf_utils.get_params(h5_gp)
+    
+    return h5_gp, parameters
+
 def process(h5_path):
-    """Main function of the executable file."""
+    """
+    Processes FF_Raw dataset in the HDF5 file
+    
+    This then saves within the h5 file in FF_Group-processed
+    
+    
+    """
 #    logging.basicConfig(filename='error.log', level=logging.INFO)
 
-    # Initialize file and read parameters
-#    h5_path = args.h5_path
-    hdf = px.ioHDF5(h5_path)
-    h5_main = hdf.file
-    p = px.hdf_utils.findH5group(h5_main, 'FF')[0]
-    parameters = hdf_utils.get_params(p)
+    h5_file = px.ioHDF5(h5_path).file
+    h5_gp, parameters = find_FF(h5_file)
 
+    # Initialize file and read parameters
     n_pixels = parameters['num_cols']
     num_rows = parameters['num_rows']
     pnts_per_pixel = parameters['pnts_per_pixel']
@@ -56,16 +66,14 @@ def process(h5_path):
 
     fig, a = plt.subplots(nrows=2, figsize=(13, 6))
 
-#    fig = plt.figure(figsize=(12, 6), tight_layout=True)
-#    grid = gs.GridSpec(1, 2)
     tfp_ax = a[0]
     shift_ax = a[1]
 
     tfp_ax.set_title('tFP Image')
     shift_ax.set_title('Shift Image')
 
-    img_length = parameters['width']
-    img_height = parameters['height']
+    img_length = parameters['FastScanSize']
+    img_height = parameters['SlowScanSize']
 
     kwargs = {'origin': 'lower', 'aspect': 'equal', 'x_size':img_length,
               'y_size':img_height, 'num_ticks': 5, 'stdevs': 3}
@@ -81,7 +89,7 @@ def process(h5_path):
     # Load every file in the file list one by one.
     for i in range(num_rows):
 
-        line_inst = hdf_utils.get_line(hdf.file, i)
+        line_inst = hdf_utils.get_line(h5_gp, i)
         
         tfp[i, :], shift[i, :], _ = line_inst.analyze()
 
@@ -109,23 +117,34 @@ def process(h5_path):
 
         del line_inst  # Delete the instance to open up memory.
 
+    save_process(h5_file, tfp, shift)
+
+    return tfp, shift
+
+def save_process(h5_file, tfp, shift):
+
+    # hdf handle
+    hdf = px.ioHDF5(h5_file)
+
     # Filter bad pixels
     tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)
     tfp_fixed = np.array(tfp_fixed)
-
-    # Save to HDF5 file. 
     
     # create unique suffix
-    names = hdf_utils.h5_list(hdf.file['/FFtrEFM_Group'], 'processed')
-    suffix = names[-1][-4:]
-    suffix = str(int(suffix)+1).zfill(4)
+    names = hdf_utils.h5_list(hdf.file['/FF_Group'], 'processed')
+    try:
+        suffix = names[-1][-4:]
+        suffix = str(int(suffix)+1).zfill(4)
+    except:
+        suffix = ''
     
-    grp_name = p.name.split('/')[-1] + '-processed-' + suffix
-    grp_tr = px.MicroDataGroup(grp_name, p.name + '/')
+    # write data
+    grp_name = h5_file.name.split('/')[-1] + '-processed-' + suffix
+    grp_tr = px.MicroDataGroup(grp_name, h5_file.name + '/')
 
-    tfp_px = px.MicroDataset('tfp', tfp, parent=p.name)
-    shift_px = px.MicroDataset('shift', shift, parent=p.name)
-    tfp_fixed_px = px.MicroDataset('tfp_filtered', tfp_fixed, parent=p.name)
+    tfp_px = px.MicroDataset('tfp', tfp, parent=h5_file.name)
+    shift_px = px.MicroDataset('shift', shift, parent=h5_file.name)
+    tfp_fixed_px = px.MicroDataset('tfp_filtered', tfp_fixed, parent=h5_file.name)
     grp_tr.attrs['timestamp'] = getTimeStamp()
 
     grp_tr.addChildren([tfp_px])
@@ -139,7 +158,3 @@ def process(h5_path):
 
     return
 
-#
-#if __name__ == '__main__':
-#
-#    sys.exit(main(sys.argv[1:]))
