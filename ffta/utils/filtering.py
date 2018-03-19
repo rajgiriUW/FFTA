@@ -53,7 +53,7 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
     
     reshape = False
     
-    if 'h5py' in str(type(hdf_file)):   #hdf file
+    if 'h5py' or 'Dataset' in str(type(hdf_file)):   #hdf file
         
         parameters = hdf_utils.get_params(hdf_file)
         hdf_file = hdf_utils.get_line(hdf_file, linenum, array_form=True, transpose=False)

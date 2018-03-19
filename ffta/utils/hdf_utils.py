@@ -30,6 +30,9 @@ def _which_h5_group(h5_path):
     H5_path can be passed as string (to h5 location), or as an existing
     variable in the workspace
     
+    If this is a Dataset, it will try and return the parent as that is 
+        by default where all relevant attributs are
+    
     h5_path : str, HDF group, HDF file
     
     Returns: h5Py Group
@@ -245,11 +248,13 @@ def get_pixel(h5_path, rc, pnts = 1,
     else:
         
         d = h5_path
-        c = h5_path.shape[0]
         parameters =  px.hdf_utils.get_attributes(h5_path)
         
         if 'trigger' not in parameters:
             parameters =  px.hdf_utils.get_attributes(h5_path.parent)
+
+        c = parameters['num_cols']
+        pnts = parameters['pnts_per_pixel']
 
     signal_pixel = d[rc[0]*c + rc[1]:rc[0]*c + rc[1]+pnts, :]    
 

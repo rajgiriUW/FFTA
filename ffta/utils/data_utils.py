@@ -37,7 +37,7 @@ def test_pixel(h5_file, param_changes={}, pxls = 1, showplots = True, verbose=Tr
     
     # Creates random pixels to sample
     pixels = []
-    if pixels == 1:
+    if pxls == 1:
     
         pixels.append([0,0])
     

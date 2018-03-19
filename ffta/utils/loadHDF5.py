@@ -398,7 +398,7 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     
     return h5_path
 
-def create_HDF_pixel_wise_averaged(h5_file, verbose=False):
+def create_HDF_pixel_wise_averaged(h5_file, verbose=True):
     """
     Creates a new group FF_avg where the FF_raw file is averaged together.
     
@@ -455,6 +455,8 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=False):
     ff_avg_group.addChildren([ds_raw, ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals])
     
     ff_avg_group.attrs = parm_dict
+    ff_avg_group.attrs['pnts_per_line'] = num_cols # to change number of pnts in a line
+    ff_avg_group.attrs['pnts_per_pixel'] = 1 # to change number of pnts in a pixel
     h5_refs = hdf.writeData(ff_avg_group, print_log=True)
 
     h5_avg = px.hdf_utils.getDataSet(hdf.file, 'FF_Avg')[0]
@@ -465,7 +467,7 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=False):
     for i in range(num_rows):   
         
         if verbose == True:
-            print('#### Pixel:',i,'####')
+            print('#### Row:',i,'####')
                   
         _ll = hdf_utils.get_line(h5_main, pnts=pnts_per_line, line_num=i, array_form=True, avg=True)  
         h5_avg[i*num_cols:(i+1)*num_cols,:] = _ll[:]
