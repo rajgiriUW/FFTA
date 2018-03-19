@@ -322,8 +322,8 @@ def hdf_commands(h5_path):
         pass
     
     try:
-        h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_raw')[0]
-        commands.append("h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_raw')[0]")
+        h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_Raw')[0]
+        commands.append("h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_Raw')[0]")
     except:
         pass
     

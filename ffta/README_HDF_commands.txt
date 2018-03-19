@@ -3,7 +3,7 @@ Standards
 h5_path = 'string_to_h5_file'
 hdf = px.ioHDF5(h5_path)
 h5_file = hdf.file ; hdf File
-h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_raw')[0] the main dataset
+h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_Raw')[0] the main dataset
 h5_ll = hdf_utils.get_line(h5_path, line_num=5) ; gets a line (here, line 5) returns as Line class
 parameters = hdf_utils.get_params(hdf.file) ; Parameters file
 h5_px = hdf_utils.get_pixel(h5_path, rc=[0,0]) ; gets a pixel (here at 0,0) returns as Pixel class
