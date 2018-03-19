@@ -20,6 +20,8 @@ from ffta.utils import dwavelet
 import nitime.timeseries as ts
 from nitime.analysis.spectral import MorletWaveletAnalyzer, SpectralAnalyzer
 
+from matplotlib import pyplot as plt
+
 from numba import autojit
 from utils.peakdetect import get_peaks
 
@@ -653,6 +655,16 @@ class Pixel(object):
 
         return
 
+    def plot(self, newplot=True):
+        """ Quick visualization of best_fit and cut."""
+        
+        if newplot:
+            plt.figure()
+        
+        plt.plot(self.cut, 'r-')
+        plt.plot(self.best_fit, 'g--')
+                
+        return
 
     def analyze(self):
         """
