@@ -16,6 +16,7 @@ Common HDF interfacing functions
 
 _which_h5_group : Returns a group corresponding to main FFtrEFM file
 get_params : Returns the common parameters list from config file
+change_params : Changes specific parameters (replicates normal command line function)
 get_line : Gets a specific line, returns as either array or Line class
 get_pixel : Gets a specific pixel, returns as either array or Pixel class
 h5_list : Gets list of files corresponding to a key, for creating unique folders/Datasets
@@ -82,7 +83,49 @@ def get_params(h5_path, key='', verbose=False):
     if any(key):
         return parameters[key]
     
+    if verbose:
+        print(parameters)
+    
     return parameters
+
+def change_params(h5_path, new_vals = {}, verbose=False):
+    """
+    Changes a parameter to a new value
+    
+    This is equivalent to h5_main.parent.attrs[key] = new_value
+    
+    h5_path : str or h5py
+        Can pass either an h5_path to a file or a file already in use
+    
+    key : dict, optional
+        Returns specific keys in the parameters dictionary
+    
+    value : str, int, float
+        The new value for the key. There is no error checking for this
+    
+    verbose : bool
+        Prints all parameters to console
+    
+    """
+    gp = _which_h5_group(h5_path)
+    parameters =  px.hdf_utils.get_attributes(gp)
+    
+    if verbose:
+        print('Old parameters:')
+        for key in new_vals:
+            print(key,':',parameters[key])
+    
+    for key in new_vals:
+        gp.attrs[key] = new_vals[key]
+        
+    parameters =  px.hdf_utils.get_attributes(gp)
+    
+    if verbose:
+        print('\nNew parameters:')
+        for key in new_vals:
+            print(key,':',parameters[key])
+
+    return 
     
 def get_line(h5_path, line_num, pnts=1, 
              array_form=False, avg=False, transpose=False):    
@@ -92,8 +135,8 @@ def get_line(h5_path, line_num, pnts=1,
     If h5_path is a dataset it processes based on user-defined pnts_avg
     If h5_path is a group/file/string_path then it can be a Line class or array
     
-    h5_path : str or h5py
-        Can pass either an h5_path to a file or a file already in use
+    h5_path : str or h5py or Dataset
+        Can pass either an h5_path to a file or a file already in use or a specific Dataset
     
     line_num : int
         Returns specific line in the dataset
@@ -163,8 +206,8 @@ def get_pixel(h5_path, rc, pnts = 1,
     Gets a pixel of data, returns all the averages within that pixel
     Returns a specific key if requested
     
-    h5_path : str or h5py
-        Can pass either an h5_path to a file or a file already in use
+    h5_path : str or h5py or Dataset
+        Can pass either an h5_path to a file or a file already in use or specific Dataset
     
     rc : list [r, c]
         Pixel location in terms of ROW, COLUMN
@@ -280,7 +323,7 @@ def hdf_commands(h5_path):
     
     try:
         h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_raw')[0]
-        commands.append("px.hdf_utils.getDataSet(hdf.file, 'FF_raw')[0]")
+        commands.append("h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_raw')[0]")
     except:
         pass
     

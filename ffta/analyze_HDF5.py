@@ -53,6 +53,10 @@ def process(h5_path):
         frequency shift image array
     """
 #    logging.basicConfig(filename='error.log', level=logging.INFO)
+    ftype = str(type(h5_path))
+    
+    if 'str' not in ftype:
+        raise TypeError('H5_path must be a string path')
 
     h5_file = px.ioHDF5(h5_path).file
     h5_gp, parameters = find_FF(h5_file)
