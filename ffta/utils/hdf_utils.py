@@ -11,6 +11,18 @@ from ffta.pixel import Pixel
 
 import numpy as np
 
+"""
+Common HDF interfacing functions
+
+_which_h5_group : Returns a group corresponding to main FFtrEFM file
+get_params : Returns the common parameters list from config file
+get_line : Gets a specific line, returns as either array or Line class
+get_pixel : Gets a specific pixel, returns as either array or Pixel class
+h5_list : Gets list of files corresponding to a key, for creating unique folders/Datasets
+hdf_commands : Creates workspace-compatible commands for common HDF variable standards
+
+"""
+
 def _which_h5_group(h5_path):
     """
     Used internally in get_ functions to indentify type of H5_path parameter.
@@ -215,7 +227,7 @@ def get_pixel(h5_path, rc, pnts = 1,
     
     return pixel_inst    
 
-def h5_list(h5file, key):
+def h5_list(h5_file, key):
     '''
     Returns list of names matching a key in the h5 group passed.
     This is useful for creating unique keys in datasets
@@ -226,7 +238,7 @@ def h5_list(h5file, key):
     >>        suffix = names[-1][-4:]
     >>        suffix = str(int(suffix)+1).zfill(4)
             
-    h5file : h5py File
+    h5_file : h5py File
         hdf.file['/Measurement_000/Channel_000'] or similar
         
     key : str
@@ -234,7 +246,7 @@ def h5_list(h5file, key):
     '''
     names = []
     
-    for i in h5file:
+    for i in h5_file:
         if key in i:
             names.append(i)
             

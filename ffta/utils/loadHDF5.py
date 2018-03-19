@@ -25,6 +25,12 @@ from ffta.utils import hdf_utils
 
 import warnings
 
+"""
+To do: 
+    Reconstruct as OOP format and create class with relevant variables
+    
+"""
+
 
 def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False, subfolder='/'):
     """
