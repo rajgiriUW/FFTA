@@ -7,7 +7,8 @@ h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_raw')[0] the main dataset
 h5_ll = hdf_utils.get_line(h5_path, line_num=5) ; gets a line (here, line 5) returns as Line class
 parameters = hdf_utils.get_params(hdf.file) ; Parameters file
 h5_px = hdf_utils.get_pixel(h5_path, rc=[0,0]) ; gets a pixel (here at 0,0) returns as Pixel class
-h5_avg = h5_main avereged pixel wise ; dataset
+h5_avg = px.hdf_utils.getDataSet(hdf.file, 'FF_Avg')[0]
+
 
 File contains Group and Dataset
 
@@ -16,6 +17,7 @@ h5_main = Dataset (see below)
 h5_ll = Line (see below)
 h5_px = Pixel (see below)
 parameters = Dict
+h5_avg = h5_main avereged pixel wise ; Dataset
 
 h5_ll.pixel_wise_avg() is an Array of the pixel-averages (i.e. 128 pixels with 60 averages is now just 128 points long instead of 128 * 60 points long)
 h5_px = hdf_utils.get_pixel
