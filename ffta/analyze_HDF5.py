@@ -42,7 +42,15 @@ def process(h5_path):
     
     This then saves within the h5 file in FF_Group-processed
     
-    
+    h5_path : string of h5Py file
+        Path to a specific h5 file on the disk or an hdf.file
+        
+    Returns
+    -------
+    tfp : ndarray
+        time-to-first-peak image array
+    shift : ndarray
+        frequency shift image array
     """
 #    logging.basicConfig(filename='error.log', level=logging.INFO)
 
