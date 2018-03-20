@@ -312,7 +312,7 @@ def hdf_commands(h5_path):
         Path to hdf5 file on disk
     """
     
-    commands = []
+    commands = ['from ffta.utils import hdf_utils']
 
     try:
         hdf = px.ioHDF5(h5_path)

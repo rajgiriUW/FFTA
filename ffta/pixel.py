@@ -165,7 +165,6 @@ class Pixel(object):
         self._tidx_orig = self.tidx
         self.tidx_orig = self.tidx
 
-
         # Initialize attributes that are going to be assigned later.
         self.signal = None
         self.phase = None
