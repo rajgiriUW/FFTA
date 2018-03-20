@@ -27,7 +27,7 @@ def find_FF(h5_path):
     
     return h5_gp, parameters
 
-def process(h5_path, ds = 'FF_Raw', ref=''):
+def process(h5_path, ds = 'FF_Raw', ref='', clear_filter = False):
     """
     Processes FF_Raw dataset in the HDF5 file
     
@@ -35,6 +35,17 @@ def process(h5_path, ds = 'FF_Raw', ref=''):
     
     h5_path : string of h5Py file
         Path to a specific h5 file on the disk or an hdf.file
+        
+    ds : str, optional
+        The Dataset to search for in the file
+        
+    ref : str, optional
+        A path to a specific dataset in the file.
+        e.g. h5_file['/FF_Group/FF_Avg/FF_Avg']
+        
+    clear_filter : bool, optional
+        For data already filtered, calls Line's clear_filter function to 
+            skip FIR/windowing steps
         
     Returns
     -------
@@ -114,6 +125,9 @@ def process(h5_path, ds = 'FF_Raw', ref=''):
     for i in range(num_rows):
 
         line_inst = hdf_utils.get_line(h5_gp, i)
+        
+        if clear_filter:
+            line_inst.clear_filter_flags()
         
         tfp[i, :], shift[i, :], inst_freq[i*num_cols:(i+1)*num_cols,:] = line_inst.analyze()
 
