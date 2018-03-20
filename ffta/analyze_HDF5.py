@@ -6,19 +6,10 @@ Created on Thu Feb 22 13:16:05 2018
 """
 
 import os
-import sys
-import time
-import multiprocessing
-import logging
-import argparse as ap
 import numpy as np
-import ffta.line as line
-from ffta.utils import load
 import badpixels
 
 # Plotting imports
-import matplotlib as mpl
-#mpl.use('WxAgg')
 from matplotlib import pyplot as plt
 
 from ffta.utils import hdf_utils
@@ -107,10 +98,10 @@ def process(h5_path, ds = 'FF_Raw'):
     tfp_ax.set_title('tFP Image')
     shift_ax.set_title('Shift Image')
 
-    tfp_image, cbar = px.plot_utils.plot_map(tfp_ax, tfp * 1e6, cmap='inferno', **kwargs)
-    cbar.set_label('Time (us)', rotation=270, labelpad=16)
-    shift_image, cbar = px.plot_utils.plot_map(shift_ax, shift, cmap='inferno', **kwargs)
-    cbar.set_label('Frequency Shift (Hz)', rotation=270, labelpad=16)
+    tfp_image, cbar_tfp = px.plot_utils.plot_map(tfp_ax, tfp * 1e6, cmap='inferno', **kwargs)
+    cbar_tfp.set_label('Time (us)', rotation=270, labelpad=16)
+    shift_image, cbar_sh = px.plot_utils.plot_map(shift_ax, shift, cmap='inferno', **kwargs)
+    cbar_sh.set_label('Frequency Shift (Hz)', rotation=270, labelpad=16)
     text = tfp_ax.text(num_cols/2,num_rows+3, '')
     
     plt.show()
@@ -146,7 +137,9 @@ def process(h5_path, ds = 'FF_Raw'):
 
         del line_inst  # Delete the instance to open up memory.
 
-    save_process(h5_file, h5_gp, tfp, shift, inst_freq)
+    _,_, tfp_fixed = save_process(h5_file, h5_gp, tfp, shift, inst_freq)
+    
+    #save_CSV(h5_path, tfp, shift, tfp_fixed)
 
     return tfp, shift, inst_freq
 
@@ -154,7 +147,7 @@ def save_process(h5_file, h5_gp, tfp, shift, inst_freq):
 
     # set correct folder path
     ftype = str(type(h5_gp))
-    if 'Dataset' in h5_gp:
+    if 'Dataset' in ftype:
         grp = h5_gp.parent.name
     else: # if not a dataset, we know it's a group to create a folder in
         grp = h5_gp.name
@@ -180,7 +173,7 @@ def save_process(h5_file, h5_gp, tfp, shift, inst_freq):
 
     tfp_px = px.MicroDataset('tfp', tfp, parent = h5_file[grp].name)
     shift_px = px.MicroDataset('shift', shift, parent = h5_file[grp].name)
-    tfp_fixed_px = px.MicroDataset('tfp_filtered', tfp_fixed, parent = h5_file[grp].name)
+    tfp_fixed_px = px.MicroDataset('tfp_fixed', tfp_fixed, parent = h5_file[grp].name)
     inst_freq = px.MicroDataset('inst_freq', inst_freq, parent = h5_file[grp].name)
     grp_tr.attrs['timestamp'] = getTimeStamp()
 
@@ -191,9 +184,18 @@ def save_process(h5_file, h5_gp, tfp, shift, inst_freq):
     
     hdf = px.ioHDF5(h5_file)
     hdf.writeData(grp_tr, print_log=True)
-
     hdf.flush()
-    hdf.close()
 
+    return tfp, shift, tfp_fixed
+
+def save_CSV(h5_path, tfp, shift, tfp_fixed):
+    
+    if type(h5_path) is not str:
+        h5_path = h5_path.name
+    path = '/'.join(h5_path.split('/')[:-1])+'/'
+    os.chdir(path)
+    np.savetxt('tfp.csv', np.fliplr(tfp).T, delimiter=',')
+    np.savetxt('shift.csv', np.fliplr(shift).T, delimiter=',')
+    np.savetxt('tfp_fixed.csv', np.fliplr(tfp_fixed).T, delimiter=',')
+    
     return
-

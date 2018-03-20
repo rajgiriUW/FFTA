@@ -53,6 +53,7 @@ def test_pixel(h5_file, param_changes={}, pxls = 1, showplots = True, verbose=Tr
         
         h5_px = hdf_utils.get_pixel(h5_file, rc=rc)
         h5_px.analyze()
+        print(rc, h5_px.tfp)
     
         if showplots == True:
             plt.plot(h5_px.best_fit, 'r--')

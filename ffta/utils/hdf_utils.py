@@ -178,11 +178,13 @@ def get_line(h5_path, line_num, pnts=1,
     else: # if a Dataset, extract parameters from the shape. 
         
         d = h5_path
-        c = d.shape[0]
         parameters =  px.hdf_utils.get_attributes(h5_path)
         
         if 'trigger' not in parameters:
             parameters =  px.hdf_utils.get_attributes(h5_path.parent)
+        
+        c = parameters['num_cols']
+        pnts = parameters['pnts_per_line']
     
     signal_line = d[line_num*pnts:(line_num+1)*pnts, :]
     
