@@ -31,6 +31,24 @@ To do:
     
 """
 
+"""
+Common HDF Loading functions
+
+loadHDF5_ibw : Loads a specific ibw and FFtrEFM folder into a new H5 file
+loadHDF5_folder : Takes a folder of IBW files and creates an H5 file
+*createHDF5_separate_lines : Creates a folder and saves each line as a separate file
+*createHDF5_file : Creates a single H5 file for one IBW file. 
+createHDF5_single_dataset : Creates FF_Raw which is the raw (r*c*averages, pnts_per_signal) Dataset
+create_HDF_pixel_wise_averaged : Creates FF_Avg where each pixel's signal is averaged together
+hdf_commands : Creates workspace-compatible commands for common HDF variable standards
+
+*For debugging
+
+Typical usage:
+    >>from ffta.utils import loadHDF5
+    >>loadHDF5.loadHDF5_ibw(ibw_file_path='E:/Data/20180314 - BAPI high-res/FF1_4.ibw', 
+                            ff_file_path=r'E:\Data\20180314 - BAPI high-res\FF01_5MHz_100avg_25nm_5V_600mA')
+"""
 
 def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False, subfolder='/'):
     """
@@ -174,7 +192,7 @@ def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5'):
 
     return h5_path, data_files, parm_dict
     
-def createHDF5_image(data_files, parm_dict, h5_path):
+def createHDF5_separate_lines(data_files, parm_dict, h5_path):
     """
     Generates the HDF5 file given path to files_list and parameters dictionary
     
@@ -483,3 +501,66 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=True):
     hdf.flush()
 
     return h5_avg
+
+def hdf_commands(h5_path):
+    """
+    Creates a bunch of typical workspace HDF5 variables for scripting use
+    
+    This prints the valid commands to the workspace. Then just highlight and 
+        copy-paste to execute
+    
+    h5_path : str
+        Path to hdf5 file on disk
+    """
+    
+    commands = ['from ffta.utils import hdf_utils']
+
+    try:
+        hdf = px.ioHDF5(h5_path)
+        commands.append("hdf = px.ioHDF5(h5_path)")
+    except:
+        pass
+    
+    try:
+        h5_file = hdf.file
+        commands.append("h5_file = hdf.file")
+    except:
+        pass
+    
+    try:
+        h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_Raw')[0]
+        commands.append("h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_Raw')[0]")
+    except:
+        pass
+    
+    try:
+        parameters = get_params(hdf.file)
+        commands.append("parameters = hdf_utils.get_params(hdf.file)")
+    except:
+        pass
+    try:
+        h5_ll = get_line(h5_path, line_num=0)
+        commands.append("h5_ll = hdf_utils.get_line(h5_path, line_num=0)")
+    except:
+        pass
+    try:
+        h5_px = get_pixel(h5_path, rc=[0,0])
+        commands.append("h5_px = hdf_utils.get_pixel(h5_path, rc=[0,0])")
+    except:
+        pass
+    try:
+        h5_avg = px.hdf_utils.getDataSet(hdf.file, 'FF_Avg')[-1]
+        commands.append("h5_avg = px.hdf_utils.getDataSet(hdf.file, 'FF_Avg')[-1]")
+    except:
+        pass
+    
+    try:
+        h5_filt = px.hdf_utils.getDataSet(hdf.file, 'Filtered_Data')[-1]     
+        commands.append("h5_filt = px.hdf_utils.getDataSet(hdf.file, 'Filtered_Data')[-1]")
+    except:
+        pass
+    
+    for i in commands:
+        print(i)
+    
+    return

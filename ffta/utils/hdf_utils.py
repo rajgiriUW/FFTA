@@ -280,6 +280,7 @@ def h5_list(h5_file, key):
     '''
     Returns list of names matching a key in the h5 group passed.
     This is useful for creating unique keys in datasets
+    This ONLY works on the specific group and is not for searching the HDF5 file folder
     
     e.g. this checks for -processed folder, increments the suffix
     >>    names = hdf_utils.h5_list(hdf.file['/FF_Group'], 'processed')
@@ -300,61 +301,3 @@ def h5_list(h5_file, key):
             names.append(i)
             
     return names
-
-
-def hdf_commands(h5_path):
-    """
-    Creates a bunch of typical workspace HDF5 variables for scripting use
-    
-    This prints the valid commands to the workspace. Then just highlight and 
-        copy-paste to execute
-    
-    h5_path : str
-        Path to hdf5 file on disk
-    """
-    
-    commands = ['from ffta.utils import hdf_utils']
-
-    try:
-        hdf = px.ioHDF5(h5_path)
-        commands.append("hdf = px.ioHDF5(h5_path)")
-    except:
-        pass
-    
-    try:
-        h5_file = hdf.file
-        commands.append("h5_file = hdf.file")
-    except:
-        pass
-    
-    try:
-        h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_Raw')[0]
-        commands.append("h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_Raw')[0]")
-    except:
-        pass
-    
-    try:
-        parameters = get_params(hdf.file)
-        commands.append("parameters = hdf_utils.get_params(hdf.file)")
-    except:
-        pass
-    try:
-        h5_ll = get_line(h5_path, line_num=0)
-        commands.append("h5_ll = hdf_utils.get_line(h5_path, line_num=0)")
-    except:
-        pass
-    try:
-        h5_px = get_pixel(h5_path, rc=[0,0])
-        commands.append("h5_px = hdf_utils.get_pixel(h5_path, rc=[0,0])")
-    except:
-        pass
-    try:
-        h5_avg = px.hdf_utils.getDataSet(hdf.file, 'FF_Avg')[0]
-        commands.append("h5_avg = px.hdf_utils.getDataSet(hdf.file, 'FF_Avg')[0]")
-    except:
-        pass
-    
-    for i in commands:
-        print(i)
-    
-    return
