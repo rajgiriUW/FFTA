@@ -737,7 +737,7 @@ class Pixel(object):
                 # Hilbert transform method
 
                 # Apply window.
-                if self.window != None:
+                if self.window != 0:
                     
                     self.apply_window()
 

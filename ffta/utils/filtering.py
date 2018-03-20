@@ -9,10 +9,25 @@ import pycroscopy as px
 from ffta.utils import hdf_utils
 import numpy as np
 
+import warnings
+
 def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = True, 
-               narrowband = False, noise_tolerance = 5e-7):
+               narrowband = False, noise_tolerance = 5e-7, bandwidth_limit=True):
     """
     Applies FFT Filter to the file at a specific line and displays the result
+    
+    Usage:
+    >> h5_ll = hdf_utils.get_line(h5_file, linenum, avg=True)
+    >> filt_sig, freq_filts, _,_ = filtering.FFT_testfilter(h5_avg, 
+                                                            parameters, 
+                                                            narrowband=True, 
+                                                            noise_tolerance=1e-5, 
+                                                            show_plots=True)
+    
+    Some important notes:
+        1) This works on any line. However, you should have the filter work on a single signal
+        2) Meaning, 
+    
     
     hdf_file : h5Py file or Nx1 NumPy array (preferred is NumPy array)
         hdf_file to work on, e.g. hdf.file['/FF-raw'] if that's a Dataset
@@ -23,7 +38,7 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
         Determines whether to remove mean (DC-offset)
         
     parameters : dict, optional
-        Contains parameters in FF-raw file for constructing filters
+        Contains parameters in FF-raw file for constructing filters. Automatic if a Dataset/File
         Must contain num_pts and samp_rate to be functional
     
     linenum : int, optional
@@ -38,7 +53,11 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
     
     noise_tolerance : float 0 to 1
         Amount of noise below which signal is set to 0
-    
+        
+    bandwidth : bool, optional
+        Total bandwidth (each side is half-bandwidth) is capped at 1200 Hz for computational reasons
+        This overrides and uses the parameters file value
+        
     Returns
     -------
     filt_line : numpy.ndarray
@@ -52,8 +71,8 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
     """
     
     reshape = False
-    
-    if 'h5py' or 'Dataset' in str(type(hdf_file)):   #hdf file
+    ftype = str(type(hdf_file))
+    if ('h5py' in ftype) or ('Dataset' in ftype):   #hdf file
         
         parameters = hdf_utils.get_params(hdf_file)
         hdf_file = hdf_utils.get_line(hdf_file, linenum, array_form=True, transpose=False)
@@ -88,6 +107,9 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
         
         try:
             bw = parameters['filter_bandwidth']
+            if bw > 1e3:
+                warnings.warn('Bandwidth of that level might cause errors')
+                bw = 2500
         except:
             print ('No bandwidth parameters')
             bw = 2500
@@ -148,6 +170,8 @@ def FFT_filter(h5_main, freq_filts, noise_tolerance=5e-7, make_new=False):
     
     h5_filt = h5_filt_grp['Filtered_Data']
     px.hdf_utils.copyAttributes(h5_main.parent, h5_filt)
+    px.hdf_utils.copyAttributes(h5_main.parent, h5_filt.parent)
+
 
     return h5_filt
 

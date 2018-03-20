@@ -151,7 +151,8 @@ def get_line(h5_path, line_num, pnts=1,
         Returns the raw array contents rather than Line class
         
     avg : bool, optional
-        Averages the pixels of n_pnts_per_pixel and then creates Pixel of that
+        Averages the pixels of the entire line 
+        This will force output to be an array
         
     transpose : bool, optional
         For legacy FFtrEFM code, pixel is required in (n_points, n_signals) format
@@ -189,16 +190,14 @@ def get_line(h5_path, line_num, pnts=1,
     signal_line = d[line_num*pnts:(line_num+1)*pnts, :]
     
     if avg == True:
+        signal_line = (signal_line.transpose() - signal_line.mean(axis=1)).transpose()
         signal_line = signal_line.mean(axis=0)
         
     if transpose == True:
         signal_line = signal_line.transpose()
     
-    if array_form == True:
+    if array_form == True or avg == True:
         return signal_line
-    
-    if avg == True and array_form == False:
-        raise ValueError('Cannot use Line to return an averaged array')
     
     line_inst = Line(signal_line, parameters, c)
     

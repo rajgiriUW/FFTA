@@ -27,7 +27,7 @@ def find_FF(h5_path):
     
     return h5_gp, parameters
 
-def process(h5_path, ds = 'FF_Raw'):
+def process(h5_path, ds = 'FF_Raw', ref=''):
     """
     Processes FF_Raw dataset in the HDF5 file
     
@@ -46,7 +46,7 @@ def process(h5_path, ds = 'FF_Raw'):
 #    logging.basicConfig(filename='error.log', level=logging.INFO)
     ftype = str(type(h5_path))
     
-    if 'str' or 'File' in ftype:
+    if ('str' in ftype) or ('File' in ftype):
         
         h5_file = px.ioHDF5(h5_path).file
     
@@ -55,7 +55,12 @@ def process(h5_path, ds = 'FF_Raw'):
         raise TypeError('Must be string path, e.g. E:\Test.h5')
     
     h5_gp, parameters = find_FF(h5_file)
-    if ds != 'FF_Raw':
+    
+    if any(ref):
+        h5_gp = h5_file[ref]
+        parameters = hdf_utils.get_params(h5_gp)
+    
+    elif ds != 'FF_Raw':
         h5_gp = px.hdf_utils.getDataSet(h5_file, ds)[0]
         parameters = hdf_utils.get_params(h5_gp)
 
@@ -98,12 +103,11 @@ def process(h5_path, ds = 'FF_Raw'):
     tfp_ax.set_title('tFP Image')
     shift_ax.set_title('Shift Image')
 
-    tfp_image, cbar_tfp = px.plot_utils.plot_map(tfp_ax, tfp * 1e6, cmap='inferno', **kwargs)
-    cbar_tfp.set_label('Time (us)', rotation=270, labelpad=16)
-    shift_image, cbar_sh = px.plot_utils.plot_map(shift_ax, shift, cmap='inferno', **kwargs)
-    cbar_sh.set_label('Frequency Shift (Hz)', rotation=270, labelpad=16)
+    tfp_image, cbar_tfp = px.plot_utils.plot_map(tfp_ax, tfp * 1e6, 
+                                                 cmap='inferno', show_cbar=False, **kwargs)
+    shift_image, cbar_sh = px.plot_utils.plot_map(shift_ax, shift, 
+                                                  cmap='inferno', show_cbar=False, **kwargs)
     text = tfp_ax.text(num_cols/2,num_rows+3, '')
-    
     plt.show()
 
     # Load every file in the file list one by one.
@@ -113,8 +117,10 @@ def process(h5_path, ds = 'FF_Raw'):
         
         tfp[i, :], shift[i, :], inst_freq[i*num_cols:(i+1)*num_cols,:] = line_inst.analyze()
 
-        tfp_image, _ = px.plot_utils.plot_map(tfp_ax, tfp * 1e6, cmap='inferno', show_cbar=False, **kwargs)
-        shift_image, _ = px.plot_utils.plot_map(shift_ax, shift, cmap='inferno', show_cbar=False, **kwargs)
+        tfp_image, _ = px.plot_utils.plot_map(tfp_ax, tfp * 1e6, 
+                                              cmap='inferno', show_cbar=False, **kwargs)
+        shift_image, _ = px.plot_utils.plot_map(shift_ax, shift, 
+                                                      cmap='inferno', show_cbar=False, **kwargs)
 
         tfp_sc = tfp[tfp.nonzero()] * 1e6
         tfp_image.set_clim(vmin=tfp_sc.min(), vmax=tfp_sc.max())
@@ -132,14 +138,22 @@ def process(h5_path, ds = 'FF_Raw'):
         text.remove()
         text = tfp_ax.text((num_cols-len(string))/2,num_rows+4, string)
 
-        plt.draw()
+        #plt.draw()
         plt.pause(0.0001)
 
         del line_inst  # Delete the instance to open up memory.
 
+    tfp_image, cbar_tfp = px.plot_utils.plot_map(tfp_ax, tfp * 1e6, cmap='inferno', **kwargs)
+    cbar_tfp.set_label('Time (us)', rotation=270, labelpad=16)
+    shift_image, cbar_sh = px.plot_utils.plot_map(shift_ax, shift, cmap='inferno', **kwargs)
+    cbar_sh.set_label('Frequency Shift (Hz)', rotation=270, labelpad=16)
+    text = tfp_ax.text(num_cols/2,num_rows+3, '')
+    
+    plt.show()
+
     _,_, tfp_fixed = save_process(h5_file, h5_gp, tfp, shift, inst_freq)
     
-    #save_CSV(h5_path, tfp, shift, tfp_fixed)
+    save_CSV(h5_path, tfp, shift, tfp_fixed, append=ds)
 
     return tfp, shift, inst_freq
 
@@ -188,14 +202,14 @@ def save_process(h5_file, h5_gp, tfp, shift, inst_freq):
 
     return tfp, shift, tfp_fixed
 
-def save_CSV(h5_path, tfp, shift, tfp_fixed):
+def save_CSV(h5_path, tfp, shift, tfp_fixed, append):
     
     if type(h5_path) is not str:
         h5_path = h5_path.name
     path = '/'.join(h5_path.split('/')[:-1])+'/'
     os.chdir(path)
-    np.savetxt('tfp.csv', np.fliplr(tfp).T, delimiter=',')
-    np.savetxt('shift.csv', np.fliplr(shift).T, delimiter=',')
-    np.savetxt('tfp_fixed.csv', np.fliplr(tfp_fixed).T, delimiter=',')
+    np.savetxt('tfp-'+append+'.csv', np.fliplr(tfp).T, delimiter=',')
+    np.savetxt('shift-'+append+'.csv', np.fliplr(shift).T, delimiter=',')
+    np.savetxt('tfp_fixed-'+append+'.csv', np.fliplr(tfp_fixed).T, delimiter=',')
     
     return

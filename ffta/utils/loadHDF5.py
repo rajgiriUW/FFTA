@@ -469,8 +469,9 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=True):
         if verbose == True:
             print('#### Row:',i,'####')
                   
-        _ll = hdf_utils.get_line(h5_main, pnts=pnts_per_line, line_num=i, array_form=True, avg=True)  
-        h5_avg[i*num_cols:(i+1)*num_cols,:] = _ll[:]
+        _ll = hdf_utils.get_line(h5_main, pnts=pnts_per_line, line_num=i, array_form=False, avg=False)  
+        _ll = _ll.pixel_wise_avg()
+        h5_avg[i*num_cols:(i+1)*num_cols,:] = _ll[:,:]
     
     h5_avg = px.hdf_utils.getH5DsetRefs(['FF_Avg'], h5_refs)[0] 
     px.hdf_utils.linkRefs(h5_avg, px.hdf_utils.getH5DsetRefs(aux_ds_names, h5_refs))
