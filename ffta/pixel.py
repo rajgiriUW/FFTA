@@ -184,7 +184,7 @@ class Pixel(object):
     def clear_filter_flags(self):
         """Removes flags from parameters for setting filters"""
         
-        self.window = None
+#        self.window = 0
         self.bandpass_filter = 0
         
         return
@@ -263,6 +263,7 @@ class Pixel(object):
 
         """Filters signal with a FIR bandpass filter."""
         # Calculate bandpass region from given parameters.
+
         nyq_rate = 0.5 * self.sampling_rate
         bw_half = self.filter_bandwidth / 2
 
@@ -660,14 +661,14 @@ class Pixel(object):
 
         return
 
-    def plot(self, newplot=True):
+    def plot(self, newplot=True, c1='r', c2='g'):
         """ Quick visualization of best_fit and cut."""
         
         if newplot:
             plt.figure()
         
-        plt.plot(self.cut, 'r-')
-        plt.plot(self.best_fit, 'g--')
+        plt.plot(self.cut, c1+'-')
+        plt.plot(self.best_fit, c2+'--')
                 
         return
 

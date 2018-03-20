@@ -9,10 +9,12 @@ import pycroscopy as px
 from ffta.utils import hdf_utils
 import numpy as np
 
+from ffta import pixel
+
 import warnings
 
 def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = True, 
-               narrowband = False, noise_tolerance = 5e-7, bandwidth_limit=True):
+               narrowband = False, noise_tolerance = 5e-7, bandwidth=-1, check_filter=True):
     """
     Applies FFT Filter to the file at a specific line and displays the result
     
@@ -54,9 +56,9 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
     noise_tolerance : float 0 to 1
         Amount of noise below which signal is set to 0
         
-    bandwidth : bool, optional
-        Total bandwidth (each side is half-bandwidth) is capped at 1200 Hz for computational reasons
-        This overrides and uses the parameters file value
+    bandwidth : int, optional
+        Total bandwidth (each side is half-bandwidth) is capped at 2500 Hz for computational reasons
+        This overrides the parameters value
         
     Returns
     -------
@@ -105,17 +107,21 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
     # Generate narrowband signal
     if narrowband == True:
         
-        try:
-            bw = parameters['filter_bandwidth']
-            if bw > 1e3:
-                warnings.warn('Bandwidth of that level might cause errors')
-                bw = 2500
-        except:
-            print ('No bandwidth parameters')
-            bw = 2500
+        if bandwidth == -1: #unspecified
+            try:
+                bandwidth = parameters['filter_bandwidth']
+                if bandwidth > 2500:
+                    warnings.warn('Bandwidth of that level might cause errors')
+                    bandwidth = 2500
+            except:
+                print ('No bandwidth parameters')
+                bandwidth = 2500
             
-        nbf = px.processing.fft.HarmonicPassFilter(num_pts, samp_rate, drive, bw, 5)
+        nbf = px.processing.fft.HarmonicPassFilter(num_pts, samp_rate, drive, bandwidth, 5)
         freq_filts = [nbf]
+
+    composite_filter = px.fft.build_composite_freq_filter(freq_filts)
+    print('Composite filter of len:', len(composite_filter))
 
     # Test filter on a single line:
     filt_line, fig_filt, axes_filt = px.processing.gmode_utils.test_filter(hdf_file,
@@ -127,8 +133,23 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
     if reshape == True:
         filt_line = np.reshape(filt_line, sh)
         
+    # Test filter out in Pixel
+    if check_filter:
+        h5_px_filt = pixel.Pixel(filt_line, parameters)
+        h5_px_filt.clear_filter_flags()
+        h5_px_filt.analyze()
+        h5_px_filt.plot(newplot=True)
+            
+        h5_px_raw = pixel.Pixel(hdf_file, parameters)
+        h5_px_raw.analyze()
+        h5_px_raw.plot(newplot=False,c1='b', c2='k')
+    
+#    h5_px_raw_unfilt = pixel.Pixel(hdf_file, parameters)
+#    h5_px_raw_unfilt.clear_filter_flags()
+#    h5_px_raw_unfilt.analyze()
+#    h5_px_raw_unfilt.plot(newplot=False,c1='y', c2='c')
+    
     return filt_line, freq_filts, fig_filt, axes_filt
-
 
 def FFT_filter(h5_main, freq_filts, noise_tolerance=5e-7, make_new=False):
     """
