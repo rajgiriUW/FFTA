@@ -156,7 +156,7 @@ class Line(object):
     def clear_filter_flags(self):
         """Removes flags from parameters for setting filters"""
         
-        self.params['window'] = 0
+        #self.params['window'] = 0
         self.params['bandpass_filter'] = 0
         
         return

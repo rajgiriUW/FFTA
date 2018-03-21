@@ -42,7 +42,7 @@ createHDF5_single_dataset : Creates FF_Raw which is the raw (r*c*averages, pnts_
 create_HDF_pixel_wise_averaged : Creates FF_Avg where each pixel's signal is averaged together
 hdf_commands : Creates workspace-compatible commands for common HDF variable standards
 
-*For debugging
+*For debugging, not in active use
 
 Typical usage:
     >>from ffta.utils import loadHDF5

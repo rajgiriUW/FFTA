@@ -117,7 +117,7 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
                 print ('No bandwidth parameters')
                 bandwidth = 2500
             
-        nbf = px.processing.fft.HarmonicPassFilter(num_pts, samp_rate, drive, bandwidth, 5)
+        nbf = px.processing.fft.HarmonicPassFilter(num_pts, samp_rate, drive, bandwidth, 7)
         freq_filts = [nbf]
 
     composite_filter = px.fft.build_composite_freq_filter(freq_filts)

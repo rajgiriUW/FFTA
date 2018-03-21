@@ -8,7 +8,8 @@ Created on Thu Mar  8 13:17:12 2018
 from ffta.utils import hdf_utils
 from matplotlib import pyplot as plt
 
-def test_pixel(h5_file, param_changes={}, pxls = 1, showplots = True, verbose=True):
+def test_pixel(h5_file, param_changes={}, pxls = 1, showplots = True, 
+               verbose=True, clear_filter = False):
     """
     Takes a random pixel and does standard processing.
     
@@ -25,6 +26,9 @@ def test_pixel(h5_file, param_changes={}, pxls = 1, showplots = True, verbose=Tr
         
     verbose : bool , optional
         To print to command line. Currently for future-proofing
+        
+    clear_filter : bool, optional
+        Whether to do filtering (FIR) or not
     
     """
     # get_pixel can work on Datasets or the H5_File
@@ -52,6 +56,10 @@ def test_pixel(h5_file, param_changes={}, pxls = 1, showplots = True, verbose=Tr
     for rc in pixels:
         
         h5_px = hdf_utils.get_pixel(h5_file, rc=rc)
+        
+        if clear_filter:
+            h5_px.clear_filter_flags()
+        
         h5_px.analyze()
         print(rc, h5_px.tfp)
     
