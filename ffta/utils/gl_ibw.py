@@ -85,16 +85,16 @@ class GLIBWTranslator(Translator):
         # Get the data to figure out if this is an image or a force curve
         images = ibw_wave.get('wData')
 
+        if images.shape[2] != len(chan_labels):
+            chan_labels = chan_labels[1:] # for weird null set errors in older AR software
+
         # Check if a Ginger Lab format ibw (has 'UserIn' in channel labels)
         _is_gl_type = any(['UserIn0' in str(s) for s in chan_labels])
         if _is_gl_type == True:
-            chan_labels = self._get_image_type(ibw_wave, ftype)   
+            chan_labels = self._get_image_type(chan_labels, ftype)   
             
         if verbose:
             print('Processing image type', ftype, 'with channels', chan_labels)
-        
-        if images.shape[2] != len(chan_labels):
-            chan_labels = chan_labels[1:] # for weird null set errors in older AR software
         
         type_suffix = 'Image'
         
@@ -293,27 +293,34 @@ class GLIBWTranslator(Translator):
         
         if ftype.lower() == 'ff':
             
-            return ['height', 'charging', 'shift']
+            del ibw_wave[0:3]
+            ibw_wave = ['height', 'charging', 'shift'] + ibw_wave
             
         elif ftype.lower() == 'trefm':
             
-            return ['height', 'charging', 'shift', 'error']
+            del ibw_wave[0:4]
+            ibw_wave = ['height', 'charging', 'shift', 'error'] + ibw_wave
             
         elif ftype.lower() == 'skpm':
             
-            return ['height', 'CPD']
+            del ibw_wave[0:2]
+            ibw_wave = ['height', 'CPD'] + ibw_wave
         
         elif ftype.lower() == 'ringdown':
             
-            return ['height', 'Q', 'error']
+            del ibw_wave[0:3]
+            ibw_wave =  ['height', 'Q', 'error'] + ibw_wave
             
         elif ftype.lower() == 'pl':
       
-            return ['PL_volts', 'PL_current']
+            del ibw_wave[0:2]
+            ibw_wave = ['PL_volts', 'PL_current'] + ibw_wave
         
         else:
             raise Exception('Improper File Type')
-            
+        
+        return ibw_wave
+    
     def _get_unit_factor(self, unit):
         """
         Returns numerical conversion of unit label
