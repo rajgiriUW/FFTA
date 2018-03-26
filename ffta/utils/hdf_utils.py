@@ -21,6 +21,7 @@ get_line : Gets a specific line, returns as either array or Line class
 get_pixel : Gets a specific pixel, returns as either array or Pixel class
 h5_list : Gets list of files corresponding to a key, for creating unique folders/Datasets
 hdf_commands : Creates workspace-compatible commands for common HDF variable standards
+add_standard_sets : Adds the standard data sets needed for much processing
 
 """
 
@@ -301,3 +302,61 @@ def h5_list(h5_file, key):
             names.append(i)
             
     return names
+
+def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6):
+    """
+    Adds Position_Indices and Position_Value datasets to a folder within the h5_file
+    
+    Uses the values of fast_x and fast_y to determine the values
+    
+    h5_file : h5 File or str 
+        Points to a path to process
+    
+    group : str or H5PY group 
+        Location to process data to, either as str or H5PY
+    """
+    
+    hdf = px.ioHDF5(h5_path)
+    
+    parms_dict = get_params(_which_h5_group(h5_path))
+    
+    if 'FastScanSize' in parms_dict:
+        fast_x = parms_dict['FastScanSize']
+    
+    if 'SlowScanSize' in parms_dict:
+        slow_y = parms_dict['SlowScanSize']
+        
+    num_rows = parms_dict['num_rows']
+    num_cols = parms_dict['num_cols']
+    
+    pnts_per_avg = parms_dict['pnts_per_avg']
+    dt = 1/parms_dict['sampling_rate']
+    
+    try:
+        grp = px.MicroDataGroup(group)
+    except:
+        grp = px.MicroDataGroup(group.name)
+        
+    ds_pos_ind, ds_pos_val = px.io.translators.utils.build_ind_val_dsets([num_cols, num_rows], is_spectral=False,
+                                              steps=[1.0 * fast_x / num_cols,
+                                                     1.0 * slow_y / num_rows],
+                                              labels=['X', 'Y'], units=['m', 'm'], verbose=True)
+    
+    ds_spec_inds, ds_spec_vals = px.io.translators.utils.build_ind_val_dsets([pnts_per_avg], is_spectral=True,
+                                                                             labels=['Time'], units=['s'], steps=[dt])
+    
+    aux_ds_names = ['Position_Indices', 'Position_Values', 
+                    'Spectroscopic_Indices', 'Spectroscopic_Values']
+    
+    grp.addChildren([ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals])
+    
+    h5_refs = hdf.writeData(grp, print_log=False)
+    try:
+        px.hdf_utils.linkRefs(hdf.file[grp], px.hdf_utils.getH5DsetRefs(aux_ds_names, h5_refs))
+        h5_main =  hdf.file[grp]
+    except:
+        px.hdf_utils.linkRefs(hdf.file[grp.name], px.hdf_utils.getH5DsetRefs(aux_ds_names, h5_refs))
+        h5_main =  hdf.file[grp.name]
+
+    
+    return h5_main

@@ -99,14 +99,14 @@ def process(h5_path, ds = 'FF_Raw', ref='', clear_filter = False):
     
     img_length = parameters['FastScanSize']
     img_height = parameters['SlowScanSize']
-    kwargs = {'origin': 'lower',  'x_size':img_length,
-          'y_size':img_height, 'num_ticks': 5, 'stdevs': 3}
+    kwargs = {'origin': 'lower',  'x_size':img_length*1e6,
+          'y_size':img_height*1e6, 'num_ticks': 5, 'stdevs': 3}
     
     try:
         ht = h5_file['/height/Raw_Data'][:,0]
         ht = np.reshape(ht, [num_cols, num_rows]).transpose()
         ht_ax = a[0][0]
-        ht_image, cbar = px.plot_utils.plot_map(ht_ax, ht*1e9, cmap='gray', **kwargs)
+        ht_image, cbar = px.plot_utils.plot_map(ht_ax, np.fliplr(ht)*1e9, cmap='gray', **kwargs)
         cbar.set_label('Height (nm)', rotation=270, labelpad=16)
     except:
         pass
@@ -167,7 +167,7 @@ def process(h5_path, ds = 'FF_Raw', ref='', clear_filter = False):
 
     _,_, tfp_fixed = save_process(h5_file, h5_gp, tfp, shift, inst_freq)
     
-    save_CSV(h5_path, tfp, shift, tfp_fixed, append=ds)
+    #save_CSV(h5_path, tfp, shift, tfp_fixed, append=ds)
 
     return tfp, shift, inst_freq
 
@@ -212,6 +212,10 @@ def save_process(h5_file, h5_gp, tfp, shift, inst_freq):
     
     hdf = px.ioHDF5(h5_file)
     hdf.writeData(grp_tr, print_log=True)
+    
+    # create standard datasets
+    h5_main = hdf_utils.add_standard_sets(h5_file, group=h5_gp.name)
+    
     hdf.flush()
 
     return tfp, shift, tfp_fixed
