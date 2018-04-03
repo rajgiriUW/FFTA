@@ -502,9 +502,15 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=True):
 
     return h5_avg
 
-def hdf_commands(h5_path):
+def hdf_commands(h5_path, ds='FF_Raw'):
     """
     Creates a bunch of typical workspace HDF5 variables for scripting use
+    
+    h5_path : str
+        String path to H5PY file
+    
+    ds : str, optional
+        The dataset to search for and set as h5_main. 
     
     This prints the valid commands to the workspace. Then just highlight and 
         copy-paste to execute
@@ -528,8 +534,8 @@ def hdf_commands(h5_path):
         pass
     
     try:
-        h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_Raw')[0]
-        commands.append("h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_Raw')[0]")
+        h5_main = px.hdf_utils.getDataSet(hdf.file, ds)[0]
+        commands.append("h5_main = px.hdf_utils.getDataSet(hdf.file, '"+ds+"')[0]")
     except:
         pass
     

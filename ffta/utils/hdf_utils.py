@@ -303,22 +303,30 @@ def h5_list(h5_file, key):
             
     return names
 
-def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6):
+def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6, 
+                      parms_dict = {}, ds=''):
     """
     Adds Position_Indices and Position_Value datasets to a folder within the h5_file
     
     Uses the values of fast_x and fast_y to determine the values
     
-    h5_file : h5 File or str 
+    h5_path : h5 File or str 
         Points to a path to process
     
     group : str or H5PY group 
         Location to process data to, either as str or H5PY
+        
+    parms_dict : dict, optional
+        Parameters to be passed. By default this should be at the command line for FFtrEFM data
+        
+    ds : str, optional
+        Dataset name to search for within this group and set as h5_main
     """
     
     hdf = px.ioHDF5(h5_path)
     
-    parms_dict = get_params(_which_h5_group(h5_path))
+    if not any(parms_dict):
+        parms_dict = get_params(_which_h5_group(h5_path))
     
     if 'FastScanSize' in parms_dict:
         fast_x = parms_dict['FastScanSize']
@@ -351,12 +359,16 @@ def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6):
     grp.addChildren([ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals])
     
     h5_refs = hdf.writeData(grp, print_log=False)
+    
+    h5_main = hdf.file[grp.name]
+    
+    if any(ds):
+        h5_main = px.hdf_utils.getDataSet(hdf.file[grp.name], ds)[0]
+    
     try:
-        px.hdf_utils.linkRefs(hdf.file[grp], px.hdf_utils.getH5DsetRefs(aux_ds_names, h5_refs))
-        h5_main =  hdf.file[grp]
+        px.hdf_utils.linkRefs(h5_main, px.hdf_utils.getH5DsetRefs(aux_ds_names, h5_refs))
     except:
-        px.hdf_utils.linkRefs(hdf.file[grp.name], px.hdf_utils.getH5DsetRefs(aux_ds_names, h5_refs))
-        h5_main =  hdf.file[grp.name]
+        px.hdf_utils.linkRefs(h5_main, px.hdf_utils.getH5DsetRefs(aux_ds_names, h5_refs))
 
     
     return h5_main
