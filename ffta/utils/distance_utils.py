@@ -21,51 +21,6 @@ The Add_position_sets function is not in the Class. It's for setting up data
 
 """
 
-def add_position_sets(h5_file, group, fast_x=32e-6, slow_y=8e-6):
-    """
-    Adds Position_Indices and Position_Value datasets to a folder within the h5_file
-    
-    Uses the values of fast_x and fast_y to determine the values
-    
-    Group is where to add these set, e.g. '/Measurement_000/Channel_000/Raw_Data-CPD'
-    """
-    
-    hdf = px.ioHDF5(h5_file)
-    parms_dict = hdf.file['/Measurement_000'].attrs
-    
-    if 'FastScanSize' in parms_dict:
-        fast_x = parms_dict['FastScanSize']
-    
-    if 'SlowScanSize' in parms_dict:
-        slow_y = parms_dict['SlowScanSize']
-        
-    num_rows = parms_dict['grid_num_rows']
-    num_cols = parms_dict['grid_num_cols']
-    pnts_per_CPDpix = hdf.file[group  +'/CPD'].shape[1]
-    dt = hdf.file[group  +'/CPD'].shape[0]*1e-6/pnts_per_CPDpix
-    
-    grp = px.MicroDataGroup(group)
-    ds_pos_ind, ds_pos_val = px.io.translators.utils.build_ind_val_dsets([num_cols, num_rows], is_spectral=False,
-                                              steps=[1.0 * fast_x / num_cols,
-                                                     1.0 * slow_y / num_rows],
-                                              labels=['X', 'Y'], units=['m', 'm'], verbose=True)
-    
-    ds_spec_inds, ds_spec_vals = px.io.translators.utils.build_ind_val_dsets([pnts_per_CPDpix], is_spectral=True,
-                                                                             labels=['Time'], units=['s'], steps=[dt])
-    
-    aux_ds_names = ['Position_Indices', 'Position_Values', 
-                    'Spectroscopic_Indices', 'Spectroscopic_Values']
-    
-    grp.addChildren([ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals])
-    
-    h5_refs = hdf.writeData(grp, print_log=False)
-    px.hdf_utils.linkRefs(hdf.file[group], px.hdf_utils.getH5DsetRefs(aux_ds_names, h5_refs))
-    
-    h5_main =  hdf.file[group]
-    
-    return h5_main
-
-
 class CPD_cluster(object):
     
     def __init__(self, h5_file, mask=None, imgsize=[32e-6,8e-6], 
@@ -73,9 +28,21 @@ class CPD_cluster(object):
                  light_on=[1,5]):
         """
     
+        h5_file : h5Py File or str
+            File type to be processed.
+            
+        mask : ndarray
+            mask file to be loaded, is expected to be of 1 (transparent) and 0 (opaque)
+            loaded e.g. mask = mask_utils.loadmask('E:/ORNL/20191221_BAPI/nice_masks/Mask_BAPI20_0008.txt')
+        
+        imgsize : list
+            dimensions of the image
         
         ds_group : str or H5Py Group
             Where the target dataset is located
+    
+        light_on : list
+            the time in milliseconds for when light is on
     
         """    
         hdf = px.ioHDF5(h5_file)
@@ -234,10 +201,16 @@ class CPD_cluster(object):
         For each pixel, this generates a minimum distance that defines the "closeness" to 
         a grain boundary in the mask
         
+        Returns to Class
+        ----------------
+        CPD_scatter : distances x CPD_points (full CPD at each distance)
+        CPD_avg_scatter : distances x 1 (CPD_average at each distance)
+        
         """
         CPD_dist = np.zeros(CPD_1D_pos.shape[0])
         CPD_avg_dist = np.zeros(CPD_1D_pos.shape[0])
         
+        # finds distance to nearest mask pixel
         for i, x in zip(CPD_1D_pos, np.arange(CPD_dist.shape[0])):
             
             d = metrics.pairwise_distances([i], mask_on_1D_pos)
@@ -254,13 +227,16 @@ class CPD_cluster(object):
         
         return CPD_dist, CPD_avg_dist
 
-    def kmeans(self, data, clusters=3, show_results=False):
+    def kmeans(self, data, clusters=3, show_results=False, light_pts=[]):
         
         """"
         
         Simple k-means
         
         Data typically is self.CPD_scatter
+        
+        light_pts : list
+            Index of where to plot (i.e. when light is on). Defaults to p_on:p_off
         
         Returns
         -------
@@ -280,33 +256,54 @@ class CPD_cluster(object):
         labels_unique = np.unique(labels)
         self.segments = {}
         
+        if not any(light_pts):
+            light_pts = [self.p_on, self.p_off]
+        
+        light_mid = int(light_pts[0] + (light_pts[1]-light_pts[0])/2)
+        
         # color defaults are blue, orange, green, red, purple...
         colors = ['#1f77b4', '#ff7f0e', '#2ca02c', 
                   '#d62728', '#9467bd', '#8c564b', 
                   '#e377c2', '#7f7f7f', '#bcbd22', 
                   '#17becf']
         if show_results:
+            
             plt.figure()
             plt.xlabel('Distance to Nearest Boundary (um)')
             plt.ylabel('CPD (V)')
+            
             for i in range(clusters):
                 
-                plt.plot(data[labels==labels_unique[i],0]*1e6,
-                         data[labels==labels_unique[i],1],c=colors[i],
-                         linestyle='None', marker='.')
-        
-                plt.plot(cluster_centers[i][0]*1e6, cluster_centers[i][1],
-                         marker='o',markerfacecolor = colors[i], markersize=8, 
-                         markeredgecolor='k')
+                if data.shape[1] > 2:
+                    plt.plot(data[labels==labels_unique[i],0]*1e6,
+                             np.mean(data[labels==labels_unique[i],light_pts[0]:light_pts[1]],axis=1),
+                             c=colors[i], linestyle='None', marker='.')
+            
+                    plt.plot(cluster_centers[i][0]*1e6, cluster_centers[i][light_mid],
+                             marker='o',markerfacecolor = colors[i], markersize=8, 
+                             markeredgecolor='k')
+                
+                else:
+                    plt.plot(data[labels==labels_unique[i],0]*1e6,
+                                 data[labels==labels_unique[i],1],
+                                 c=colors[i], linestyle='None', marker='.')
+                
+                    plt.plot(cluster_centers[i][0]*1e6, cluster_centers[i][1],
+                             marker='o',markerfacecolor = colors[i], markersize=8, 
+                             markeredgecolor='k')
                 
         return self.results
     
     def segment_maps(self):
         
         """
+        This creates 2D maps of the segments to overlay on an image
+        
+        Returns to Class
+        ----------------
         segments is in actual length
         segments_idx is in index coordinates
-        segments_CPD is the the full CPD trace
+        segments_CPD is the full CPD trace
         
         To display, make sure to do [:,1], [:,0] given row, column ordering
         Also, segments_idx is to display since pyplot uses the index on the axis
@@ -335,6 +332,27 @@ class CPD_cluster(object):
             self.CPD_time_avg[i] = np.mean(self.segments_CPD[i], axis=0)
         
         return
+    
+    def heat_map(self, bins=100):
+        
+        """
+        Plots a heat map using CPD_avg_scatter data
+        """
+        
+        heatmap, _, _ = np.histogram2d(self.CPD_avg_scatter[:,1],self.CPD_avg_scatter[:,0],bins)
+        
+        plt.figure()
+        xr = [np.min(self.CPD_avg_scatter[:,0])*1e6, np.max(self.CPD_avg_scatter[:,0])*1e6]
+        yr = [np.min(self.CPD_avg_scatter[:,1]), np.max(self.CPD_avg_scatter[:,1])]
+        aspect = int((xr[1]-xr[0])/ (yr[1]-yr[0]))
+        plt.imshow(heatmap, origin='lower', extent=[xr[0], xr[1], yr[0],yr[1]], 
+                   cmap='hot', aspect=aspect)
+        
+        plt.xlabel('Distance to Nearest Boundary (um)')
+        plt.ylabel('CPD (V)')
+        
+        return
+
 
     def elbow_plot(self):
         
@@ -407,6 +425,12 @@ class CPD_cluster(object):
 
     
     def animated_image_clusters(self, clusters=3, one_color=False):
+        """
+        Takes an image and animates the clusters over time on the overlay
+        
+        As of 4/3/2018 this code is just a placeholder
+        
+        """
         
         plt.rcParams['animation.ffmpeg_path'] = r'C:\Users\Raj\Downloads\ffmpeg-20180124-1948b76-win64-static\bin\ffmpeg.exe'
         
