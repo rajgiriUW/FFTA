@@ -6,18 +6,16 @@ Created on Thu Mar 22 21:19:26 2018
 """
 
 import numpy as np
-from sklearn import metrics, cluster
+import sklearn as sk
 import pycroscopy as px
+from pycroscopy.processing.cluster import Cluster
+from pycroscopy.processing.process import ProcessIf this deck goes anywhere are we going to call it
 from matplotlib import pyplot as plt
-from matplotlib import cm
-
 import matplotlib.animation as animation
 import mask_utils
 
 """ 
 Creates a Class with various CPD data grouped based on distance to a grain boundary
-
-The Add_position_sets function is not in the Class. It's for setting up data
 
 """
 
@@ -213,7 +211,7 @@ class CPD_cluster(object):
         # finds distance to nearest mask pixel
         for i, x in zip(CPD_1D_pos, np.arange(CPD_dist.shape[0])):
             
-            d = metrics.pairwise_distances([i], mask_on_1D_pos)
+            d = sk.metrics.pairwise_distances([i], mask_on_1D_pos)
             CPD_dist[x] = np.min(d)
             CPD_avg_dist[x] = np.mean(d)
         
@@ -248,7 +246,7 @@ class CPD_cluster(object):
         """
         
         # create single [x,y] dataset
-        estimators = cluster.KMeans(clusters)
+        estimators = sk.cluster.KMeans(clusters)
         self.results = estimators.fit(data)
         
         labels = self.results.labels_
