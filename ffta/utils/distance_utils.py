@@ -9,10 +9,10 @@ import numpy as np
 import sklearn as sk
 import pycroscopy as px
 from pycroscopy.processing.cluster import Cluster
-from pycroscopy.processing.process import ProcessIf this deck goes anywhere are we going to call it
+from pycroscopy.processing.process import Process
 from matplotlib import pyplot as plt
 import matplotlib.animation as animation
-import mask_utils
+from ffta.utils import mask_utils
 
 """ 
 Creates a Class with various CPD data grouped based on distance to a grain boundary
@@ -71,13 +71,11 @@ class CPD_cluster(object):
 
     def CPD_params(self):
         """ creates CPD averaged data and extracts parameters """
-        CPD_on_time = self.h5_main['CPD_on_time']
         
-        self.CPD_off_avg = np.zeros(CPD_on_time.shape)
-        self.CPD_on_avg = np.zeros(CPD_on_time.shape)
         parms_dict = self.h5_main.parent.parent.attrs
-        self.num_rows = parms_dict['grid_num_rows']
-        self.num_cols = parms_dict['grid_num_cols']
+        self.num_rows = parms_dict['num_rows']
+        self.num_cols = parms_dict['num_cols']
+        IO_rate = parms_dict['sampling_rate']
         
         N_points_per_pixel = parms_dict['num_bins']
         IO_rate = parms_dict['IO_rate_[Hz]']     #sampling_rate
@@ -86,12 +84,20 @@ class CPD_cluster(object):
         self.dtCPD = self.pxl_time/self.CPD.shape[1] 
         p_on = int(self.light_on_time[0]*1e-3 / self.dtCPD) 
         p_off = int(self.light_on_time[1]*1e-3 / self.dtCPD) 
+
+#        CPD_on_time = self.h5_main['CPD_on_time']
+        
+        self.CPD_off_avg = np.zeros([self.num_rows, self.num_cols])
+        self.CPD_on_avg = np.zeros([self.num_rows, self.num_cols])
+
+#        self.num_rows = parms_dict['grid_num_rows']
+#        self.num_cols = parms_dict['grid_num_cols']
         
         self.p_on = p_on
         self.p_off = p_off
         
-        for r in np.arange(CPD_on_time.shape[0]):
-            for c in np.arange(CPD_on_time.shape[1]):
+        for r in np.arange(self.num_rows):
+            for c in np.arange(self.num_cols):
                 
                 self.CPD_off_avg[r][c] = np.mean(self.CPD[r*self.num_cols + c,p_off:])
                 self.CPD_on_avg[r][c] = np.mean(self.CPD[r*self.num_cols + c,p_on:p_off])
@@ -228,7 +234,6 @@ class CPD_cluster(object):
     def kmeans(self, data, clusters=3, show_results=False, light_pts=[]):
         
         """"
-        
         Simple k-means
         
         Data typically is self.CPD_scatter
@@ -266,31 +271,31 @@ class CPD_cluster(object):
                   '#17becf']
         if show_results:
             
-            plt.figure()
-            plt.xlabel('Distance to Nearest Boundary (um)')
-            plt.ylabel('CPD (V)')
+            fig, ax = plt.subplots(nrows=1, figsize=(12, 6))
+            ax.set_xlabel('Distance to Nearest Boundary (um)')
+            ax.set_ylabel('CPD (V)')
             
             for i in range(clusters):
                 
                 if data.shape[1] > 2:
-                    plt.plot(data[labels==labels_unique[i],0]*1e6,
+                    ax.plot(data[labels==labels_unique[i],0]*1e6,
                              np.mean(data[labels==labels_unique[i],light_pts[0]:light_pts[1]],axis=1),
                              c=colors[i], linestyle='None', marker='.')
             
-                    plt.plot(cluster_centers[i][0]*1e6, cluster_centers[i][light_mid],
+                    ax.plot(cluster_centers[i][0]*1e6, cluster_centers[i][light_mid],
                              marker='o',markerfacecolor = colors[i], markersize=8, 
                              markeredgecolor='k')
                 
                 else:
-                    plt.plot(data[labels==labels_unique[i],0]*1e6,
+                    ax.plot(data[labels==labels_unique[i],0]*1e6,
                                  data[labels==labels_unique[i],1],
                                  c=colors[i], linestyle='None', marker='.')
                 
-                    plt.plot(cluster_centers[i][0]*1e6, cluster_centers[i][1],
+                    ax.plot(cluster_centers[i][0]*1e6, cluster_centers[i][1],
                              marker='o',markerfacecolor = colors[i], markersize=8, 
                              markeredgecolor='k')
                 
-        return self.results
+        return self.results, ax, fig
     
     def segment_maps(self):
         
@@ -331,6 +336,24 @@ class CPD_cluster(object):
         
         return
     
+    def plot_segment_maps(self, ax):
+        """ Plots the segments using a color map on given axis ax"""
+        
+        
+        colors = ['#1f77b4', '#ff7f0e', '#2ca02c', 
+                  '#d62728', '#9467bd', '#8c564b', 
+                  '#e377c2', '#7f7f7f', '#bcbd22', 
+                  '#17becf']
+        
+        for i in self.segments_idx:
+
+            ax.plot(self.segments_idx[i][:,1], self.segments_idx[i][:,0], 
+                    color=colors[i], marker='s', linestyle='None', label=i)
+            
+        ax.legend(fontsize=14, loc=[-0.18,0.3])
+        
+        return
+    
     def heat_map(self, bins=100):
         
         """
@@ -339,17 +362,16 @@ class CPD_cluster(object):
         
         heatmap, _, _ = np.histogram2d(self.CPD_avg_scatter[:,1],self.CPD_avg_scatter[:,0],bins)
         
-        plt.figure()
+        fig, ax = plt.subplots(nrows=1, figsize=(12, 6))
+        ax.set_xlabel('Distance to Nearest Boundary (um)')
+        ax.set_ylabel('CPD (V)')
         xr = [np.min(self.CPD_avg_scatter[:,0])*1e6, np.max(self.CPD_avg_scatter[:,0])*1e6]
         yr = [np.min(self.CPD_avg_scatter[:,1]), np.max(self.CPD_avg_scatter[:,1])]
         aspect = int((xr[1]-xr[0])/ (yr[1]-yr[0]))
-        plt.imshow(heatmap, origin='lower', extent=[xr[0], xr[1], yr[0],yr[1]], 
+        ax.imshow(heatmap, origin='lower', extent=[xr[0], xr[1], yr[0],yr[1]], 
                    cmap='hot', aspect=aspect)
         
-        plt.xlabel('Distance to Nearest Boundary (um)')
-        plt.ylabel('CPD (V)')
-        
-        return
+        return ax, fig
 
 
     def elbow_plot(self):

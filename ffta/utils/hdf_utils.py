@@ -8,7 +8,7 @@ import pycroscopy as px
 
 from ffta.line import Line
 from ffta.pixel import Pixel
-
+import warnings
 import numpy as np
 
 """
@@ -333,12 +333,18 @@ def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6,
     
     if 'SlowScanSize' in parms_dict:
         slow_y = parms_dict['SlowScanSize']
-        
-    num_rows = parms_dict['num_rows']
-    num_cols = parms_dict['num_cols']
     
-    pnts_per_avg = parms_dict['pnts_per_avg']
-    dt = 1/parms_dict['sampling_rate']
+    try:
+        num_rows = parms_dict['num_rows']
+        num_cols = parms_dict['num_cols']
+        pnts_per_avg = parms_dict['pnts_per_avg']
+        dt = 1/parms_dict['sampling_rate']
+    except: # some defaults
+        warnings.warn('Improper parameters specified.')
+        num_rows = 64
+        num_cols = 128
+        pnts_per_avg = 1
+        dt = 1
     
     try:
         grp = px.MicroDataGroup(group)

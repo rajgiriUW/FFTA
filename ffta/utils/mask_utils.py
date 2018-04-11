@@ -7,30 +7,59 @@ Created on Thu Mar 22 18:43:21 2018
 
 import numpy as np
 
-def loadmask(path, rows=64):
+def load_mask_txt(path, rows=64, flip=False):
     """
-    Loads mask
-    Replaces 1 (Transparent pixels) with NaN
+    Loads mask from text
+    
+    path : str
+        Filepath to disk location of the mask
+        
+    rows : int, optional
+        Sets a hard limit on the rows of the mask, due to Igor images being larger (rowwise)
+        than the typical G-Mode/FF-trEFM Mask size
+    
+    flip : bool, optional
+        Whether to flip the mask left-to-right to match CPD
     
     Returns
     -------
     mask : the mask itself
     
-    maskNaN : all 1s are NaNs, primarily for image display
-    
-    mask_on_1D : non-NaN pixels as a 1D list for distance calculation
-    mask_off_1D : NaN pixels as a 1D list for CPD masking
     """
     mask = np.loadtxt(path)
     
     if mask.shape[1] < mask.shape[0]: # we know it's fewer rows than columns
         mask = mask.transpose()
     
+    if flip:
+        mask = np.fliplr(mask)
+    
     mask = mask[:rows, :]
     
     return mask
 
 def load_masks(mask):
+    """
+    Outputs several useful mask versions
+    
+    For reference:
+        NaNs = 1s in the mask = transparent in display
+        0s = 0s in the mask = opaque in display (i.e., are exluded/masked)
+    
+    mask : ndarray 2D (rows, columns)
+        The mask to process into various new masks
+    
+    Returns
+    -------
+    maskNaN : ndarray, 2D (rows, columns)
+        all 1s are NaNs, primarily for image display. 
+    
+    mask_on_1D : ndarray, 1D (rows*columns)
+        non-NaN pixels as a 1D list for distance calculation
+    
+    mask_off_1D : ndarray, 1D (rows*columns) 
+        NaN pixels as a 1D list for CPD masking
+    """
     
     mask_nan = np.copy(mask)
 
