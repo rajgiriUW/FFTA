@@ -139,10 +139,20 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
         h5_px_filt.clear_filter_flags()
         h5_px_filt.analyze()
         h5_px_filt.plot(newplot=True)
+        
+        h5_px_filt = pixel.Pixel(filt_line, parameters)
+        
+        h5_px_filt.analyze()
+        h5_px_filt.plot(newplot=True)
             
         h5_px_raw = pixel.Pixel(hdf_file, parameters)
         h5_px_raw.analyze()
-        h5_px_raw.plot(newplot=False,c1='b', c2='k')
+        h5_px_raw.plot(newplot=True,c1='b', c2='k')
+
+        h5_px_raw = pixel.Pixel(hdf_file, parameters)
+        h5_px_raw.clear_filter_flags()
+        h5_px_raw.analyze()
+        h5_px_raw.plot(newplot=True,c1='r', c2='y')
     
 #    h5_px_raw_unfilt = pixel.Pixel(hdf_file, parameters)
 #    h5_px_raw_unfilt.clear_filter_flags()

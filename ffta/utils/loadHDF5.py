@@ -418,7 +418,7 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
 
 def create_HDF_pixel_wise_averaged(h5_file, verbose=True):
     """
-    Creates a new group FF_avg where the FF_raw file is averaged together.
+    Creates a new group FF_Avg where the FF_raw file is averaged together.
     
     This is more useful as pixel-wise averages are more relevant in FF-processing
     

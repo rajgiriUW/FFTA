@@ -27,13 +27,13 @@ def find_FF(h5_path):
     
     return h5_gp, parameters
 
-def process(h5_path, ds = 'FF_Raw', ref='', clear_filter = False):
+def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False):
     """
     Processes FF_Raw dataset in the HDF5 file
     
     This then saves within the h5 file in FF_Group-processed
     
-    h5_path : string of h5Py file
+    h5_file : h5Py file or str
         Path to a specific h5 file on the disk or an hdf.file
         
     ds : str, optional
@@ -55,11 +55,11 @@ def process(h5_path, ds = 'FF_Raw', ref='', clear_filter = False):
         frequency shift image array
     """
 #    logging.basicConfig(filename='error.log', level=logging.INFO)
-    ftype = str(type(h5_path))
+    ftype = str(type(h5_file))
     
-    if ('str' in ftype) or ('File' in ftype):
+    if ('str' in ftype) or ('File' in ftype) or ('Dataset' in ftype):
         
-        h5_file = px.ioHDF5(h5_path).file
+        h5_file = px.ioHDF5(h5_file).file
     
     else:
 
@@ -219,6 +219,23 @@ def save_process(h5_file, h5_gp, tfp, shift, inst_freq):
     hdf.flush()
 
     return tfp, shift, tfp_fixed
+
+def save_CSV_from_file(h5_file, append=''):
+    
+    h5_file = px.ioHDF5(h5_file).file
+    tfp = px.hdf_utils.getDataSet(h5_file, 'tfp')[0].value
+    tfp_fixed = px.hdf_utils.getDataSet(h5_file, 'tfp_fixed')[0].value
+    shift = px.hdf_utils.getDataSet(h5_file, 'shift')[0].value
+    
+    path = h5_file.file.filename.replace('\\','/')
+    path = '/'.join(path.split('/')[:-1])+'/'
+    os.chdir(path)
+    np.savetxt('tfp-'+append+'.csv', np.fliplr(tfp).T, delimiter=',')
+    np.savetxt('shift-'+append+'.csv', np.fliplr(shift).T, delimiter=',')
+    np.savetxt('tfp_fixed-'+append+'.csv', np.fliplr(tfp_fixed).T, delimiter=',')
+    
+    return
+
 
 def save_CSV(h5_path, tfp, shift, tfp_fixed, append):
     
