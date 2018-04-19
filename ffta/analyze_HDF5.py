@@ -69,7 +69,8 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False):
     
     if any(ref):
         h5_gp = h5_file[ref]
-        parameters = hdf_utils.get_params(h5_gp)
+        #parameters = hdf_utils.get_params(h5_gp)
+        parameters = px.hdf_utils.get_attributes(h5_gp)
     
     elif ds != 'FF_Raw':
         h5_gp = px.hdf_utils.getDataSet(h5_file, ds)[0]
@@ -193,16 +194,16 @@ def save_process(h5_file, h5_gp, tfp, shift, inst_freq):
         suffix = names[-1][-4:]
         suffix = str(int(suffix)+1).zfill(4)
     except:
-        suffix = suffix = str(int(suffix)).zfill(4)
+        suffix = str(int(suffix)).zfill(4)
     
     # write data
     grp_name = grp.split('/')[-1] + '-processed-' + suffix
-    grp_tr = px.MicroDataGroup(grp_name, parent = h5_file[grp].name)
+    grp_tr = px.MicroDataGroup(grp_name, parent = grp)
 
-    tfp_px = px.MicroDataset('tfp', tfp, parent = h5_file[grp].name)
-    shift_px = px.MicroDataset('shift', shift, parent = h5_file[grp].name)
-    tfp_fixed_px = px.MicroDataset('tfp_fixed', tfp_fixed, parent = h5_file[grp].name)
-    inst_freq = px.MicroDataset('inst_freq', inst_freq, parent = h5_file[grp].name)
+    tfp_px = px.MicroDataset('tfp', tfp, parent = grp)
+    shift_px = px.MicroDataset('shift', shift, parent = grp)
+    tfp_fixed_px = px.MicroDataset('tfp_fixed', tfp_fixed, parent = grp)
+    inst_freq = px.MicroDataset('inst_freq', inst_freq, parent = grp)
     grp_tr.attrs['timestamp'] = getTimeStamp()
 
     grp_tr.addChildren([tfp_px])
@@ -210,11 +211,13 @@ def save_process(h5_file, h5_gp, tfp, shift, inst_freq):
     grp_tr.addChildren([tfp_fixed_px])
     grp_tr.addChildren([inst_freq])
     
+    # Find folder, write to it
     hdf = px.ioHDF5(h5_file)
-    hdf.writeData(grp_tr, print_log=True)
+    h5_refs = hdf.writeData(grp_tr, print_log=True)
+    grp_tr_name = h5_refs[0].parent.name
     
     # create standard datasets
-    h5_main = hdf_utils.add_standard_sets(h5_file, group=h5_gp.name)
+    h5_main = hdf_utils.add_standard_sets(h5_file, group=grp_tr_name)
     
     hdf.flush()
 

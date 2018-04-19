@@ -81,8 +81,20 @@ def get_params(h5_path, key='', verbose=False):
     
     parameters =  px.hdf_utils.get_attributes(gp)
     
+    # if this dataset does not have complete FFtrEFM parameters
     if 'trigger' not in parameters:
         parameters =  px.hdf_utils.get_attributes(h5_path.parent)
+
+    # still not there? hard-select the main dataset
+    if 'trigger' not in parameters:
+        
+        try:
+            h5_file = px.ioHDF5(h5_path).file
+            parameters = px.hdf_utils.get_attributes(h5_file['FF_Group'])
+            
+        except:
+            warn('Improper parameters file. Try h5_file')
+        
     
     if any(key):
         return parameters[key]
