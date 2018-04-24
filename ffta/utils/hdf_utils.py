@@ -93,7 +93,7 @@ def get_params(h5_path, key='', verbose=False):
             parameters = px.hdf_utils.get_attributes(h5_file['FF_Group'])
             
         except:
-            warn('Improper parameters file. Try h5_file')
+            warnings.warn('Improper parameters file. Try h5_file')
         
     
     if any(key):
@@ -317,7 +317,7 @@ def h5_list(h5_file, key):
     return names
 
 def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6, 
-                      parms_dict = {}, ds=''):
+                      parms_dict = {}, ds='FF_Raw'):
     """
     Adds Position_Indices and Position_Value datasets to a folder within the h5_file
     

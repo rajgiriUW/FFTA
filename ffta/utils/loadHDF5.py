@@ -50,7 +50,8 @@ Typical usage:
                             ff_file_path=r'E:\Data\20180314 - BAPI high-res\FF01_5MHz_100avg_25nm_5V_600mA')
 """
 
-def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False, subfolder='/'):
+def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False, 
+                 subfolder='/', average=False):
     """
     Loads .ibw single file an HDF5 format. Then appends the FF data to that HDF5
 
@@ -82,7 +83,7 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False, s
     
     parm_dict: dict
         Dictionary of relevant scan parameters
-
+        
     """
     
     if not any(ibw_file_path):
@@ -101,8 +102,15 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False, s
     hdf = px.ioHDF5(h5_path)
     xy_scansize = [hdf.file.attrs['FastScanSize'],hdf.file.attrs['SlowScanSize']]
     
+    if verbose:
+        print("### Loading file folder ###")
     h5_path, _, parm_dict = loadHDF5_folder(folder_path=ff_file_path, 
                                             xy_scansize=xy_scansize, file_name=h5_path)
+    
+    if average:
+        if verbose:
+            print('### Creating averaged set ###')
+        h5_avg = create_HDF_pixel_wise_averaged(h5_path)
     
     return h5_path, parm_dict
 
@@ -155,7 +163,6 @@ def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5'):
     parm_dict['num_rows'] = len(data_files)
     parm_dict['num_cols'] = n_pixels
     
-    
     # Add dimensions if not in the config file
     if 'FastScanSize' not in parm_dict.keys():
         if not any(xy_scansize):
@@ -191,123 +198,6 @@ def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5'):
     createHDF5_single_dataset(data_files, parm_dict, h5_path)
 
     return h5_path, data_files, parm_dict
-    
-def createHDF5_separate_lines(data_files, parm_dict, h5_path):
-    """
-    Generates the HDF5 file given path to files_list and parameters dictionary
-    
-    Creates a Datagroup FFtrEFM_Group with each line as a separate Dataset
-    
-    Parameters
-    ----------
-    h5_path : string
-        Path to H5 file
-    
-    data_files : list
-        List of the *.ibw files to be invidually scanned
-        
-    parm_dict : dict
-        Scan parameters to be saved as attributes
-
-    Returns
-    -------
-    h5_path: str
-        The filename path to the H5 file created
-    
-    """
-    
-    # Uses first data set to determine parameters
-    line_file = load.signal(data_files[0])
-    if 'pnts_per_pixel' not in parm_dict.keys():
-        parm_dict['pnts_per_avg'] = line_file.shape[0]
-        parm_dict['pnts_per_pixel'] = line_file.shape[1] / parm_dict['num_cols']
-        parm_dict['pnts_per_line'] = line_file.shape[1]    
-
-    # Prepare data for writing to HDF
-    dt = 1/parm_dict['sampling_rate']
-    def_vec= np.arange(0, parm_dict['total_time'], dt)
-    if def_vec.shape[0] != parm_dict['pnts_per_avg']:
-        raise Exception('Time-per-point calculation error')
-
-    # This takes a very long time but creates a giant NxM matrix of the data
-    #data_size = [line_file.shape[1]*parm_dict['num_rows'], line_file.shape[0]]
-    data_size = [line_file.shape[1]*parm_dict['num_rows'], line_file.shape[0]]
-
-    # To do: Fix the labels/atrtibutes on the relevant data sets
-    hdf = px.ioHDF5(h5_path)
-    ff_group = px.MicroDataGroup('FFtrEFM_Group', parent='/')
-    root_group = px.MicroDataGroup('/')
-    
-    ds_raw = px.MicroDataset('0000', data=line_file, dtype=np.float32,parent=ff_group)
-
-    ff_group.addChildren([ds_raw])
-    ff_group.attrs = parm_dict
-    
-    # Get reference for writing the data
-    h5_refs = hdf.writeData(ff_group, print_log=True)
-    h5_FFraw = px.io.hdf_utils.getH5DsetRefs(['0000'], h5_refs)[0]
-
-    # Cycles through the remaining files. This takes a while (~few minutes)
-    for k, num in zip(data_files[1:], np.arange(1,len(data_files))):
-        
-        fname = k.replace('/','\\')
-        print('####',fname.split('\\')[-1],'####')
-        fname = str(num).rjust(4,'0')
-        
-        line_file = load.signal(k)
-        hdf.file[ff_group.name+'/'+fname] = line_file.transpose()
-        
-    px.hdf_utils.print_tree(hdf.file)
-    
-    hdf.flush()
-    
-    return h5_path
-    
-
-def createHDF5_file(signal, parm_dict, h5_path=''):
-    """
-    Generates the HDF5 file given path to a specific file and a parameters dictionary
-
-    Parameters
-    ----------
-    h5_path : string
-        Path to desired h5 file.
-    
-    signal : str
-        Path to the data file to be converted
-        
-    parm_dict : dict
-        Scan parameters
-
-    Returns
-    -------
-    h5_path: str
-        The filename path to the H5 file create
-    
-    """
-    
-    sg = load.signal(signal)
-    
-    if not any(h5_path): # if not passed, auto-generate name
-        fname = signal.replace('/','\\')    
-        h5_path = fname[:-4] + '.h5'
-        
-    hdf = px.ioHDF5(h5_path)
-    px.hdf_utils.print_tree(hdf.file)
-    
-    ff_group = px.MicroDataGroup('FFtrEFM_Group', parent='/')
-    root_group = px.MicroDataGroup('/')
-    
-    fname = fname.split('\\')[-1][:-4]
-    sg = px.MicroDataset(fname, data=sg, dtype=np.float32,parent=ff_group)
-    
-    ff_group.addChildren([sg])
-    ff_group.attrs = parm_dict
-    
-    # Get reference for writing the data
-    h5_refs = hdf.writeData(ff_group, print_log=True)
-    
-    hdf.flush()
     
     
 def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
@@ -502,6 +392,136 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=True):
 
     return h5_avg
 
+
+def createHDF5_separate_lines(data_files, parm_dict, h5_path):
+    """
+    Generates the HDF5 file given path to files_list and parameters dictionary
+    
+    Creates a Datagroup FFtrEFM_Group with each line as a separate Dataset
+    
+    Parameters
+    ----------
+    h5_path : string
+        Path to H5 file
+    
+    data_files : list
+        List of the *.ibw files to be invidually scanned
+        
+    parm_dict : dict
+        Scan parameters to be saved as attributes
+
+    Returns
+    -------
+    h5_path: str
+        The filename path to the H5 file created
+    
+    """
+    
+    # Uses first data set to determine parameters
+    line_file = load.signal(data_files[0])
+    if 'pnts_per_pixel' not in parm_dict.keys():
+        parm_dict['pnts_per_avg'] = line_file.shape[0]
+        parm_dict['pnts_per_pixel'] = line_file.shape[1] / parm_dict['num_cols']
+        parm_dict['pnts_per_line'] = line_file.shape[1]    
+
+    # Prepare data for writing to HDF
+    dt = 1/parm_dict['sampling_rate']
+    def_vec= np.arange(0, parm_dict['total_time'], dt)
+    if def_vec.shape[0] != parm_dict['pnts_per_avg']:
+        raise Exception('Time-per-point calculation error')
+
+    # This takes a very long time but creates a giant NxM matrix of the data
+    #data_size = [line_file.shape[1]*parm_dict['num_rows'], line_file.shape[0]]
+    data_size = [line_file.shape[1]*parm_dict['num_rows'], line_file.shape[0]]
+
+    # To do: Fix the labels/atrtibutes on the relevant data sets
+    hdf = px.ioHDF5(h5_path)
+    ff_group = px.MicroDataGroup('FFtrEFM_Group', parent='/')
+    root_group = px.MicroDataGroup('/')
+    
+    ds_raw = px.MicroDataset('0000', data=line_file, dtype=np.float32,parent=ff_group)
+
+    ff_group.addChildren([ds_raw])
+    ff_group.attrs = parm_dict
+    
+    # Get reference for writing the data
+    h5_refs = hdf.writeData(ff_group, print_log=True)
+    h5_FFraw = px.io.hdf_utils.getH5DsetRefs(['0000'], h5_refs)[0]
+
+    # Cycles through the remaining files. This takes a while (~few minutes)
+    for k, num in zip(data_files[1:], np.arange(1,len(data_files))):
+        
+        fname = k.replace('/','\\')
+        print('####',fname.split('\\')[-1],'####')
+        fname = str(num).rjust(4,'0')
+        
+        line_file = load.signal(k)
+        hdf.file[ff_group.name+'/'+fname] = line_file.transpose()
+        
+    px.hdf_utils.print_tree(hdf.file)
+    
+    hdf.flush()
+    
+    return h5_path
+    
+
+def createHDF5_file(signal, parm_dict, h5_path='', ds_name='FF_Raw'):
+    """
+    Generates the HDF5 file given path to a specific file and a parameters dictionary
+
+    Parameters
+    ----------
+    h5_path : string
+        Path to desired h5 file.
+    
+    signal : str, ndarray
+        Path to the data file to be converted or a workspace array
+        
+    parm_dict : dict
+        Scan parameters
+
+    Returns
+    -------
+    h5_path: str
+        The filename path to the H5 file create
+    
+    """
+    
+    sg = signal
+    
+    if 'str' in str(type(signal)):
+        sg = load.signal(signal)
+    
+    if not any(h5_path): # if not passed, auto-generate name
+        fname = signal.replace('/','\\')    
+        h5_path = fname[:-4] + '.h5'
+    else:
+        fname = h5_path
+        
+    hdf = px.ioHDF5(h5_path)
+    px.hdf_utils.print_tree(hdf.file)
+    
+    ff_group = px.MicroDataGroup('FF_Group', parent='/')
+    root_group = px.MicroDataGroup('/')
+    
+#    fname = fname.split('\\')[-1][:-4]
+    sg = px.MicroDataset(ds_name, data=sg, dtype=np.float32,parent=ff_group)
+    
+    if 'pnts_per_pixel' not in parm_dict.keys():
+        parm_dict['pnts_per_avg'] = signal.shape[1]
+        parm_dict['pnts_per_pixel'] = 1
+        parm_dict['pnts_per_line'] = parm_dict['num_cols']
+        
+    ff_group.addChildren([sg])
+    ff_group.attrs = parm_dict
+    
+    # Get reference for writing the data
+    h5_refs = hdf.writeData(ff_group, print_log=True)
+    
+    hdf.flush()
+    
+
+
 def hdf_commands(h5_path, ds='FF_Raw'):
     """
     Creates a bunch of typical workspace HDF5 variables for scripting use
@@ -565,6 +585,13 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         commands.append("h5_filt = px.hdf_utils.getDataSet(hdf.file, 'Filtered_Data')[-1]")
     except:
         pass
+
+    try:
+        h5_rb = px.hdf_utils.getDataSet(hdf.file, 'Rebuilt_Data')[-1]     
+        commands.append("h5_rb = px.hdf_utils.getDataSet(hdf.file, 'Rebuilt_Data')[-1]")
+    except:
+        pass
+
     
     for i in commands:
         print(i)

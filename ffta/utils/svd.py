@@ -20,7 +20,7 @@ Wrapper to SVD functions, specific to ffta Class
 
 """
 
-def FF_SVD(h5_main, num_components=64, show_plots=True):
+def FF_SVD(h5_main, num_components=128, show_plots=True):
     """
     h5_main : h5Py Dataset
         Main dataset to filter
@@ -66,6 +66,7 @@ def FF_SVD(h5_main, num_components=64, show_plots=True):
         print('Need', skree_sum[skree_sum<0.8].shape[0],'components for 80%')
         print('Need', skree_sum[skree_sum<0.9].shape[0],'components for 90%')
         print('Need', skree_sum[skree_sum<0.95].shape[0],'components for 95%')
+        print('Need', skree_sum[skree_sum<0.99].shape[0],'components for 99%')
         
         fig_skree, axes =px.plot_utils.plot_scree(h5_S, title='Skree plot')
         
@@ -78,7 +79,7 @@ def FF_SVD(h5_main, num_components=64, show_plots=True):
                                                     plots_on_side=3, subtitle_prefix='Component', 
                                                     title='SVD Eigenvectors', evenly_spaced=False)
     
-    px.hdf_utils.copyAttributes(h5_main, h5_svd_group)
+    px.hdf_utils.copyAttributes(h5_main.parent, h5_svd_group)
     
     return h5_svd_group
 
