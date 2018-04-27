@@ -390,18 +390,21 @@ class CPD_cluster(object):
 
         if newImage:
             fig, ax = plt.subplots(nrows=1, figsize=(8, 6))
-            px.plot_utils.plot_map(ax, self.CPD_on_avg, x_size=self.FastScanSize,
+            im0,_ = px.plot_utils.plot_map(ax, self.CPD_on_avg, x_size=self.FastScanSize,
                                    y_size=self.SlowScanSize, show_cbar=False, 
                                    cmap='inferno')
-
+           
         for i in self.segments_idx:
 
-            im, = ax.plot(self.segments_idx[i][:,1], self.segments_idx[i][:,0],
+            im1, = ax.plot(self.segments_idx[i][:,1], self.segments_idx[i][:,0],
                           color=colors[i], marker='s', linestyle='None', label=i)
 
         ax.legend(fontsize=14, loc=[-0.18,0.3])
 
-        return im
+        if newImage:
+            return im0, im1
+
+        return im1
 
     def heat_map(self, bins=50):
 
@@ -498,7 +501,7 @@ class CPD_cluster(object):
         plt.rcParams['animation.ffmpeg_path'] = r'C:\Users\Raj\Downloads\ffmpeg-20180124-1948b76-win64-static\bin\ffmpeg.exe'
 
         fig, ax = plt.subplots(nrows=1, figsize=(13,6))
-        px.plot_utils.plot_map(ax, self.CPD_on_avg, x_size=self.FastScanSize,
+        im0 = px.plot_utils.plot_map(ax, self.CPD_on_avg, x_size=self.FastScanSize,
                                y_size=self.SlowScanSize, show_cbar=False, 
                                cmap='inferno')
 
@@ -514,9 +517,9 @@ class CPD_cluster(object):
 
             _results  = self.kmeans(data, clusters = clusters)
             self.segment_maps(results=_results)
-            im0 = self.plot_segment_maps(ax)            
+            im1 = self.plot_segment_maps(ax)            
 
-            km_ims.append([im0])
+            ims.append([im1])
 
         ani = animation.ArtistAnimation(fig, ims, interval=120,repeat_delay=10)
 
