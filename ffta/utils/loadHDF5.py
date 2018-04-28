@@ -560,17 +560,17 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         pass
     
     try:
-        parameters = get_params(hdf.file)
+        parameters = hdf_utils.get_params(hdf.file)
         commands.append("parameters = hdf_utils.get_params(hdf.file)")
     except:
         pass
     try:
-        h5_ll = get_line(h5_path, line_num=0)
+        h5_ll = hdf_utils.get_line(h5_path, line_num=0)
         commands.append("h5_ll = hdf_utils.get_line(h5_path, line_num=0)")
     except:
         pass
     try:
-        h5_px = get_pixel(h5_path, rc=[0,0])
+        h5_px = hdf_utils.get_pixel(h5_path, rc=[0,0])
         commands.append("h5_px = hdf_utils.get_pixel(h5_path, rc=[0,0])")
     except:
         pass
