@@ -27,7 +27,7 @@ def find_FF(h5_path):
     
     return h5_gp, parameters
 
-def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False):
+def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True):
     """
     Processes FF_Raw dataset in the HDF5 file
     
@@ -46,7 +46,10 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False):
     clear_filter : bool, optional
         For data already filtered, calls Line's clear_filter function to 
             skip FIR/windowing steps
-        
+    
+    verbose : bool, optional,
+        Whether to write data to the command line
+    
     Returns
     -------
     tfp : ndarray
@@ -85,8 +88,9 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False):
     pnts_per_pixel = parameters['pnts_per_pixel']
     pnts_per_avg = parameters['pnts_per_avg']
 
-    print('Recombination: ', parameters['recombination'])
-    print( 'ROI: ', parameters['roi'])
+    if verbose:
+        print('Recombination: ', parameters['recombination'])
+        print( 'ROI: ', parameters['roi'])
 
     # Initialize arrays.
     tfp = np.zeros([num_rows, num_cols])
@@ -149,12 +153,13 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False):
         tfpmean = 1e6 * tfp[i, :].mean()
         tfpstd = 1e6 * tfp[i, :].std()
 
-        string = ("Line {0:.0f}, average tFP (us) ="
-                  " {1:.2f} +/- {2:.2f}".format(i + 1, tfpmean, tfpstd))
-        print(string)
+        if verbose:
+            string = ("Line {0:.0f}, average tFP (us) ="
+                      " {1:.2f} +/- {2:.2f}".format(i + 1, tfpmean, tfpstd))
+            print(string)
 
-        text.remove()
-        text = tfp_ax.text((num_cols-len(string))/2,num_rows+4, string)
+            text.remove()
+            text = tfp_ax.text((num_cols-len(string))/2,num_rows+4, string)
 
         #plt.draw()
         plt.pause(0.0001)
@@ -169,13 +174,13 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False):
     
     plt.show()
 
-#    _,_, tfp_fixed = save_process(h5_file, h5_gp, tfp, shift, inst_freq, parameters)
+    _,_, tfp_fixed = save_process(h5_file, h5_gp, tfp, shift, inst_freq, parameters, verbose=verbose)
     
     #save_CSV(h5_path, tfp, shift, tfp_fixed, append=ds)
 
     return tfp, shift, inst_freq
 
-def save_process(h5_file, h5_gp, tfp, shift, inst_freq, parameters):
+def save_process(h5_file, h5_gp, tfp, shift, inst_freq, parameters, verbose=False):
 
     # set correct folder path
     ftype = str(type(h5_gp))
@@ -216,12 +221,16 @@ def save_process(h5_file, h5_gp, tfp, shift, inst_freq, parameters):
     
     # Find folder, write to it
     hdf = px.ioHDF5(h5_file)
-    h5_refs = hdf.writeData(grp_tr, print_log=True)
-    grp_tr_name = h5_refs[0].parent.name
+    h5_refs = hdf.writeData(grp_tr, print_log=verbose), 
+    try:
+        grp_tr_name = h5_refs[0].parent.name
+    except:
+        grp_tr_name = h5_refs[0][0].parent.name
     
     # create standard datasets
-    h5_inst_freq = hdf_utils.add_standard_sets(h5_file, group=grp_tr_name, parms_dict=parameters, ds='inst_freq')
-    
+    h5_inst_freq = hdf_utils.add_standard_sets(h5_file, group=grp_tr_name, parms_dict=parameters, ds='inst_freq', verbose=verbose)
+    for key in parameters:
+        grp_tr.attrs[key] = parameters[key]
     # individual plots
     
     hdf.flush()
@@ -291,18 +300,21 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
     xs = parm_dict['FastScanSize']
     ys = parm_dict['SlowScanSize']
     asp = ys/xs
+    if asp != 1:
+        asp = asp * 2
+        
     fig, a = plt.subplots(nrows=3, figsize=(8,9))
     
     [vmint, vmaxt] = np.mean(tfp)-2*np.std(tfp), np.mean(tfp)-2*np.std(tfp)
     [vmins, vmaxs] = np.mean(shift)-2*np.std(shift), np.mean(shift)-2*np.std(shift)
     
     _, cbar_t = px.plot_utils.plot_map(a[0], tfp_fixed*1e6, x_size = xs*1e6, y_size = ys*1e6,
-                                       aspect=2*asp, cmap='inferno', stdevs=stdevs)
+                                       aspect=asp, cmap='inferno', stdevs=stdevs)
     
     _, cbar_r = px.plot_utils.plot_map(a[1], 1/(1e3*tfp_fixed), x_size = xs*1e6, y_size = ys*1e6,
-                                       aspect=2*asp, cmap='inferno', stdevs=stdevs)
+                                       aspect=asp, cmap='inferno', stdevs=stdevs)
     _, cbar_s = px.plot_utils.plot_map(a[2], shift, x_size = xs*1e6, y_size = ys*1e6,
-                                       aspect=2*asp, cmap='inferno', stdevs=stdevs)
+                                       aspect=asp, cmap='inferno', stdevs=stdevs)
 
     cbar_t.set_label('tfp (us)', rotation=270, labelpad=16)
     a[0].set_title('tfp', fontsize=12)
@@ -323,15 +335,3 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
 
     return
 
-
-def save_CSV(h5_path, tfp, shift, tfp_fixed, append):
-    
-    if type(h5_path) is not str:
-        h5_path = h5_path.name
-    path = '/'.join(h5_path.split('/')[:-1])+'/'
-    os.chdir(path)
-    np.savetxt('tfp-'+append+'.csv', np.fliplr(tfp).T, delimiter=',')
-    np.savetxt('shift-'+append+'.csv', np.fliplr(shift).T, delimiter=',')
-    np.savetxt('tfp_fixed-'+append+'.csv', np.fliplr(tfp_fixed).T, delimiter=',')
-    
-    return
