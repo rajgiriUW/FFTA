@@ -16,35 +16,38 @@ from ffta.utils import mask_utils, hdf_utils
 from ffta import pixel
 """
 Creates a Class with various data grouped based on distance to masked edges
-A more general version of CPD clustering data
 
+Typical usage:
+
+>> mymask = mask_utils.load_mask_txt('Path_mask.txt')
+>> tfp_clust = distance_utils.dist_cluster(h5_path, mask=mymask, data_avg='tfp', parms_dict=parameters)
+>> tfp_clust.analyze()
+>> tfp_clust.plot_img()
+>> tfp_clust.kmeans()
+>> tfp_clust.plot_kmeans()
+
+To do: 
+    Implement dist_cluster as implementation of pycroscopy Cluster class
 """
 
 class dist_cluster(object):
 
-    def __init__(self, h5_main, parms_dict, data_avg = '', mask=None):
+    def __init__(self, h5_main, parms_dict, data_avg, mask):
         """
-
-        h5_file : h5Py dataset or str
+        h5_main : h5Py dataset or str
             File type to be processed.
 
         mask : ndarray
             mask file to be loaded, is expected to be of 1 (transparent) and 0 (opaque)
             loaded e.g. mask = mask_utils.loadmask('E:/ORNL/20191221_BAPI/nice_masks/Mask_BAPI20_0008.txt')
 
-        imgsize : list
-            dimensions of the image
+        parms_dict : dict
+            Parameters file used for the image. Must contain at minimum:
+                num_rows, num_cols, sampling_rate, FastScanSize, SlowScanSize, total_time
 
-        ds_group : str or H5Py Group
-            Where the target dataset is located
-
-        light_on : list
-            the time in milliseconds for when light is on
-
-        Example usage:
-        >> mymask = mask_utils.load_mask_txt('Path_mask.txt')
-        >> CPD_clust = distance_utils.CPD_sluter(h5_path, mask=mymask)
-        >> CPD_clust.analyze_CPD(CPD_clust.CPD_on_avg)
+        data_avg : str
+            The file to use as the "averaged" data upon which to apply the mask and do calculations
+            e.g. 'tfp' searches within the h5_main parent folder for 'tfp'
 
         """
 #        hdf = px.ioHDF5(h5_file)
@@ -54,15 +57,17 @@ class dist_cluster(object):
         # Set up datasets data
         self.data = self.h5_main[()]
         self.parms_dict = parms_dict
-#        self.pnts_per_CPDpix = self.CPD.shape[1]
 
         self._params()
 
         # Create mask for grain boundaries
-
-        #
         if not mask.any():
             mask = np.ones([self.num_rows, self.num_cols])
+            
+        try:
+            self.tfp = px.hdf_utils.getDataSet(h5_main.parent, 'tfp')[0]
+        except:
+            self.tfp = None
 
         self.mask = mask
         self.mask_nan, self.mask_on_1D, self.mask_off_1D = mask_utils.load_masks(self.mask)
@@ -134,6 +139,18 @@ class dist_cluster(object):
             self.data_avg_1D_vals[x] = self.data_avg[r][c]
             self.data_1D_vals[x,:] = self.data[self.num_cols*r + c,:]
 
+        return
+
+    def plot_img(self):
+        
+        if self.tfp is not None:
+            
+            fig, ax = plt.subplots(nrows=1, figsize=(12, 6))
+            px.plot_utils.plot_map(ax, self.tfp, 
+                                   x_size=self.FastScanSize, y_size=self.SlowScanSize, 
+                                   cmap='inferno')
+            ax.imshow(self.mask_nan)
+        
         return
 
     def _make_distance_arrays(self):
@@ -281,20 +298,22 @@ class dist_cluster(object):
         return ax, fig
 
 
-    def elbow_plot(self, data):
+    def elbow_plot(self, data=None, clusters=10):
         """"
-        Simple k-means elbow plot
+        Simple k-means elbow plot, over 10 clusters. Note that this can take
+        a long time for big data sets.
 
-        Data typically is self.data_scatter
-
+        Data defaults to self.data_scatter
 
         Returns
         -------
-        self.results : KMeans type
+        score : KMeans type
 
         """
 
-        Nc = range(1, 20)
+        data = data if data is None else self.data_scatter
+
+        Nc = range(1, clusters)
         km = [sk.cluster.KMeans(n_clusters=i) for i in Nc]
 
         score = [km[i].fit(data).score(data) for i in range(len(km))]

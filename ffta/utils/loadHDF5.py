@@ -564,16 +564,25 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         commands.append("parameters = hdf_utils.get_params(hdf.file)")
     except:
         pass
+    
     try:
         h5_ll = hdf_utils.get_line(h5_path, line_num=0)
         commands.append("h5_ll = hdf_utils.get_line(h5_path, line_num=0)")
     except:
         pass
+    
     try:
         h5_px = hdf_utils.get_pixel(h5_path, rc=[0,0])
         commands.append("h5_px = hdf_utils.get_pixel(h5_path, rc=[0,0])")
     except:
         pass
+    
+    try:
+        h5_if = px.hdf_utils.getDataSet(hdf.file, 'inst_freq')
+        commands.append("h5_if = px.hdf_utils.getDataSet(hdf.file, 'inst_freq')[-1]")
+    except:
+        pass
+    
     try:
         h5_avg = px.hdf_utils.getDataSet(hdf.file, 'FF_Avg')[-1]
         commands.append("h5_avg = px.hdf_utils.getDataSet(hdf.file, 'FF_Avg')[-1]")

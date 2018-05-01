@@ -83,7 +83,7 @@ def FF_SVD(h5_main, num_components=128, show_plots=True):
     
     return h5_svd_group
 
-def FF_SVD_filter(h5_main, clean_components=[]):
+def FF_SVD_filter(h5_main, clean_components=None):
     """
     Filters data given the array clean_components
     
