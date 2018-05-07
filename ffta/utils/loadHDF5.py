@@ -16,7 +16,8 @@ import numpy as np
 import os
 
 import pycroscopy as px
-from pycroscopy.io.write_utils import build_ind_val_dsets
+from pycroscopy.io.write_utils import build_ind_val_dsets, Dimension
+
 import h5py
 
 from ffta.utils import load
@@ -99,7 +100,7 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False,
     h5_path = tran.translate(ibw_file_path, ftype=ftype, 
                              verbose=verbose, subfolder=subfolder)
     
-    hdf = px.ioHDF5(h5_path)
+    hdf = px.io.HDFwriter(h5_path)
     xy_scansize = [hdf.file.attrs['FastScanSize'],hdf.file.attrs['SlowScanSize']]
     
     if verbose:
@@ -251,38 +252,37 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     data_size = [line_file.shape[1]*parm_dict['num_rows'], line_file.shape[0] ]
 
     # To do: Fix the labels/atrtibutes on the relevant data sets
-    hdf = px.ioHDF5(h5_path)
-    ff_group = px.MicroDataGroup('FF_Group', parent='/')
-    root_group = px.MicroDataGroup('/')
+    hdf = px.io.HDFwriter(h5_path)
+    ff_group = px.io.VirtualGroup('FF_Group', parent='/')
+    root_group = px.io.VirtualGroup('/')
     
     # Set up the position vectors for the data
-    ds_pos_ind, ds_pos_val = build_ind_val_dsets([num_cols, num_rows], is_spectral=False,
-                                                  steps=[1.0 * parm_dict['FastScanSize'] / num_cols,
-                                                         1.0 * parm_dict['SlowScanSize'] / num_rows],
-                                                  labels=['X', 'Y'], units=['m', 'm'], verbose=verbose)
-
-    ds_spec_inds, ds_spec_vals = build_ind_val_dsets([pnts_per_avg], is_spectral=True,
-                                                     labels=['Deflection'], units=['V'])
+    
+    pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
+                Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
+    ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False, verbose=verbose)
+    ds_spec_inds, ds_spec_vals = build_ind_val_dsets(Dimension('Deflection', 'V',[pnts_per_avg] ),
+                                                     is_spectral=True, verbose=verbose)
     
     ds_spec_vals.data = ds_spec_vals.data * dt # correct the values to be right timescale
     
-    ds_raw = px.MicroDataset('FF_Raw', data=[], dtype=np.float32,
-                             parent=ff_group, maxshape=data_size, 
-                             chunking=(1, parm_dict['pnts_per_line']))
+    ds_raw = px.io.VirtualDataset('FF_Raw', data=[[0],[0]], dtype=np.float32,
+                                  parent=ff_group, maxshape=data_size, 
+                                  chunking=(1, parm_dict['pnts_per_line']))
 
     # Standard list of auxiliary datasets that get linked with the raw dataset:
     aux_ds_names = ['Position_Indices', 'Position_Values', 
                     'Spectroscopic_Indices', 'Spectroscopic_Values']
 
-    ff_group.addChildren([ds_raw, ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals])
+    ff_group.add_children([ds_raw, ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals])
 
     # Get reference for writing the data
     ff_group.attrs = parm_dict
-    h5_refs = hdf.writeData(ff_group, print_log=True)
+    h5_refs = hdf.write(ff_group, print_log=True)
     
     pnts_per_line = parm_dict['pnts_per_line']
 
-    h5_file = px.hdf_utils.getDataSet(hdf.file, 'FF_Raw')[0]
+    h5_file = px.hdf_utils.find_dataset(hdf.file, 'FF_Raw')[0]
 
     # Cycles through the remaining files. This takes a while (~few minutes)
     for k, num in zip(data_files, np.arange(0,len(data_files))):
@@ -296,11 +296,11 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
         f = hdf.file[h5_file.name]
         f[pnts_per_line*num:pnts_per_line*(num+1), :] = line_file[:,:]
     
-    h5_main = px.hdf_utils.getH5DsetRefs(['FF_Raw'], h5_refs)[0] 
-    px.hdf_utils.linkRefs(h5_main, px.hdf_utils.getH5DsetRefs(aux_ds_names, h5_refs))
+    h5_main = px.hdf_utils.get_h5_obj_refs(['FF_Raw'], h5_refs)[0] 
+    px.hdf_utils.link_h5_objects_as_attrs(h5_main, px.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
     
     if verbose == True:
-        px.hdf_utils.print_tree(hdf.file)
+        px.hdf_utils.print_tree(hdf.file, rel_paths=True)
     
     hdf.flush()
     
