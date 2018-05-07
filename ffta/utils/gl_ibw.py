@@ -2,7 +2,7 @@
 """
 Created on Wed Feb 21 10:06:12 2018
 
-@author: Raj Giridharagopal, Suhas Somnath
+@author: Raj Giridharagopal
 """
 
 from __future__ import division, print_function, absolute_import, unicode_literals
@@ -20,12 +20,12 @@ from igor import binarywave as bw
 
 import pycroscopy as px
 
-from pycroscopy.io.io_hdf5 import ioHDF5
-from pycroscopy.io.translators.translator import Translator
-from pycroscopy.io.translators.utils import generate_dummy_main_parms, build_ind_val_dsets
-from pycroscopy.io.io_hdf5 import ioHDF5
-from pycroscopy.io.hdf_utils import getH5DsetRefs, linkRefs
-from pycroscopy.io.microdata import MicroDataGroup, MicroDataset
+from pycroscopy.core.io.translator import Translator, generate_dummy_main_parms
+from pycroscopy.io.hdf_writer import HDFwriter
+from pycroscopy.io.virtual_data import VirtualDataset, VirtualGroup
+from pycroscopy.io.write_utils import build_ind_val_dsets
+from pycroscopy.io.write_utils import Dimension, VALUES_DTYPE
+from pycroscopy.core.io.hdf_utils import get_h5_obj_refs, link_h5_objects_as_attrs
 
 from ffta.utils import load
 
@@ -110,18 +110,17 @@ class GLIBWTranslator(Translator):
         images = images.transpose(2, 0, 1)  # now ordered as [chan, Y, X] image
         images = np.reshape(images, (images.shape[0], -1, 1))  # 3D [chan, Y*X points,1]
 
-        ds_pos_ind, ds_pos_val = build_ind_val_dsets([num_cols, num_rows], is_spectral=False,
-                                                     steps=[1.0 * parm_dict['FastScanSize'] / num_cols,
-                                                            1.0 * parm_dict['SlowScanSize'] / num_rows],
-                                                     labels=['X', 'Y'], units=['m', 'm'], verbose=verbose)
+        pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
+                    Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
 
-        ds_spec_inds, ds_spec_vals = build_ind_val_dsets([1], is_spectral=True, steps=[1],
-                                                         labels=['arb'], units=['a.u.'], verbose=verbose)
+        ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False, verbose=verbose)
+        ds_spec_inds, ds_spec_vals = build_ind_val_dsets(Dimension('arb', 'a.u.', [1]), is_spectral=True,
+                                                         verbose=verbose)
 
         # Prepare the list of raw_data datasets
         chan_raw_dsets = list()
         for chan_data, chan_name, chan_unit in zip(images, chan_labels, chan_units):
-            ds_raw_data = MicroDataset('Raw_Data', data=np.atleast_2d(chan_data), dtype=np.float32, compression='gzip')
+            ds_raw_data = VirtualDataset('Raw_Data', data=np.atleast_2d(chan_data), dtype=np.float32, compression='gzip')
             ds_raw_data.attrs['quantity'] = chan_name
             ds_raw_data.attrs['units'] = [chan_unit]
             chan_raw_dsets.append(ds_raw_data)
@@ -130,15 +129,15 @@ class GLIBWTranslator(Translator):
 
         # Prepare the tree structure
         # technically should change the date, etc.
-        spm_data = MicroDataGroup('')
+        spm_data = VirtualGroup('')
         global_parms = generate_dummy_main_parms()
         global_parms['data_type'] = 'IgorIBW_' + type_suffix
         global_parms['translator'] = 'IgorIBW'
         spm_data.attrs = global_parms
         #meas_grp = MicroDataGroup('Measurement_000')
-        meas_grp = MicroDataGroup(subfolder)
+        meas_grp = VirtualGroup(subfolder)
         meas_grp.attrs = parm_dict
-        spm_data.addChildren([meas_grp])
+        spm_data.add_children([meas_grp])
 
         if verbose:
             print('Finished preparing tree trunk')
@@ -152,8 +151,8 @@ class GLIBWTranslator(Translator):
                 remove(h5_path)
 
         # Write head of tree to file:
-        hdf = ioHDF5(h5_path)
-        hdf.writeData(spm_data, print_log=verbose)
+        hdf = HDFwriter(h5_path)
+        hdf.write(spm_data, print_log=verbose)
 
         if verbose:
             print('Finished writing tree trunk')
@@ -165,16 +164,16 @@ class GLIBWTranslator(Translator):
         for chan_index, raw_dset in enumerate(chan_raw_dsets):
             
             if channel_label_name == True:
-                chan_grp = MicroDataGroup(chan_labels[chan_index], '/'+subfolder+'/')
+                chan_grp = VirtualGroup(chan_labels[chan_index], '/'+subfolder+'/')
             else:
                 #chan_grp = MicroDataGroup('{:s}{:03d}'.format('Channel_', chan_index), '/Measurement_000/')
-                chan_grp = MicroDataGroup('{:s}{:03d}'.format('Channel_', chan_index), '/'+subfolder+'/')
+                chan_grp = VirtualGroup('{:s}{:03d}'.format('Channel_', chan_index), '/'+subfolder+'/')
             
             chan_grp.attrs['name'] = raw_dset.attrs['quantity']
-            chan_grp.addChildren([ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals, raw_dset])
-            h5_refs = hdf.writeData(chan_grp, print_log=verbose)
-            h5_raw = getH5DsetRefs(['Raw_Data'], h5_refs)[0]
-            linkRefs(h5_raw, getH5DsetRefs(aux_ds_names, h5_refs))
+            chan_grp.add_children([ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals, raw_dset])
+            h5_refs = hdf.write(chan_grp, print_log=verbose)
+            h5_raw = get_h5_obj_refs(['Raw_Data'], h5_refs)[0]
+            link_h5_objects_as_attrs(h5_raw, get_h5_obj_refs(aux_ds_names, h5_refs))
 
         if verbose:
             print('Finished writing all channels')

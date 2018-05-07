@@ -339,7 +339,7 @@ def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6,
         Whether to write to the command line
     """
     
-    hdf = px.ioHDF5(h5_path)
+    hdf = px.io.HDFwriter(h5_path)
     
     if not any(parms_dict):
         parms_dict = get_params(_which_h5_group(h5_path))
@@ -363,17 +363,17 @@ def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6,
         dt = 1
     
     try:
-        grp = px.MicroDataGroup(group)
+        grp = px.io.VirtualGroup(group)
     except:
-        grp = px.MicroDataGroup(group.name)
+        grp = px.io.VirtualGroup(group.name)
         
-    ds_pos_ind, ds_pos_val = px.io.translators.utils.build_ind_val_dsets([num_cols, num_rows], is_spectral=False,
-                                              steps=[1.0 * fast_x / num_cols,
+    ds_pos_ind, ds_pos_val = px.hdf_utils.write_ind_val_dsets([num_cols, num_rows], is_spectral=False,
+                                              dimensions=[1.0 * fast_x / num_cols,
                                                      1.0 * slow_y / num_rows],
                                               labels=['X', 'Y'], units=['m', 'm'], verbose=verbose)
     
-    ds_spec_inds, ds_spec_vals = px.io.translators.utils.build_ind_val_dsets([pnts_per_avg], is_spectral=True,
-                                                                             labels=['Time'], units=['s'], steps=[dt], 
+    ds_spec_inds, ds_spec_vals = px.hdf_utils.write_ind_val_dsets([pnts_per_avg], is_spectral=True,
+                                                                             labels=['Time'], units=['s'], dimensions=[dt], 
                                                                              verbose=verbose)
     
     aux_ds_names = ['Position_Indices', 'Position_Values', 
@@ -381,7 +381,7 @@ def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6,
     
     grp.addChildren([ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals])
     
-    h5_refs = hdf.writeData(grp, print_log=verbose)
+    h5_refs = hdf.write(grp, print_log=verbose)
     
     h5_main = hdf.file[grp.name]
     

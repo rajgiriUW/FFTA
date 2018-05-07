@@ -16,7 +16,7 @@ import numpy as np
 import os
 
 import pycroscopy as px
-from pycroscopy.io.translators.utils import build_ind_val_dsets
+from pycroscopy.io.write_utils import build_ind_val_dsets
 import h5py
 
 from ffta.utils import load
@@ -545,6 +545,8 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         hdf = px.ioHDF5(h5_path)
         commands.append("hdf = px.ioHDF5(h5_path)")
     except:
+        hdf = px.hdf_utils.h5py.File(h5_path)
+        commands.append("hdf = px.hdf_utils.h5py.File(h5_path)")
         pass
     
     try:
@@ -557,7 +559,11 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         h5_main = px.hdf_utils.getDataSet(hdf.file, ds)[0]
         commands.append("h5_main = px.hdf_utils.getDataSet(hdf.file, '"+ds+"')[0]")
     except:
-        pass
+        try:
+            h5_main = px.hdf_utils.find_dataset(hdf.file, ds)[0]
+            commands.append("h5_main = px.hdf_utils.find_dataset(hdf.file, '"+ds+"')[0]")
+        except:
+            pass
     
     try:
         parameters = hdf_utils.get_params(hdf.file)
@@ -581,25 +587,41 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         h5_if = px.hdf_utils.getDataSet(hdf.file, 'inst_freq')
         commands.append("h5_if = px.hdf_utils.getDataSet(hdf.file, 'inst_freq')[-1]")
     except:
-        pass
+        try:
+            h5_if = px.hdf_utils.find_dataset(hdf.file, 'inst_freq')
+            commands.append("h5_if = px.hdf_utils.find_dataset(hdf.file, 'inst_freq')[-1]")
+        except:
+            pass
     
     try:
         h5_avg = px.hdf_utils.getDataSet(hdf.file, 'FF_Avg')[-1]
         commands.append("h5_avg = px.hdf_utils.getDataSet(hdf.file, 'FF_Avg')[-1]")
     except:
-        pass
+        try:
+            h5_avg = px.hdf_utils.find_dataset(hdf.file, 'FF_Avg')[-1]
+            commands.append("h5_avg = px.hdf_utils.find_dataset(hdf.file, 'FF_Avg')[-1]")
+        except:
+            pass
     
     try:
         h5_filt = px.hdf_utils.getDataSet(hdf.file, 'Filtered_Data')[-1]     
         commands.append("h5_filt = px.hdf_utils.getDataSet(hdf.file, 'Filtered_Data')[-1]")
     except:
-        pass
+        try:
+            h5_filt = px.hdf_utils.find_dataset(hdf.file, 'Filtered_Data')[-1]     
+            commands.append("h5_filt = px.hdf_utils.find_dataset(hdf.file, 'Filtered_Data')[-1]")
+        except:
+            pass
 
     try:
         h5_rb = px.hdf_utils.getDataSet(hdf.file, 'Rebuilt_Data')[-1]     
         commands.append("h5_rb = px.hdf_utils.getDataSet(hdf.file, 'Rebuilt_Data')[-1]")
     except:
-        pass
+        try:
+            h5_rb = px.hdf_utils.find_dataset(hdf.file, 'Rebuilt_Data')[-1]     
+            commands.append("h5_rb = px.hdf_utils.find_dataset(hdf.file, 'Rebuilt_Data')[-1]")
+        except:
+            pass
 
     
     for i in commands:
