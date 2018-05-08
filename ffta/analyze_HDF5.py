@@ -8,14 +8,15 @@ Created on Thu Feb 22 13:16:05 2018
 import os
 import numpy as np
 import badpixels
+import h5py
 
-# Plotting imports
 from matplotlib import pyplot as plt
 
 from ffta.utils import hdf_utils
 import pycroscopy as px
 
 from pycroscopy.core.io.io_utils import get_time_stamp
+from pycroscopy.io.write_utils import build_ind_val_dsets, Dimension
 """
 Analyzes an HDF_5 format trEFM data set and writes the result into that file
 """
@@ -83,20 +84,23 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True):
 
         raise TypeError('Must be string path, e.g. E:\Test.h5')
     
-    # Looks for a ref first before searching for ds
+    # Looks for a ref first before searching for ds, h5_ds is group to process
     if any(ref):
-        h5_gp = h5_file[ref]
-        parameters = px.hdf_utils.get_attributes(h5_gp)
+        h5_ds = h5_file[ref]
+        parameters = px.hdf_utils.get_attributes(h5_ds)
         
         if 'trigger' not in parameters:
-            parameters = hdf_utils.get_params(h5_gp)
+            parameters = hdf_utils.get_params(h5_ds)
     
     elif ds != 'FF_Raw':
-        h5_gp = px.hdf_utils.find_dataset(h5_file, ds)[-1]
-        parameters = hdf_utils.get_params(h5_gp)
+        h5_ds = px.hdf_utils.find_dataset(h5_file, ds)[-1]
+        parameters = hdf_utils.get_params(h5_ds)
     
     else:
-        h5_gp, parameters = find_FF(h5_file)
+        h5_ds, parameters = find_FF(h5_file)
+
+    if isinstance(h5_ds, h5py.Dataset):
+        h5_gp = h5_ds.parent
 
     # Initialize file and read parameters
     num_cols = parameters['num_cols']
@@ -151,7 +155,7 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True):
     # Load every file in the file list one by one.
     for i in range(num_rows):
 
-        line_inst = hdf_utils.get_line(h5_gp, i)
+        line_inst = hdf_utils.get_line(h5_ds, i)
         
         if clear_filter:
             line_inst.clear_filter_flags()
@@ -193,68 +197,76 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True):
     
     plt.show()
 
-    _,_, tfp_fixed = save_process(h5_file, h5_gp, tfp, shift, inst_freq, parameters, verbose=verbose)
+    h5_if = save_process(h5_file, h5_ds.parent, inst_freq, parameters, verbose=verbose)
+    _, _,_, tfp_fixed = save_ht_outs(h5_file, h5_if.parent, tfp, shift, parameters, verbose=verbose)
     
     #save_CSV(h5_path, tfp, shift, tfp_fixed, append=ds)
 
     return tfp, shift, inst_freq
 
-def save_process(h5_file, h5_gp, tfp, shift, inst_freq, parameters, verbose=False):
+def save_process(h5_file, h5_gp, inst_freq, parm_dict, verbose=False):
+    """ Adds Instantaneous Frequency as a main dataset """
+    # Error check
+    if isinstance(h5_gp, h5py.Dataset):
+        raise ValueError('Must pass an h5Py group')
 
-    # set correct folder path
-    ftype = str(type(h5_gp))
-    if 'Dataset' in ftype:
-        grp = h5_gp.parent.name
-    else: # if not a dataset, we know it's a group to create a folder in
-        grp = h5_gp.name
+    # Get relevant parameters
+    num_rows = parm_dict['num_rows']
+    num_cols = parm_dict['num_cols']
+    pnts_per_avg = parm_dict['pnts_per_avg']
+
+    h5_meas_group = px.hdf_utils.create_indexed_group(h5_gp, 'processed')
+
+    # Create dimensions
+    pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
+                Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
+    ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False, verbose=verbose)
+    spec_desc = [Dimension('Time', 's',np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
+    ds_spec_inds, ds_spec_vals = build_ind_val_dsets(spec_desc, is_spectral=True, verbose=verbose)
+
+    # Writes main dataset
+    h5_if = px.hdf_utils.write_main_dataset(h5_meas_group,  
+                                             inst_freq,
+                                             'inst_freq',  # Name of main dataset
+                                             'Frequency',  # Physical quantity contained in Main dataset
+                                             'Hz',  # Units for the physical quantity
+                                             pos_desc,  # Position dimensions
+                                             spec_desc,  # Spectroscopic dimensions
+                                             dtype=np.float32,  # data type / precision
+                                             main_dset_attrs=parm_dict)
+
+    px.hdf_utils.copy_attributes(h5_if, h5_gp)
+
+    return h5_if
+
+
+def save_ht_outs(h5_file, h5_gp, tfp, shift, parameters, verbose=False):
+    """ Save processed Hilbert Transform outputs"""
+    # Error check
+    if isinstance(h5_gp, h5py.Dataset):
+        raise ValueError('Must pass an h5Py group')
         
     # Filter bad pixels
     tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)
     tfp_fixed = np.array(tfp_fixed)
     
-    # create correct directory structure
-    names = hdf_utils.h5_list(h5_file[grp], 'processed')
-    
-    # create unique suffix
-    suffix = 0
-    try:
-        suffix = names[-1][-4:]
-        suffix = str(int(suffix)+1).zfill(4)
-    except:
-        suffix = str(int(suffix)).zfill(4)
-    
     # write data
-    grp_name = grp.split('/')[-1] + '-processed-' + suffix
-    grp_tr = px.io.VirtualGroup(grp_name, parent = grp)
+    grp_name = h5_gp.name
+    grp_tr = px.io.VirtualGroup(grp_name)
+    tfp_px = px.io.VirtualDataset('tfp', tfp, parent = h5_gp)
+    shift_px = px.io.VirtualDataset('shift', shift, parent = h5_gp)
+    tfp_fixed_px = px.io.VirtualDataset('tfp_fixed', tfp_fixed, parent = h5_gp)
 
-    tfp_px = px.io.VirtualDataset('tfp', tfp, parent = grp)
-    shift_px = px.io.VirtualDataset('shift', shift, parent = grp)
-    tfp_fixed_px = px.io.VirtualDataset('tfp_fixed', tfp_fixed, parent = grp)
-    inst_freq_px = px.io.VirtualDataset('inst_freq', inst_freq, parent = grp)
     grp_tr.attrs['timestamp'] = get_time_stamp()
-
     grp_tr.add_children([tfp_px])
     grp_tr.add_children([shift_px])
     grp_tr.add_children([tfp_fixed_px])
-    grp_tr.add_children([inst_freq_px])
     
     # Find folder, write to it
     hdf = px.io.HDFwriter(h5_file)
     h5_refs = hdf.write(grp_tr, print_log=verbose), 
-    try:
-        grp_tr_name = h5_refs[0].parent.name
-    except:
-        grp_tr_name = h5_refs[0][0].parent.name
     
-    # create standard datasets
-    h5_inst_freq = hdf_utils.add_standard_sets(h5_file, group=grp_tr_name, parm_dict=parameters, ds='inst_freq', verbose=verbose)
-    for key in parameters:
-        grp_tr.attrs[key] = parameters[key]
-    # individual plots
-    
-#    hdf.flush()
-
-    return tfp, shift, tfp_fixed
+    return h5_refs, tfp, shift, tfp_fixed
 
 def save_CSV_from_file(h5_file, h5_path='/', append=''):
     """

@@ -344,7 +344,6 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=True):
     dt = 1/parm_dict['sampling_rate']
     
     # Set up the position vectors for the data
-    
     pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
                 Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
     ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False, verbose=verbose)
