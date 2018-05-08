@@ -77,6 +77,9 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False,
     
     subfolder : str, optional
         Specifies folder under root (/) to save data in. Default is standard pycroscopy format
+        
+    average : bool, optional
+        Whether to automatically call the create_pixel_averaged function to average data at each pixel
     
     Returns
     -------
@@ -113,6 +116,8 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False,
         if verbose:
             print('### Creating averaged set ###')
         h5_avg = create_HDF_pixel_wise_averaged(h5_path)
+        
+        return h5_path, parm_dict, h5_avg
     
     return h5_path, parm_dict
 
@@ -197,12 +202,12 @@ def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5'):
     else:
         h5_path = file_name
     
-    createHDF5_single_dataset(data_files, parm_dict, h5_path)
+    create_HDF5_single_dataset(data_files, parm_dict, h5_path)
 
     return h5_path, data_files, parm_dict
     
     
-def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
+def create_HDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     """
     Generates the HDF5 file given path to files_list and parameters dictionary
     

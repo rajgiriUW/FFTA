@@ -119,7 +119,6 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True):
 
     # Initialize plotting.
     plt.ion()
-
     fig, a = plt.subplots(nrows=2, ncols=2,figsize=(13, 6))
 
     tfp_ax = a[0][1]
@@ -127,9 +126,6 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True):
     
     img_length = parameters['FastScanSize']
     img_height = parameters['SlowScanSize']
-    kwargs = {'origin': 'lower',  'x_size':img_length*1e6,
-          'y_size':img_height*1e6, 'num_ticks': 5, 'stdevs': 3}
-    
     kwargs = {'origin': 'lower',  'x_vec':img_length*1e6,
               'y_vec':img_height*1e6, 'num_ticks': 5, 'stdevs': 3}
     
@@ -314,7 +310,7 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
         Number of standard deviations to display
     """
     
-    h5_file = px.ioHDF5(h5_file).file
+    h5_file = px.io.HDFwriter(h5_file).file
 
     parm_dict = px.hdf_utils.get_attributes(h5_file[h5_path])
 
@@ -324,9 +320,9 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
     if 'Dataset' in str(type(h5_file[h5_path])):
         h5_path = h5_file[h5_path].parent.name
     
-    tfp = px.hdf_utils.getDataSet(h5_file[h5_path], 'tfp')[0].value
-    tfp_fixed = px.hdf_utils.getDataSet(h5_file[h5_path], 'tfp_fixed')[0].value
-    shift = px.hdf_utils.getDataSet(h5_file[h5_path], 'shift')[0].value
+    tfp = px.hdf_utils.find_dataset(h5_file[h5_path], 'tfp')[0].value
+    tfp_fixed = px.hdf_utils.find_dataset(h5_file[h5_path], 'tfp_fixed')[0].value
+    shift = px.hdf_utils.find_dataset(h5_file[h5_path], 'shift')[0].value
     
     xs = parm_dict['FastScanSize']
     ys = parm_dict['SlowScanSize']
@@ -339,12 +335,11 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
     [vmint, vmaxt] = np.mean(tfp)-2*np.std(tfp), np.mean(tfp)-2*np.std(tfp)
     [vmins, vmaxs] = np.mean(shift)-2*np.std(shift), np.mean(shift)-2*np.std(shift)
     
-    _, cbar_t = px.plot_utils.plot_map(a[0], tfp_fixed*1e6, x_size = xs*1e6, y_size = ys*1e6,
+    _, cbar_t = px.plot_utils.plot_map(a[0], tfp_fixed*1e6, x_vec = xs*1e6, y_vec= ys*1e6,
                                        aspect=asp, cmap='inferno', stdevs=stdevs)
-    
-    _, cbar_r = px.plot_utils.plot_map(a[1], 1/(1e3*tfp_fixed), x_size = xs*1e6, y_size = ys*1e6,
+    _, cbar_r = px.plot_utils.plot_map(a[1], 1/(1e3*tfp_fixed), x_vec = xs*1e6, y_vec = ys*1e6,
                                        aspect=asp, cmap='inferno', stdevs=stdevs)
-    _, cbar_s = px.plot_utils.plot_map(a[2], shift, x_size = xs*1e6, y_size = ys*1e6,
+    _, cbar_s = px.plot_utils.plot_map(a[2], shift, x_vec = xs*1e6, y_vec = ys*1e6,
                                        aspect=asp, cmap='inferno', stdevs=stdevs)
 
     cbar_t.set_label('tfp (us)', rotation=270, labelpad=16)

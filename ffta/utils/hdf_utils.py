@@ -31,7 +31,9 @@ def _which_h5_group(h5_path):
     """
     Used internally in get_ functions to indentify type of H5_path parameter.
     H5_path can be passed as string (to h5 location), or as an existing
-    variable in the workspace
+    variable in the workspace.
+    
+    This tries 
     
     If this is a Dataset, it will try and return the parent as that is 
         by default where all relevant attributs are
@@ -47,7 +49,7 @@ def _which_h5_group(h5_path):
     if 'str' in ftype:
         
         hdf = px.ioHDF5(h5_path)
-        p = px.hdf_utils.findH5group(hdf.file, 'FF_Group')[0]
+        p = px.hdf_utils.find_results_groups(hdf.file, 'FF_Group')[0]
     
         return p
 
@@ -57,7 +59,7 @@ def _which_h5_group(h5_path):
     
     # h5_path is an HDF File
     elif 'File' in ftype:
-        p = px.hdf_utils.findH5group(h5_path, 'FF_Group')[0]
+        p = px.hdf_utils.find_results_groups(h5_path, 'FF_Group')[0]
         
     elif 'Dataset' in ftype:
         p = h5_path.parent
@@ -79,9 +81,7 @@ def get_params(h5_path, key='', verbose=False):
         Prints all parameters to console
     """
     
-    gp = _which_h5_group(h5_path)
-    
-    parameters =  px.hdf_utils.get_attributes(gp)
+    parameters =  px.hdf_utils.get_attributes(h5_path)
     
     # if this dataset does not have complete FFtrEFM parameters
     if 'trigger' not in parameters:
@@ -95,7 +95,7 @@ def get_params(h5_path, key='', verbose=False):
             parameters = px.hdf_utils.get_attributes(h5_file['FF_Group'])
             
         except:
-            warnings.warn('Improper parameters file. Try h5_file')
+            raise TypeError('No proper parameters file found.')
         
     
     if any(key):
@@ -125,8 +125,7 @@ def change_params(h5_path, new_vals = {}, verbose=False):
         Prints all parameters to console
     
     """
-    gp = _which_h5_group(h5_path)
-    parameters =  px.hdf_utils.get_attributes(gp)
+    parameters =  px.hdf_utils.get_attributes(h5_path)
     
     if verbose:
         print('Old parameters:')
@@ -144,6 +143,7 @@ def change_params(h5_path, new_vals = {}, verbose=False):
             print(key,':',parameters[key])
 
     parameters =  px.hdf_utils.get_attributes(gp)
+    
     return parameters
     
 def get_line(h5_path, line_num, pnts=1, 
@@ -185,20 +185,16 @@ def get_line(h5_path, line_num, pnts=1,
     # If not a dataset, then find the associated Group
     if 'Dataset' not in str(type(h5_path)):
     
-        p = _which_h5_group(h5_path)
-        parameters =  px.hdf_utils.get_attributes(p)
+        parameters =  get_params(h5_path)
 
-        d = p['FF_Raw']
-        c = p.attrs['num_cols']
-        pnts = p.attrs['pnts_per_line']
+        d = h5_path['FF_Raw']
+        c = parameters['num_cols']
+        pnts = parameters['pnts_per_line']
      
     else: # if a Dataset, extract parameters from the shape. 
         
         d = h5_path
-        parameters =  px.hdf_utils.get_attributes(h5_path)
-        
-        if 'trigger' not in parameters:
-            parameters =  px.hdf_utils.get_attributes(h5_path.parent)
+        parameters =  get_params(h5_path)
         
         c = parameters['num_cols']
         pnts = parameters['pnts_per_line']
@@ -255,9 +251,9 @@ def get_pixel(h5_path, rc, pnts = 1,
     
     # If not a dataset, then find the associated Group
     if 'Dataset' not in str(type(h5_path)):
-        p = _which_h5_group(h5_path)
+        p = get_params(h5_path)
     
-        d = p['FF_Raw']
+        d = h5_path['FF_Raw']
         c = p.attrs['num_cols']
         pnts = int(p.attrs['pnts_per_pixel'])
         parameters =  px.hdf_utils.get_attributes(p)
@@ -265,10 +261,7 @@ def get_pixel(h5_path, rc, pnts = 1,
     else:
         
         d = h5_path
-        parameters =  px.hdf_utils.get_attributes(h5_path)
-        
-        if 'trigger' not in parameters:
-            parameters =  px.hdf_utils.get_attributes(h5_path.parent)
+        parameters =  get_params(h5_path)
 
         c = parameters['num_cols']
         pnts = parameters['pnts_per_pixel']
@@ -344,7 +337,7 @@ def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6,
     hdf = px.io.HDFwriter(h5_path)
     
     if not any(parm_dict):
-        parm_dict = get_params(_which_h5_group(h5_path))
+        parm_dict = get_params(h5_path)
     
     if 'FastScanSize' in parm_dict:
         fast_x = parm_dict['FastScanSize']

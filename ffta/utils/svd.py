@@ -8,7 +8,6 @@ Created on Wed Mar  7 22:04:39 2018
 import pycroscopy as px
 import numpy as np
 
-from pycroscopy.processing.process import Process
 from pycroscopy.processing.svd_utils import SVD
 
 from matplotlib import pyplot as plt

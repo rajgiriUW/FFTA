@@ -50,9 +50,14 @@ class dist_cluster(object):
             e.g. 'tfp' searches within the h5_main parent folder for 'tfp'
 
         """
-#        hdf = px.ioHDF5(h5_file)
         self.h5_main = h5_main
-        self.data_avg = px.hdf_utils.getDataSet(h5_main.parent, data_avg)[0].value
+        
+        if isinstance(data_avg, str):
+            self.data_avg = px.hdf_utils.find_dataset(h5_main.parent, data_avg)[0].value
+        if isinstance(data_avg, np.ndarray):
+            self.data_avg = data_avg
+        else:
+            raise ValueError ('Wrong format for data_avg')
 
         # Set up datasets data
         self.data = self.h5_main[()]
@@ -65,7 +70,7 @@ class dist_cluster(object):
             mask = np.ones([self.num_rows, self.num_cols])
             
         try:
-            self.tfp = px.hdf_utils.getDataSet(h5_main.parent, 'tfp')[0]
+            self.tfp = px.hdf_utils.find_dataset(h5_main.parent, 'tfp')[0]
         except:
             self.tfp = None
 
@@ -84,6 +89,9 @@ class dist_cluster(object):
         self.sampling_rate = parms_dict['sampling_rate']
         self.FastScanSize = parms_dict['FastScanSize']
         self.SlowScanSize = parms_dict['SlowScanSize']
+        
+        self.xvec = np.linspace(0,self.FastScanSize, self.num_cols)
+        self.yvec = np.linspace(0,self.SlowScanSize, self.num_rows)
 
 #        IO_rate = parms_dict['IO_rate_[Hz]']     #sampling_rate
         self.pxl_time = parms_dict['total_time']    #seconds per pixel
@@ -146,12 +154,12 @@ class dist_cluster(object):
         if self.tfp is not None:
             
             fig, ax = plt.subplots(nrows=1, figsize=(12, 6))
-            px.plot_utils.plot_map(ax, self.tfp, 
-                                   x_size=self.FastScanSize, y_size=self.SlowScanSize, 
+            px.plot_utils.plot_map(ax, self.tfp.value, 
+                                   x_vec=self.xvec, y_vec=self.yvec, 
                                    cmap='inferno')
             ax.imshow(self.mask_nan)
         
-        return
+        return fig, ax
 
     def _make_distance_arrays(self):
         """
@@ -311,7 +319,7 @@ class dist_cluster(object):
 
         """
 
-        data = data if data is None else self.data_scatter
+        data = self.data_scatter if data is None else data
 
         Nc = range(1, clusters)
         km = [sk.cluster.KMeans(n_clusters=i) for i in Nc]
@@ -379,8 +387,8 @@ class dist_cluster(object):
 
         if newImage:
             fig, ax = plt.subplots(nrows=1, figsize=(8, 6))
-            im0,_ = px.plot_utils.plot_map(ax, self.data_on_avg, x_size=self.FastScanSize,
-                                   y_size=self.SlowScanSize, show_cbar=False, 
+            im0,_ = px.plot_utils.plot_map(ax, self.data_on_avg, x_vec=self.FastScanSize,
+                                   y_vec=self.SlowScanSize, show_cbar=False, 
                                    cmap='inferno')
            
         for i in self.segments_idx:
@@ -401,14 +409,14 @@ class dist_cluster(object):
         Plots a heat map using CPD_avg_scatter data
         """
 
-        heatmap, _, _ = np.histogram2d(self.CPD_avg_scatter[:,1],self.data_avg_scatter[:,0],bins)
+        heatmap, _, _ = np.histogram2d(self.data_avg_scatter[:,1],self.data_avg_scatter[:,0],bins)
 
         fig, ax = plt.subplots(nrows=1, figsize=(8, 6))
         ax.set_xlabel('Distance to Nearest Boundary (um)')
-        ax.set_ylabel('CPD (V)')
+        ax.set_ylabel('tfp (us)')
         xr = [np.min(self.data_avg_scatter[:,0])*1e6, np.max(self.data_avg_scatter[:,0])*1e6]
-        yr = [np.min(self.data_avg_scatter[:,1]), np.max(self.data_avg_scatter[:,1])]
-        aspect = int((xr[1]-xr[0])/ (yr[1]-yr[0]))
+        yr = [np.min(self.data_avg_scatter[:,1])*1e6, np.max(self.data_avg_scatter[:,1])*1e6]
+        aspect = ((xr[1]-xr[0])/ (yr[1]-yr[0]))
         ax.imshow(heatmap, origin='lower', extent=[xr[0], xr[1], yr[0],yr[1]],
                    cmap='viridis', aspect=aspect)
         fig.tight_layout()
