@@ -14,8 +14,8 @@ from matplotlib import pyplot as plt
 
 from ffta.utils import hdf_utils
 import pycroscopy as px
-from pycroscopy.io.io_utils import getTimeStamp
 
+from pycroscopy.core.io.io_utils import get_time_stamp
 """
 Analyzes an HDF_5 format trEFM data set and writes the result into that file
 """
@@ -32,6 +32,18 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True):
     Processes FF_Raw dataset in the HDF5 file
     
     This then saves within the h5 file in FF_Group-processed
+    
+    This uses the dataset in this priority:
+        *A relative path specific by ref, e.g. '/FF_Group/FF_Avg/FF_Avg'
+        *A dataset specified by ds, returning the last found, e.g. 'FF_Raw'
+        *FF_Group/FF_Raw found via searching from hdf_utils folder
+    
+    Typical usage:
+    >> import pycroscopy as px
+    >> h5_file = px.io.HDFwriter('path_to_h5_file.h5').file
+    >> from ffta import analyze_HDF5
+    >> tfp, shift, inst_freq = analyze_HDF5.process(h5_file, ref = '/FF_Group/FF_Avg/FF_Avg')
+    
     
     h5_file : h5Py file or str
         Path to a specific h5 file on the disk or an hdf.file
@@ -56,18 +68,22 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True):
         time-to-first-peak image array
     shift : ndarray
         frequency shift image array
+    inst_freq : ndarray (2D)
+        instantaneous frequency array, an N x p array of N=rows*cols points
+            and where p = points_per_signal (e.g. 16000 for 1.6 ms @10 MHz sampling)
     """
 #    logging.basicConfig(filename='error.log', level=logging.INFO)
     ftype = str(type(h5_file))
     
     if ('str' in ftype) or ('File' in ftype) or ('Dataset' in ftype):
         
-        h5_file = px.ioHDF5(h5_file).file
+        h5_file = px.io.HDFwriter(h5_file).file
     
     else:
 
         raise TypeError('Must be string path, e.g. E:\Test.h5')
     
+    # Looks for a ref first before searching for ds
     if any(ref):
         h5_gp = h5_file[ref]
         parameters = px.hdf_utils.get_attributes(h5_gp)
@@ -76,7 +92,7 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True):
             parameters = hdf_utils.get_params(h5_gp)
     
     elif ds != 'FF_Raw':
-        h5_gp = px.hdf_utils.getDataSet(h5_file, ds)[0]
+        h5_gp = px.hdf_utils.find_dataset(h5_file, ds)[-1]
         parameters = hdf_utils.get_params(h5_gp)
     
     else:
@@ -109,6 +125,9 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True):
     img_height = parameters['SlowScanSize']
     kwargs = {'origin': 'lower',  'x_size':img_length*1e6,
           'y_size':img_height*1e6, 'num_ticks': 5, 'stdevs': 3}
+    
+    kwargs = {'origin': 'lower',  'x_vec':img_length*1e6,
+              'y_vec':img_height*1e6, 'num_ticks': 5, 'stdevs': 3}
     
     try:
         ht = h5_file['/height/Raw_Data'][:,0]
@@ -206,34 +225,34 @@ def save_process(h5_file, h5_gp, tfp, shift, inst_freq, parameters, verbose=Fals
     
     # write data
     grp_name = grp.split('/')[-1] + '-processed-' + suffix
-    grp_tr = px.MicroDataGroup(grp_name, parent = grp)
+    grp_tr = px.io.VirtualGroup(grp_name, parent = grp)
 
-    tfp_px = px.MicroDataset('tfp', tfp, parent = grp)
-    shift_px = px.MicroDataset('shift', shift, parent = grp)
-    tfp_fixed_px = px.MicroDataset('tfp_fixed', tfp_fixed, parent = grp)
-    inst_freq_px = px.MicroDataset('inst_freq', inst_freq, parent = grp)
-    grp_tr.attrs['timestamp'] = getTimeStamp()
+    tfp_px = px.io.VirtualDataset('tfp', tfp, parent = grp)
+    shift_px = px.io.VirtualDataset('shift', shift, parent = grp)
+    tfp_fixed_px = px.io.VirtualDataset('tfp_fixed', tfp_fixed, parent = grp)
+    inst_freq_px = px.io.VirtualDataset('inst_freq', inst_freq, parent = grp)
+    grp_tr.attrs['timestamp'] = get_time_stamp()
 
-    grp_tr.addChildren([tfp_px])
-    grp_tr.addChildren([shift_px])
-    grp_tr.addChildren([tfp_fixed_px])
-    grp_tr.addChildren([inst_freq_px])
+    grp_tr.add_children([tfp_px])
+    grp_tr.add_children([shift_px])
+    grp_tr.add_children([tfp_fixed_px])
+    grp_tr.add_children([inst_freq_px])
     
     # Find folder, write to it
-    hdf = px.ioHDF5(h5_file)
-    h5_refs = hdf.writeData(grp_tr, print_log=verbose), 
+    hdf = px.io.HDFwriter(h5_file)
+    h5_refs = hdf.write(grp_tr, print_log=verbose), 
     try:
         grp_tr_name = h5_refs[0].parent.name
     except:
         grp_tr_name = h5_refs[0][0].parent.name
     
     # create standard datasets
-    h5_inst_freq = hdf_utils.add_standard_sets(h5_file, group=grp_tr_name, parms_dict=parameters, ds='inst_freq', verbose=verbose)
+    h5_inst_freq = hdf_utils.add_standard_sets(h5_file, group=grp_tr_name, parm_dict=parameters, ds='inst_freq', verbose=verbose)
     for key in parameters:
         grp_tr.attrs[key] = parameters[key]
     # individual plots
     
-    hdf.flush()
+#    hdf.flush()
 
     return tfp, shift, tfp_fixed
 

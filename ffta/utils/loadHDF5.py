@@ -261,7 +261,7 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
                 Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
     ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False, verbose=verbose)
-    ds_spec_inds, ds_spec_vals = build_ind_val_dsets(Dimension('Deflection', 'V',[pnts_per_avg] ),
+    ds_spec_inds, ds_spec_vals = build_ind_val_dsets(Dimension('Time', 's',[pnts_per_avg] ),
                                                      is_spectral=True, verbose=verbose)
     
     ds_spec_vals.data = ds_spec_vals.data * dt # correct the values to be right timescale

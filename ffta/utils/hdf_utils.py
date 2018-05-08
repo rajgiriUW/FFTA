@@ -11,6 +11,8 @@ from ffta.pixel import Pixel
 import warnings
 import numpy as np
 
+from pycroscopy.io.write_utils import build_ind_val_dsets, Dimension
+
 """
 Common HDF interfacing functions
 
@@ -317,7 +319,7 @@ def h5_list(h5_file, key):
     return names
 
 def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6, 
-                      parms_dict = {}, ds='FF_Raw', verbose=False):
+                      parm_dict = {}, ds='FF_Raw', verbose=False):
     """
     Adds Position_Indices and Position_Value datasets to a folder within the h5_file
     
@@ -341,20 +343,20 @@ def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6,
     
     hdf = px.io.HDFwriter(h5_path)
     
-    if not any(parms_dict):
-        parms_dict = get_params(_which_h5_group(h5_path))
+    if not any(parm_dict):
+        parm_dict = get_params(_which_h5_group(h5_path))
     
-    if 'FastScanSize' in parms_dict:
-        fast_x = parms_dict['FastScanSize']
+    if 'FastScanSize' in parm_dict:
+        fast_x = parm_dict['FastScanSize']
     
-    if 'SlowScanSize' in parms_dict:
-        slow_y = parms_dict['SlowScanSize']
+    if 'SlowScanSize' in parm_dict:
+        slow_y = parm_dict['SlowScanSize']
     
     try:
-        num_rows = parms_dict['num_rows']
-        num_cols = parms_dict['num_cols']
-        pnts_per_avg = parms_dict['pnts_per_avg']
-        dt = 1/parms_dict['sampling_rate']
+        num_rows = parm_dict['num_rows']
+        num_cols = parm_dict['num_cols']
+        pnts_per_avg = parm_dict['pnts_per_avg']
+        dt = 1/parm_dict['sampling_rate']
     except: # some defaults
         warnings.warn('Improper parameters specified.')
         num_rows = 64
@@ -366,32 +368,30 @@ def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6,
         grp = px.io.VirtualGroup(group)
     except:
         grp = px.io.VirtualGroup(group.name)
-        
-    ds_pos_ind, ds_pos_val = px.hdf_utils.write_ind_val_dsets([num_cols, num_rows], is_spectral=False,
-                                              dimensions=[1.0 * fast_x / num_cols,
-                                                     1.0 * slow_y / num_rows],
-                                              labels=['X', 'Y'], units=['m', 'm'], verbose=verbose)
     
-    ds_spec_inds, ds_spec_vals = px.hdf_utils.write_ind_val_dsets([pnts_per_avg], is_spectral=True,
-                                                                             labels=['Time'], units=['s'], dimensions=[dt], 
-                                                                             verbose=verbose)
+    pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
+                Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
+    ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False, verbose=verbose)
+    
+    spec_desc = [Dimension('Time', 's',np.linspace(0, pnts_per_avg, dt))]
+    ds_spec_inds, ds_spec_vals = build_ind_val_dsets(spec_desc, is_spectral=True, verbose=verbose)
     
     aux_ds_names = ['Position_Indices', 'Position_Values', 
                     'Spectroscopic_Indices', 'Spectroscopic_Values']
     
-    grp.addChildren([ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals])
+    grp.add_children([ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals])
     
     h5_refs = hdf.write(grp, print_log=verbose)
     
     h5_main = hdf.file[grp.name]
     
     if any(ds):
-        h5_main = px.hdf_utils.getDataSet(hdf.file[grp.name], ds)[0]
+        h5_main = px.hdf_utils.find_dataset(hdf.file[grp.name], ds)[0]
     
     try:
-        px.hdf_utils.linkRefs(h5_main, px.hdf_utils.getH5DsetRefs(aux_ds_names, h5_refs))
+        px.hdf_utils.link_h5_objects_as_attrs(h5_main, px.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
     except:
-        px.hdf_utils.linkRefs(h5_main, px.hdf_utils.getH5DsetRefs(aux_ds_names, h5_refs))
+        px.hdf_utils.link_h5_objects_as_attrs(h5_main, px.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
 
     
     return h5_main
