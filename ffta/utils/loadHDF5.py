@@ -45,10 +45,11 @@ hdf_commands : Creates workspace-compatible commands for common HDF variable sta
 
 *For debugging, not in active use
 
-Typical usage:
+Example usage:
     >>from ffta.utils import loadHDF5
-    >>loadHDF5.loadHDF5_ibw(ibw_file_path='E:/Data/20180314 - BAPI high-res/FF1_4.ibw', 
-                            ff_file_path=r'E:\Data\20180314 - BAPI high-res\FF01_5MHz_100avg_25nm_5V_600mA')
+    >>h5_path, parameters = loadHDF5.loadHDF5_ibw(ibw_file_path='E:/Data/FF_image_file.ibw', 
+                                                  ff_file_path=r'E:\Data\FF_Folder')
+    >>loadHDF5.hdf_commands(h5_path) #prints out commands available
 """
 
 def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False, 
@@ -238,6 +239,7 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     num_rows = parm_dict['num_rows']
     num_cols = parm_dict['num_cols']
     pnts_per_avg = parm_dict['pnts_per_avg']
+    pnts_per_pixel = parm_dict['pnts_per_pixel']
 
     # Prepare data for writing to HDF
     dt = 1/parm_dict['sampling_rate']
@@ -257,14 +259,12 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     root_group = px.io.VirtualGroup('/')
     
     # Set up the position vectors for the data
-    
-    pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
+    pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols*pnts_per_pixel)),
                 Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
     ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False, verbose=verbose)
-    ds_spec_inds, ds_spec_vals = build_ind_val_dsets(Dimension('Time', 's',[pnts_per_avg] ),
-                                                     is_spectral=True, verbose=verbose)
     
-    ds_spec_vals.data = ds_spec_vals.data * dt # correct the values to be right timescale
+    spec_desc = [Dimension('Time', 's',np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
+    ds_spec_inds, ds_spec_vals = build_ind_val_dsets(spec_desc, is_spectral=True, verbose=verbose)
     
     ds_raw = px.io.VirtualDataset('FF_Raw', data=[[0],[0]], dtype=np.float32,
                                   parent=ff_group, maxshape=data_size, 
@@ -282,7 +282,9 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     
     pnts_per_line = parm_dict['pnts_per_line']
 
-    h5_file = px.hdf_utils.find_dataset(hdf.file, 'FF_Raw')[0]
+    h5_raw = px.hdf_utils.find_dataset(hdf.file, 'FF_Raw')[0]
+    h5_raw.attrs['quantity'] = 'Deflection'
+    h5_raw.attrs['units'] = 'V'
 
     # Cycles through the remaining files. This takes a while (~few minutes)
     for k, num in zip(data_files, np.arange(0,len(data_files))):
@@ -293,7 +295,7 @@ def createHDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
         
         line_file = load.signal(k).transpose()
 
-        f = hdf.file[h5_file.name]
+        f = hdf.file[h5_raw.name]
         f[pnts_per_line*num:pnts_per_line*(num+1), :] = line_file[:,:]
     
     h5_main = px.hdf_utils.get_h5_obj_refs(['FF_Raw'], h5_refs)[0] 
@@ -331,7 +333,7 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=True):
     hdf = px.io.HDFwriter(h5_file)
     h5_main = px.hdf_utils.find_dataset(hdf.file, 'FF_Raw' )[0]
     
-    ff_avg_group = px.io.VirtualGroup('FF_Avg', parent=h5_main.parent.name)
+    ff_avg_group = px.io.VirtualGroup('FF_Group_Avg', parent=h5_main.parent.name)
     root_group = px.io.VirtualGroup('/')
     parm_dict = px.hdf_utils.get_attributes(h5_main.parent)
 
@@ -346,10 +348,9 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=True):
     pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
                 Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
     ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False, verbose=verbose)
-    ds_spec_inds, ds_spec_vals = build_ind_val_dsets(Dimension('Deflection', 'V',[pnts_per_avg] ),
-                                                     is_spectral=True, verbose=verbose)
     
-    ds_spec_vals.data = ds_spec_vals.data * dt # correct the values to be right timescale
+    spec_desc = [Dimension('Time', 's',np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
+    ds_spec_inds, ds_spec_vals = build_ind_val_dsets(spec_desc, is_spectral=True, verbose=verbose)
     
     ds_raw = px.io.VirtualDataset('FF_Avg', data=[[0],[0]], dtype=np.float32,
                                   parent=ff_avg_group, maxshape=[num_cols*num_rows, pnts_per_avg], 
@@ -367,6 +368,8 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=True):
     h5_refs = hdf.write(ff_avg_group, print_log=True)
 
     h5_avg = px.hdf_utils.find_dataset(hdf.file, 'FF_Avg')[0]
+    h5_avg.attrs['quantity'] = 'Deflection'
+    h5_avg.attrs['units'] = 'V'
     
     # Uses get_line to extract line. Averages and returns to the Dataset FF_Avg
     # We can operate on the dataset array directly, get_line is used for future_proofing if
@@ -380,8 +383,8 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=True):
         _ll = _ll.pixel_wise_avg()
         h5_avg[i*num_cols:(i+1)*num_cols,:] = _ll[:,:]
     
-    h5_avg = px.hdf_utils.get_h5_obj_refs(['FF_Avg'], h5_refs)[0] 
-    px.hdf_utils.link_h5_objects_as_attrs(h5_avg, px.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
+    h5_r = px.hdf_utils.get_h5_obj_refs(['FF_Avg'], h5_refs)[0] 
+    px.hdf_utils.link_h5_objects_as_attrs(h5_r, px.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
     
     if verbose == True:
         px.hdf_utils.print_tree(hdf.file, rel_paths=True)
