@@ -66,7 +66,7 @@ def _which_h5_group(h5_path):
         
     return p
 
-def get_params(h5_path, key='', verbose=False):
+def get_params(h5_path, key='', verbose=False, del_indices=True):
     """
     Gets dict of parameters from the FF-file
     Returns a specific key-value if requested
@@ -77,8 +77,11 @@ def get_params(h5_path, key='', verbose=False):
     key : str, optional
         Returns specific key in the parameters dictionary
         
-    verbose : bool
+    verbose : bool, optional
         Prints all parameters to console
+        
+    del_indices : bool, optional
+        Deletes relative links within the H5Py and any quantity/units
     """
     
     parameters =  px.hdf_utils.get_attributes(h5_path)
@@ -91,12 +94,11 @@ def get_params(h5_path, key='', verbose=False):
     if 'trigger' not in parameters:
         
         try:
-            h5_file = px.ioHDF5(h5_path).file
+            h5_file = px.io.HDFwriter(h5_path).file
             parameters = px.hdf_utils.get_attributes(h5_file['FF_Group'])
             
         except:
             raise TypeError('No proper parameters file found.')
-        
     
     if any(key):
         return parameters[key]
@@ -104,6 +106,13 @@ def get_params(h5_path, key='', verbose=False):
     if verbose:
         print(parameters)
     
+    del_keys = ['Position_Indices', 'Position_Values','Spectroscopic_Indices',
+                'Spectroscopic_Values', 'quantity', 'units']
+    
+    for key in del_keys:
+        if key in parameters:
+            del parameters[key]
+            
     return parameters
 
 def change_params(h5_path, new_vals = {}, verbose=False):

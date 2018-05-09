@@ -87,11 +87,8 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True):
     # Looks for a ref first before searching for ds, h5_ds is group to process
     if any(ref):
         h5_ds = h5_file[ref]
-        parameters = px.hdf_utils.get_attributes(h5_ds)
+        parameters = hdf_utils.get_params(h5_ds)
         
-        if 'trigger' not in parameters:
-            parameters = hdf_utils.get_params(h5_ds)
-    
     elif ds != 'FF_Raw':
         h5_ds = px.hdf_utils.find_dataset(h5_file, ds)[-1]
         parameters = hdf_utils.get_params(h5_ds)
@@ -277,10 +274,10 @@ def save_CSV_from_file(h5_file, h5_path='/', append=''):
         text to append to file name
     """
     
-    h5_file = px.ioHDF5(h5_file).file
-    tfp = px.hdf_utils.getDataSet(h5_file[h5_path], 'tfp')[0].value
-    tfp_fixed = px.hdf_utils.getDataSet(h5_file[h5_path], 'tfp_fixed')[0].value
-    shift = px.hdf_utils.getDataSet(h5_file[h5_path], 'shift')[0].value
+    h5_file = px.io.HDFwriter(h5_file).file
+    tfp = px.hdf_utils.find_dataset(h5_file[h5_path], 'tfp')[0].value
+    tfp_fixed = px.hdf_utils.find_dataset(h5_file[h5_path], 'tfp_fixed')[0].value
+    shift = px.hdf_utils.find_dataset(h5_file[h5_path], 'shift')[0].value
     
     path = h5_file.file.filename.replace('\\','/')
     path = '/'.join(path.split('/')[:-1])+'/'
