@@ -28,7 +28,7 @@ def find_FF(h5_path):
     
     return h5_gp, parameters
 
-def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True):
+def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, liveplots=True):
     """
     Processes FF_Raw dataset in the HDF5 file
     
@@ -62,6 +62,10 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True):
     
     verbose : bool, optional,
         Whether to write data to the command line
+    
+    liveplots : bool
+        Displaying can sometimes cause the window to pop in front of other active windows
+        in Matplotlib. This disables it, with an obvious drawback of no feedback.
     
     Returns
     -------
@@ -115,6 +119,7 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True):
     inst_freq = np.zeros([num_rows*num_cols, pnts_per_avg])
 
     # Initialize plotting.
+    
     plt.ion()
     fig, a = plt.subplots(nrows=2, ncols=2,figsize=(13, 6))
 
@@ -155,30 +160,31 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True):
         
         tfp[i, :], shift[i, :], inst_freq[i*num_cols:(i+1)*num_cols,:] = line_inst.analyze()
 
-        tfp_image, _ = px.plot_utils.plot_map(tfp_ax, tfp * 1e6, 
-                                              cmap='inferno', show_cbar=False, **kwargs)
-        shift_image, _ = px.plot_utils.plot_map(shift_ax, shift, 
-                                                      cmap='inferno', show_cbar=False, **kwargs)
+        if liveplots:
+            tfp_image, _ = px.plot_utils.plot_map(tfp_ax, tfp * 1e6, 
+                                                  cmap='inferno', show_cbar=False, **kwargs)
+            shift_image, _ = px.plot_utils.plot_map(shift_ax, shift, 
+                                                          cmap='inferno', show_cbar=False, **kwargs)
 
-        tfp_sc = tfp[tfp.nonzero()] * 1e6
-        tfp_image.set_clim(vmin=tfp_sc.min(), vmax=tfp_sc.max())
+            tfp_sc = tfp[tfp.nonzero()] * 1e6
+            tfp_image.set_clim(vmin=tfp_sc.min(), vmax=tfp_sc.max())
+    
+            shift_sc = shift[shift.nonzero()]
+            shift_image.set_clim(vmin=shift_sc.min(), vmax=shift_sc.max())
 
-        shift_sc = shift[shift.nonzero()]
-        shift_image.set_clim(vmin=shift_sc.min(), vmax=shift_sc.max())
-
-        tfpmean = 1e6 * tfp[i, :].mean()
-        tfpstd = 1e6 * tfp[i, :].std()
-
-        if verbose:
-            string = ("Line {0:.0f}, average tFP (us) ="
-                      " {1:.2f} +/- {2:.2f}".format(i + 1, tfpmean, tfpstd))
-            print(string)
-
-            text.remove()
-            text = tfp_ax.text((num_cols-len(string))/2,num_rows+4, string)
+            tfpmean = 1e6 * tfp[i, :].mean()
+            tfpstd = 1e6 * tfp[i, :].std()
+    
+            if verbose:
+                string = ("Line {0:.0f}, average tFP (us) ="
+                          " {1:.2f} +/- {2:.2f}".format(i + 1, tfpmean, tfpstd))
+                print(string)
+    
+                text.remove()
+                text = tfp_ax.text((num_cols-len(string))/2,num_rows+4, string)
 
         #plt.draw()
-        plt.pause(0.0001)
+            plt.pause(0.0001)
 
         del line_inst  # Delete the instance to open up memory.
 
