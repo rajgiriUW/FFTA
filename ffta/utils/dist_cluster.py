@@ -33,7 +33,7 @@ To do:
 
 class dist_cluster(object):
 
-    def __init__(self, h5_main, data_avg, mask, results = None):
+    def __init__(self, h5_main, data_avg, mask, results = None, isCPD=False):
         """
         h5_main : h5Py dataset or str
             File type to be processed.
@@ -49,6 +49,12 @@ class dist_cluster(object):
         data_avg : str
             The file to use as the "averaged" data upon which to apply the mask and do calculations
             e.g. 'tfp' searches within the h5_main parent folder for 'tfp'
+            
+        results : clustering results
+            If you want to pass some previously-calculated results..
+            
+        isCPD : bool, optional,
+            toggle between GMode and FFtrEFM data, this is just for plotting
 
         """
         self.h5_main = h5_main
@@ -62,7 +68,9 @@ class dist_cluster(object):
 
         if results:
             self.results = results
-
+        
+        self.isCPD= isCPD
+        
         # Set up datasets data
         self.data = self.h5_main[()]
         self.parms_dict = hdf_utils.get_params(h5_main)
@@ -122,7 +130,7 @@ class dist_cluster(object):
             Unmasked locations (indices) as 1D location
 
         data_1D_vals : data as a 1D array with data points (num_rows*num_cols X pnts_per_data)
-        data_avg_1D_vals : Average data (data_on_avg, say) that is 1D
+        data_avg_1D_vals : Average data (CPD_on_avg/tfP_fixed, say) that is 1D
 
         """
 
@@ -316,28 +324,54 @@ class dist_cluster(object):
                   '#17becf']
 
         fig, ax = plt.subplots(nrows=1, figsize=(8, 4))
-        ax.set_xlabel('Distance to Nearest Boundary (um)', fontsize=16)
-        ax.set_ylabel('tfp (us)', fontsize=16)
+
         ax.tick_params(labelsize=15)
 
         for i in labels_unique:
 
-            # CPD time trace
-            ax.plot(self.data_dist[labels==labels_unique[i]]*1e6,
-                    self.data_avg_scatter[labels==labels_unique[i],1]*1e6,
-                     c=colors[i], linestyle='None', marker='.')
-            
-            pix = pixel.Pixel(cluster_centers[i],self.parms_dict)
-            pix.inst_freq = cluster_centers[i]
-            pix.fit_freq_product()
-            self.clust_tfp.append(pix.tfp)
-
-            ax.plot(np.mean(self.data_dist[labels==labels_unique[i]]*1e6), 
-                    pix.tfp*1e6,
-                     marker='o',markerfacecolor = colors[i], markersize=8,
-                     markeredgecolor='k')
+            if not self.isCPD:            
+                # FFtrEFM data
+                ax.plot(self.data_dist[labels==labels_unique[i]]*1e6,
+                        self.data_avg_scatter[labels==labels_unique[i],1]*1e6,
+                        c=colors[i], linestyle='None', marker='.')
+                
+                pix = pixel.Pixel(cluster_centers[i],self.parms_dict)
+                pix.inst_freq = cluster_centers[i]
+                pix.fit_freq_product()
+                self.clust_tfp.append(pix.tfp)
+                ax.plot(np.mean(self.data_dist[labels==labels_unique[i]]*1e6), 
+                        pix.tfp*1e6,
+                         marker='o',markerfacecolor = colors[i], markersize=8,
+                         markeredgecolor='k')
+                ax.set_xlabel('Distance to Nearest Boundary (um)', fontsize=16)
+                ax.set_ylabel('tfp (us)', fontsize=16)
+        
+            elif self.isCPD:
+                # CPD data
+                ax.plot(self.data_dist[labels==labels_unique[i]]*1e6,
+                        self.data_avg_scatter[labels==labels_unique[i],1]*1e3,
+                        c=colors[i], linestyle='None', marker='.')
+                xp_0 = int( (self.parms_dict['light_on_time'][0]*1e-3 / self.parms_dict['total_time'])*self.data_avg.shape[1])
+                xp_1 = int( (self.parms_dict['light_on_time'][1]*1e-3 / self.parms_dict['total_time'])*self.data_avg.shape[1])
+                pix = cluster_centers[i][xp_0:xp_1]    
+                ax.plot(np.mean(self.data_dist[labels==labels_unique[i]]*1e6), 
+                        np.mean(pix)*1e3,
+                         marker='o',markerfacecolor = colors[i], markersize=8,
+                         markeredgecolor='k')
+                ax.set_xlabel('Distance to Nearest Boundary (um)', fontsize=16)
+                ax.set_ylabel('CPD (mV)', fontsize=16)
+        
 
         return ax, fig
+
+    def plot_centers(self):
+        
+        fig, ax = plt.subplots(nrows=1, figsize=(6, 4))
+        
+        for i in self.results.cluster_centers_:
+            ax.plot(np.linspace(0,self.parms_dict['total_time'],i.shape[0]),i)
+        
+        return fig, ax
 
 
     def elbow_plot(self, data=None, clusters=10):
@@ -377,8 +411,8 @@ class dist_cluster(object):
         ----------------
         segments is in actual length
         segments_idx is in index coordinates
-        segments_CPD is the full CPD trace (i.e. vs time)
-        segments_CPD_avg is for the average CPD value trace (not vs time)
+        segments_data is the full CPD trace (i.e. vs time)
+        segments_data_avg is for the average CPD value trace (not vs time)
 
         To display, make sure to do [:,1], [:,0] given row, column ordering
         Also, segments_idx is to display since pyplot uses the index on the axis
@@ -402,7 +436,7 @@ class dist_cluster(object):
             self.segments_data[i] = self.data_1D_vals[labels==labels_unique[i],:]
             self.segments_data_avg[i] = self.data_avg_1D_vals[labels==labels_unique[i]]
 
-        # the average CPD in that segment
+        # the average value in that segment
         self.data_time_avg = {}
         for i in range(len(labels_unique)):
 
@@ -445,15 +479,25 @@ class dist_cluster(object):
 
         heatmap, _, _ = np.histogram2d(self.data_avg_scatter[:,1],self.data_avg_scatter[:,0],bins)
 
-        fig, ax = plt.subplots(nrows=1, figsize=(8, 6))
+        fig, ax = plt.subplots(nrows=1, figsize=(8, 4))
         ax.set_xlabel('Distance to Nearest Boundary (um)')
-        ax.set_ylabel('tfp (us)')
-        xr = [np.min(self.data_avg_scatter[:,0])*1e6, np.max(self.data_avg_scatter[:,0])*1e6]
-        yr = [np.min(self.data_avg_scatter[:,1])*1e6, np.max(self.data_avg_scatter[:,1])*1e6]
-        aspect = ((xr[1]-xr[0])/ (yr[1]-yr[0]))
-        ax.imshow(heatmap, origin='lower', extent=[xr[0], xr[1], yr[0],yr[1]],
-                   cmap='viridis', aspect=aspect)
-        fig.tight_layout()
+        
+        if not self.isCPD:
+            ax.set_ylabel('tfp (us)')
+            xr = [np.min(self.data_avg_scatter[:,0])*1e6, np.max(self.data_avg_scatter[:,0])*1e6]
+            yr = [np.min(self.data_avg_scatter[:,1])*1e6, np.max(self.data_avg_scatter[:,1])*1e6]
+            aspect = ((xr[1]-xr[0])/ (yr[1]-yr[0]))
+            ax.imshow(heatmap, origin='lower', extent=[xr[0], xr[1], yr[0],yr[1]],
+                       cmap='viridis', aspect=aspect)
+            fig.tight_layout()
+        else:
+            ax.set_ylabel('CPD (mV))')
+            xr = [np.min(self.data_avg_scatter[:,0])*1e6, np.max(self.data_avg_scatter[:,0])*1e6]
+            yr = [np.min(self.data_avg_scatter[:,1])*1e3, np.max(self.data_avg_scatter[:,1])*1e3]
+            aspect = ((xr[1]-xr[0])/ (yr[1]-yr[0]))
+            ax.imshow(heatmap, origin='lower', extent=[xr[0], xr[1], yr[0],yr[1]],
+                       cmap='viridis', aspect=aspect)
+            fig.tight_layout()
 
         return ax, fig
 
