@@ -103,6 +103,7 @@ class dist_cluster(object):
 #        IO_rate = parms_dict['IO_rate_[Hz]']     #sampling_rate
         self.pxl_time = parms_dict['total_time']    #seconds per pixel
         self.dt = self.pxl_time/self.data.shape[1]
+        self.aspect = self.num_rows/self.num_cols
 
         return
 
@@ -152,7 +153,7 @@ class dist_cluster(object):
             fig, ax = plt.subplots(nrows=1, figsize=(12, 6))
             _, cbar = px.plot_utils.plot_map(ax, self.data_avg*1e6, 
                                              x_vec=self.xvec*1e6, y_vec=self.yvec*1e6, 
-                                             cmap='inferno')
+                                             cmap='inferno', aspect=self.aspect)
             cbar.set_label('tFP (us)', rotation=270, labelpad=16)
             ax.imshow(self.mask_nan)
         
@@ -362,7 +363,7 @@ class dist_cluster(object):
                 ax.set_ylabel('CPD (mV)', fontsize=16)
         
 
-        return ax, fig
+        return fig, ax
 
     def plot_centers(self):
         
@@ -499,7 +500,7 @@ class dist_cluster(object):
                        cmap='viridis', aspect=aspect)
             fig.tight_layout()
 
-        return ax, fig
+        return fig, ax
 
 
     def animated_clusters(self, clusters=3, one_color=False):
