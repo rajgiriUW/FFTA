@@ -269,7 +269,7 @@ class dist_cluster(object):
         
         # Find folder, write to it
         hdf = px.io.HDFwriter(self.h5_main.file)
-        h5_refs = hdf.write(grp, print_log=verbose), 
+        h5_refs = hdf.write(grp, print_log=verbose)
 
         return h5_clust
 
@@ -330,18 +330,19 @@ class dist_cluster(object):
 
         for i in labels_unique:
 
-            if not self.isCPD:            
+           if not self.isCPD:            
                 # FFtrEFM data
                 ax.plot(self.data_dist[labels==labels_unique[i]]*1e6,
                         self.data_avg_scatter[labels==labels_unique[i],1]*1e6,
                         c=colors[i], linestyle='None', marker='.')
                 
-                pix = pixel.Pixel(cluster_centers[i],self.parms_dict)
-                pix.inst_freq = cluster_centers[i]
-                pix.fit_freq_product()
-                self.clust_tfp.append(pix.tfp)
+#                pix = pixel.Pixel(cluster_centers[i],self.parms_dict)
+#                pix.inst_freq = cluster_centers[i]
+#                pix.fit_freq_product()
+#                self.clust_tfp.append(pix.tfp)
+                pix_tfp = np.mean(self.data_avg_scatter[labels==labels_unique[i],1])
                 ax.plot(np.mean(self.data_dist[labels==labels_unique[i]]*1e6), 
-                        pix.tfp*1e6,
+                        pix_tfp*1e6,
                          marker='o',markerfacecolor = colors[i], markersize=8,
                          markeredgecolor='k')
                 ax.set_xlabel('Distance to Nearest Boundary (um)', fontsize=16)
