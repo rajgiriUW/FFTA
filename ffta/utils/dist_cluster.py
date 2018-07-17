@@ -21,7 +21,7 @@ Creates a Class with various data grouped based on distance to masked edges
 Typical usage:
 
 >> mymask = mask_utils.load_mask_txt('Path_mask.txt')
->> tfp_clust = distance_utils.dist_cluster(h5_path, mask=mymask, data_avg='tfp', parms_dict=parameters)
+>> tfp_clust = dist_cluster.dist_cluster(h5_main, mask=mymask, data_avg='tfp')
 >> tfp_clust.analyze()
 >> tfp_clust.plot_img()
 >> tfp_clust.kmeans()
@@ -33,7 +33,7 @@ To do:
 
 class dist_cluster(object):
 
-    def __init__(self, h5_main, data_avg, mask, results = None, isCPD=False):
+    def __init__(self, h5_main, data_avg, mask, results = None, isCPD=False, parms_dict=None):
         """
         h5_main : h5Py dataset or str
             File type to be processed.
@@ -73,8 +73,11 @@ class dist_cluster(object):
         
         # Set up datasets data
         self.data = self.h5_main[()]
-        self.parms_dict = hdf_utils.get_params(h5_main)
-
+        self.parms_dict = parms_dict
+        if parms_dict == None:
+            print('get params')
+            self.parms_dict = hdf_utils.get_params(h5_main)
+        
         self._params()
 
         # Create mask for grain boundaries
@@ -330,7 +333,7 @@ class dist_cluster(object):
 
         for i in labels_unique:
 
-           if not self.isCPD:            
+            if not self.isCPD:            
                 # FFtrEFM data
                 ax.plot(self.data_dist[labels==labels_unique[i]]*1e6,
                         self.data_avg_scatter[labels==labels_unique[i],1]*1e6,
