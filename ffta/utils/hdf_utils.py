@@ -396,4 +396,48 @@ def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6,
         px.hdf_utils.link_h5_objects_as_attrs(h5_main, px.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
 
     
+    hdf.flush()
+    
     return h5_main
+
+def add_single_dataset(h5_path, group, dset, dset_name, verbose=False):
+    '''
+    Adds a single dataset (dset) to group h5_grp in h5_main
+    
+    h5_path : h5 File or str 
+        Points to a path to process
+    
+    group : str or H5PY group 
+        Location to process data to, either as str or H5PY
+        
+    dset : ndarray
+        Dataset name to search for within this group and set as h5_main
+        
+    dset_name : str
+        Dataset name for the h5 folder
+    
+    '''
+    
+    hdf = px.io.HDFwriter(h5_path)
+    h5_file = hdf.file
+    
+    if isinstance(group, str):
+        grp_tr = px.io.VirtualGroup(group)
+        grp_name = group
+    else:
+        grp_tr = px.io.VirtualGroup(group.name)
+        grp_name = group.name
+        
+    grp_ds = px.io.VirtualDataset(dset_name, dset, parent= h5_file[grp_name])
+    grp_tr.add_children([grp_ds])
+
+    if verbose:
+        hdf.write(grp_tr,print_log=True)
+        px.hdf_utils.print_tree(h5_file, rel_paths=True)
+    
+    else:
+        hdf.write(grp_tr,print_log=False)
+    
+    hdf.flush()
+    
+    return hdf.file
