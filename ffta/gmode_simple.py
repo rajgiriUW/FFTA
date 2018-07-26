@@ -33,7 +33,7 @@ class F3R(object):
         self.num_periods = int(self.pxl_time/self.time_per_osc)
         
         xpts = np.arange(0,self.total_time, 1/self.sampling_rate)[:-1]
-        self.pixel_ex_wfm = np.sin(xpts * self.drive_freq)
+        self.pixel_ex_wfm = np.sin(xpts * self.drive_freq*2*np.pi)
         
         self.signal = signal_array
         
@@ -41,7 +41,25 @@ class F3R(object):
             
             self.signal = self.signal.mean(axis=0)
         
+        self.signal -= np.mean(self.signal) #DC offset
+        
         return
+    
+    def t_div(self):
+        '''
+        Simple divide by the transfer function to get Force. Doesn't really work
+        '''
+    
+        h = self.pixel_ex_wfm
+        y = self.signal
+        
+        H = np.fft.fftshift(np.fft.fft(h))
+        Y = np.fft.fftshift(np.fft.fft(y))
+        F = np.divide(H,Y)
+        
+        self.signal = np.real(np.fft.ifft(np.fft.ifftshift(F)))
+        
+        return    
     
     def analyze(self, periods=4):
      
@@ -66,6 +84,7 @@ class F3R(object):
         
         # second degree polynomial fitting
         deg = 2
+#        deg = 1
        
         # Holds all the fit parameters
         self.wHfit3 = np.zeros((1, self.pnts_per_CPDpix, deg+1))
@@ -88,13 +107,13 @@ class F3R(object):
         self.wHfit3[0,-1,:] = popt
         
         self.CPD = -0.5*np.divide(self.wHfit3[:,:,1],self.wHfit3[:,:,2])[0,:]
-        
+#        self.CPD = self.wHfit3[:,:,1][0,:]
         
         return
     
     def smooth(self, kernel):
         
-        self.CPD_filt = sig.convolve(self.CPD, kernel)
+        self.CPD_filt = np.convolve(self.CPD, kernel, mode='valid')
         
         return
         
