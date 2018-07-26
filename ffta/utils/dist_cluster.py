@@ -335,16 +335,16 @@ class dist_cluster(object):
 
             if not self.isCPD:            
                 # FFtrEFM data
-                ax.plot(self.data_dist[labels==labels_unique[i]]*1e6,
-                        self.data_avg_scatter[labels==labels_unique[i],1]*1e6,
+                ax.plot(self.data_dist[labels==i]*1e6,
+                        self.data_avg_scatter[labels==i,1]*1e6,
                         c=colors[i], linestyle='None', marker='.')
                 
 #                pix = pixel.Pixel(cluster_centers[i],self.parms_dict)
 #                pix.inst_freq = cluster_centers[i]
 #                pix.fit_freq_product()
 #                self.clust_tfp.append(pix.tfp)
-                pix_tfp = np.mean(self.data_avg_scatter[labels==labels_unique[i],1])
-                ax.plot(np.mean(self.data_dist[labels==labels_unique[i]]*1e6), 
+                pix_tfp = np.mean(self.data_avg_scatter[labels==i,1])
+                ax.plot(np.mean(self.data_dist[labels==i]*1e6), 
                         pix_tfp*1e6,
                          marker='o',markerfacecolor = colors[i], markersize=8,
                          markeredgecolor='k')
