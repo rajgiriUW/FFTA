@@ -61,6 +61,39 @@ class F3R(object):
         
         return    
     
+    def lia(self, tc=2):
+        '''
+        Simple lockin integration
+        
+        time constant tc = number of points
+        
+        Does not auto calculate for you based on time. 
+        '''
+        
+        xpts = np.arange(0,self.total_time, 1/self.sampling_rate)[:-1]
+        sini = np.sin(2*np.pi*self.drive_freq*xpts)
+        cosi = np.cos(2*np.pi*self.drive_freq*xpts)
+        
+        UoutX = self.signal * sini
+        UoutY = self.signal * cosi
+        
+        X = np.array([])
+        Y = np.array([])
+        for i in np.arange(0,int(self.N_points_per_pixel), tc):
+            
+            t = xpts[i:i+tc]
+            Uout = np.trapz(UoutX[i:i+tc], t)
+            X = np.append(X,Uout)
+            Uout = np.trapz(UoutY[i:i+tc], t)
+            Y = np.append(Y,Uout)
+        
+        self.X = X
+        self.Y = Y
+        self.amp = np.sqrt(X**2 + Y**2)
+        self.phase = np.arctan(Y/X)
+        
+        return
+    
     def analyze(self, periods=4):
      
         complete_periods = True
