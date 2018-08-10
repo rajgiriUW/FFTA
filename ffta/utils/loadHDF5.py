@@ -121,7 +121,7 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False,
     
     return h5_path, parm_dict
 
-def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5'):
+def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5', textload = False):
     """
     Loads .ibw folder into an HDF5 format.
 
@@ -135,6 +135,9 @@ def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5'):
         
     file_name : str
         Desired file name, otherwise is auto-generated
+
+    textload : bool, optional
+        If you have a folder of .txt instead of .ibw (older files, some synthetic data)
 
     Returns
     -------
@@ -160,9 +163,16 @@ def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5'):
     print(folder_path, 'folder path')    
     filelist = os.listdir(folder_path)
     
-    data_files = [os.path.join(folder_path, name)
-                  for name in filelist if name[-3:] == 'ibw']
-
+    if textload == False:
+    
+        data_files = [os.path.join(folder_path, name)
+                      for name in filelist if name[-3:] == 'ibw']
+    
+    else:
+        
+        data_files = [os.path.join(folder_path, name)
+                      for name in filelist if name[-3:] == 'txt']
+    
     config_file = [os.path.join(folder_path, name)
                    for name in filelist if name[-3:] == 'cfg'][0]
     
@@ -191,11 +201,8 @@ def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5'):
     # Check ratio is correct
     ratio = parm_dict['FastScanSize'] / parm_dict['SlowScanSize']
     if n_pixels/len(data_files) != ratio:
-        raise Exception('X-Y Dimensions do not match filelist. Add manually to config file')
+        raise Exception('X-Y Dimensions do not match filelist. Add manually to config file. Check n-pixels.')
     
-    if not any(file_name):
-        file_name = 'FF_H5'
-        
     folder_path = folder_path.replace('/','\\')
     if os.path.exists(file_name) == False:
         h5_path = os.path.join(folder_path, file_name) + '.h5'
@@ -236,10 +243,22 @@ def create_HDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     
     # Uses first data set to determine parameters
     line_file = load.signal(data_files[0])
+    
+    # e.g. if a 16000 point signal with 2000 averages and 10 pixels
+    # parm_dict['pnts_per_pixel'] = 200 (# signals at each pixel)
+    #           ['pnts_per_avg'] = 16000 (# pnts per signal, called an "average")
+    #           ['pnts_per_line'] = 2000 (# signals in each line)
+
     if 'pnts_per_pixel' not in parm_dict.keys():
         parm_dict['pnts_per_avg'] = int(line_file.shape[0])
-        parm_dict['pnts_per_pixel'] = int(line_file.shape[1] / parm_dict['num_cols'])
-        parm_dict['pnts_per_line'] = int(line_file.shape[1])
+        
+        try:
+        # for 1 average per pixel, this will fail
+            parm_dict['pnts_per_pixel'] = int(line_file.shape[1] / parm_dict['num_cols'])
+            parm_dict['pnts_per_line'] = int(line_file.shape[1])
+        except:
+            parm_dict['pnts_per_pixel'] = 1
+            parm_dict['pnts_per_line'] = 1
 
     num_rows = parm_dict['num_rows']
     num_cols = parm_dict['num_cols']
@@ -256,7 +275,8 @@ def create_HDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     # This takes a very long time but creates a giant NxM matrix of the data
     # N = number of points in each spectra, M = number of rows * columns
     #data_size = [line_file.shape[0], line_file.shape[1]*parm_dict['num_rows'] ]
-    data_size = [line_file.shape[1]*parm_dict['num_rows'], line_file.shape[0] ]
+    data_size = [parm_dict['pnts_per_line']*parm_dict['num_rows'], 
+                 line_file.shape[0] ]
 
     # To do: Fix the labels/atrtibutes on the relevant data sets
     hdf = px.io.HDFwriter(h5_path)
@@ -283,7 +303,7 @@ def create_HDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
 
     # Get reference for writing the data
     ff_group.attrs = parm_dict
-    h5_refs = hdf.write(ff_group, print_log=True)
+    h5_refs = hdf.write(ff_group, print_log=verbose)
     
     pnts_per_line = parm_dict['pnts_per_line']
 

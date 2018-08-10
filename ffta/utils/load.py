@@ -13,7 +13,7 @@ from numpy.lib.npyio import loadtxt
 from os.path import splitext
 
 
-def signal(path, skiprows=1):
+def signal(path, skiprows=0):
     """
     Loads .ibw or ASCII files and return it as a numpy.ndarray.
 
@@ -37,7 +37,7 @@ def signal(path, skiprows=1):
         signal_array = loadibw(path)['wave']['wData']  # Load data.
 
     elif ext.lower() == '.txt':
-
+        
         signal_array = loadtxt(path, skiprows=skiprows)
 
     else:

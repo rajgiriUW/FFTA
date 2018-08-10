@@ -44,6 +44,10 @@ def FF_SVD(h5_main, num_components=128, show_plots=True, override=True):
         Group containing the h5_svd data
     
     """
+    
+    if not(isinstance(h5_main, px.core.io.pycro_data.PycroDataset)):
+        h5_main = px.core.PycroDataset(h5_main)
+    
     h5_svd = SVD(h5_main, num_components=num_components)
     
     parm_dict = hdf_utils.get_params(h5_main)
@@ -77,7 +81,7 @@ def FF_SVD(h5_main, num_components=128, show_plots=True, override=True):
         
         fig_skree, axes =px.plot_utils.plot_scree(h5_S, title='Skree plot')
         
-        fig_abun, axes = px.plot_utils.plot_map_stack(abun_maps, num_comps=9, title='SVD Abundance Maps',
+        fig_abun, axes = px.plot_utils.plot_map_stack(abun_maps, num_comps=25, title='SVD Abundance Maps',
                                                       color_bar_mode='single', cmap='inferno', reverse_dims=True, fig_mult=(3.5,3.5))
 
         fig_eigvec, axes = px.plot_utils.plot_curves(h5_spec_vals*1e3, eigen_vecs, use_rainbow_plots=False, 
@@ -101,7 +105,9 @@ def FF_SVD_filter(h5_main, clean_components=None):
         This must be the same as where SVD was performed
     
     """
-    
+    if not(isinstance(h5_main, px.core.io.pycro_data.PycroDataset)):
+        h5_main = px.core.PycroDataset(h5_main)
+        
     h5_rb = px.processing.svd_utils.rebuild_svd(h5_main, components=clean_components)
     
     parameters = hdf_utils.get_params(h5_main)
