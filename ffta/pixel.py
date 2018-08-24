@@ -12,11 +12,11 @@ from scipy import signal as sps
 from scipy import optimize as spo
 from scipy import interpolate as spi
 
-from ffta.utils import noise
-from ffta.utils import cwavelet
-from ffta.utils import parab
-from ffta.utils import fitting
-from ffta.utils import dwavelet
+from ffta.pixel_utils import noise
+from ffta.pixel_utils import cwavelet
+from ffta.pixel_utils import parab
+from ffta.pixel_utils import fitting
+from ffta.pixel_utils import dwavelet
 import nitime.timeseries as ts
 
 from matplotlib import pyplot as plt

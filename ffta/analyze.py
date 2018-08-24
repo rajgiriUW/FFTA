@@ -14,7 +14,7 @@ import logging
 import argparse as ap
 import numpy as np
 import ffta.line as line
-from ffta.utils import load
+from ffta.pixel_utils import load
 import badpixels
 from progressbar import ProgressBar, ETA, Percentage
 

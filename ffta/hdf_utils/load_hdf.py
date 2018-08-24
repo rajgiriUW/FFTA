@@ -8,19 +8,13 @@ __maintainer__ = "Rajiv Giridharagopal"
 __email__ = "rgiri@uw.edu"
 __status__ = "Development"
 
-import configparser
-import sys
-from igor.binarywave import load as loadibw
-from numpy.lib.npyio import loadtxt
 import numpy as np
 import os
 
 import pycroscopy as px
 from pycroscopy.io.write_utils import build_ind_val_dsets, Dimension
 
-import h5py
-
-from ffta.utils import load
+from ffta.pixel_utils import load
 from ffta.hdf_utils import gl_ibw
 from ffta.hdf_utils import hdf_utils
 

@@ -9,11 +9,11 @@ import numpy as np
 import sklearn as sk
 import pycroscopy as px
 from pycroscopy.processing.cluster import Cluster
-from pycroscopy.core.processing.process import Process
-from pycroscopy.io.write_utils import build_ind_val_matrices, Dimension
+from pyUSID.processing.process import Process
+from pyUSID.io.write_utils import build_ind_val_matrices, Dimension
 from matplotlib import pyplot as plt
 import matplotlib.animation as animation
-from ffta.utils import mask_utils, hdf_utils
+from ffta.pixel_utils import mask_utils, hdf_utils
 from ffta import pixel
 """
 Creates a Class with various data grouped based on distance to masked edges
