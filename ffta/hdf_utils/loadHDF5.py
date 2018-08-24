@@ -21,8 +21,8 @@ from pycroscopy.io.write_utils import build_ind_val_dsets, Dimension
 import h5py
 
 from ffta.utils import load
-from ffta.utils import gl_ibw
-from ffta.utils import hdf_utils
+from ffta.hdf_utils import gl_ibw
+from ffta.hdf_utils import hdf_utils
 
 import warnings
 

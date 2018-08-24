@@ -10,7 +10,7 @@ import sklearn as sk
 import pycroscopy as px
 from pycroscopy.processing.cluster import Cluster
 from pycroscopy.core.processing.process import Process
-from pycroscopy.io.write_utils import build_ind_val_dsets, Dimension
+from pycroscopy.io.write_utils import build_ind_val_matrices, Dimension
 from matplotlib import pyplot as plt
 import matplotlib.animation as animation
 from ffta.utils import mask_utils, hdf_utils
@@ -31,7 +31,7 @@ To do:
     Implement dist_cluster as implementation of pycroscopy Cluster class
 """
 
-class dist_cluster(object):
+class dist_cluster:
 
     def __init__(self, h5_main, data_avg, mask, results = None, isCPD=False, parms_dict=None):
         """

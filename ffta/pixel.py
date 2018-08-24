@@ -18,14 +18,13 @@ from ffta.utils import parab
 from ffta.utils import fitting
 from ffta.utils import dwavelet
 import nitime.timeseries as ts
-from nitime.analysis.spectral import MorletWaveletAnalyzer, SpectralAnalyzer
 
 from matplotlib import pyplot as plt
 
 from numba import autojit
 from utils.peakdetect import get_peaks
 
-class Pixel(object):
+class Pixel:
     """
     Signal Processing to Extract Time-to-First-Peak.
 

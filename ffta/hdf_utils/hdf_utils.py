@@ -376,7 +376,7 @@ def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6,
     ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False, verbose=verbose)
     
     spec_desc = [Dimension('Time', 's',np.linspace(0, pnts_per_avg, dt))]
-    ds_spec_inds, ds_spec_vals = build_ind_val_dsets(spec_desc, is_spectral=True, verbose=verbose)
+    ds_spec_inds, ds_spec_vals = build_ind_val_matrices(spec_desc, is_spectral=True, verbose=verbose)
     
     aux_ds_names = ['Position_Indices', 'Position_Values', 
                     'Spectroscopic_Indices', 'Spectroscopic_Values']

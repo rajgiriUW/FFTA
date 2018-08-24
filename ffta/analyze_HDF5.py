@@ -14,9 +14,10 @@ from matplotlib import pyplot as plt
 
 from ffta.utils import hdf_utils
 import pycroscopy as px
+import pyUSID as usid
 
-from pycroscopy.core.io.io_utils import get_time_stamp
-from pycroscopy.io.write_utils import build_ind_val_dsets, Dimension
+from pyUSID.io.io_utils import get_time_stamp
+from pyUSID.io.write_utils import build_ind_val_matrices, Dimension
 """
 Analyzes an HDF_5 format trEFM data set and writes the result into that file
 """
@@ -219,9 +220,9 @@ def save_process(h5_file, h5_gp, inst_freq, parm_dict, verbose=False):
     # Create dimensions
     pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
                 Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
-    ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False, verbose=verbose)
+    ds_pos_ind, ds_pos_val = build_ind_val_matrices(pos_desc, is_spectral=False, verbose=verbose)
     spec_desc = [Dimension('Time', 's',np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
-    ds_spec_inds, ds_spec_vals = build_ind_val_dsets(spec_desc, is_spectral=True, verbose=verbose)
+    ds_spec_inds, ds_spec_vals = build_ind_val_matrices(spec_desc, is_spectral=True, verbose=verbose)
 
     # Writes main dataset
     h5_if = px.hdf_utils.write_main_dataset(h5_meas_group,  
