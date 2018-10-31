@@ -22,7 +22,7 @@ import nitime.timeseries as ts
 from matplotlib import pyplot as plt
 
 from numba import autojit
-from utils.peakdetect import get_peaks
+from pixel_utils.peakdetect import get_peaks
 
 class Pixel:
     """
