@@ -20,7 +20,7 @@ class Line(object):
 
     Parameters
     ----------
-    signal_array : (n_points, n_signals) array_like
+    signal_array : (n_signals, n_points) array_like
         2D real-valued signal array, corresponds to a line
     params : dict
         Includes parameters for processing. The list of parameters is:
@@ -85,7 +85,10 @@ class Line(object):
         # Initialize tFP and shift arrays.
         self.tfp = np.empty(self.n_pixels)
         self.shift = np.empty(self.n_pixels)
-        self.inst_freq = np.empty((signal_array.shape[0], self.n_pixels))
+        self.inst_freq = np.empty((self.n_pixels, signal_array.shape[1]))
+        
+        self.avgs_per_pixel = int(signal_array.shape[0]/self.n_pixels)
+        self.n_signals = signal_array.shape[1]
 
         return
 
@@ -105,12 +108,55 @@ class Line(object):
         """
 
         # Split the signal array into pixels.
-        pixel_signals = np.split(self.signal_array, self.n_pixels, axis=1)
+
+        # for pycroscopy the array is arranged differently (n_pixels, n_points). 
+        # This code preserves existing functionality but the format should be deprecated
+        try:
+      
+            pixel_signals = np.split(self.signal_array, self.n_pixels, axis=0)
+
+        # exception = non-pycroscopy format
+        except:
+
+            self.inst_freq = np.empty((self.n_pixels, self.signal_array.shape[0]))
+            self.avgs_per_pixel = int(self.signal_array.shape[1]/self.n_pixels)
+            self.n_signals = self.signal_array.shape[0]
+            
+            pixel_signals = np.split(self.signal_array.transpose(), self.n_pixels, axis=0)
 
         # Iterate over pixels and return tFP and shift arrays.
         for i, pixel_signal in enumerate(pixel_signals):
 
             p = pixel.Pixel(pixel_signal, self.params)
-            (self.tfp[i], self.shift[i], self.inst_freq[:, i]) = p.analyze()
+            
+            (self.tfp[i], self.shift[i], self.inst_freq[i, :]) = p.analyze()
 
         return (self.tfp, self.shift, self.inst_freq)
+
+    def pixel_wise_avg(self):
+        """
+        Averages the line per pixel and saves the result as signal_avg_array
+        
+        Returns
+        -------
+        signal_avg_array : (n_points, n_pixels) numpy array
+            Returns signal_averaged time-domain signal at each pixel
+        """
+        
+        self.signal_avg_array = np.empty((self.n_pixels, self.signal_array.shape[1]))
+                
+        for i in range(self.n_pixels):
+        
+            avg = self.signal_array[i*self.avgs_per_pixel:(i+1)*self.avgs_per_pixel]
+            self.signal_avg_array[i, :] = avg.mean(axis=0)
+            
+        
+        return self.signal_avg_array
+    
+    def clear_filter_flags(self):
+        """Removes flags from parameters for setting filters"""
+        
+        #self.params['window'] = 0
+        self.params['bandpass_filter'] = 0
+        
+        return

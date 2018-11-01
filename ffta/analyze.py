@@ -14,9 +14,8 @@ import logging
 import argparse as ap
 import numpy as np
 import ffta.line as line
-from ffta.utils import load
+from ffta.pixel_utils import load
 import badpixels
-from progressbar import ProgressBar, ETA, Percentage
 
 # Plotting imports
 import matplotlib as mpl
@@ -72,12 +71,12 @@ def main(argv=None):
     # Load parameters from .cfg file.
     n_pixels, parameters = load.configuration(config_file)
 
-    print 'Recombination: ', parameters['recombination']
-    if parameters.has_key('phase_fitting'):    
+    print('Recombination: ', parameters['recombination'])
+    if 'phase_fitting' in parameters:    
 
-        print 'Phase fitting: ', parameters['phase_fitting']
+        print('Phase fitting: ', parameters['phase_fitting'])
 
-    print 'ROI: ', parameters['roi']
+    print( 'ROI: ', parameters['roi'])
 
     if not args.p:
 
@@ -107,10 +106,6 @@ def main(argv=None):
         shift_image = shift_ax.imshow(shift, cmap='cubehelix', **kwargs)
         text = plt.figtext(0.4, 0.1, '')
         plt.show()
-
-        # Set the progress bar.
-        widgets = [Percentage(), ' / ', ETA()]
-        pbar = ProgressBar(widgets=widgets, maxval=len(data_files)).start()
 
         # Load every file in the file list one by one.
         for i, data_file in enumerate(data_files):
@@ -144,15 +139,10 @@ def main(argv=None):
 
             del line_inst  # Delete the instance to open up memory.
 
-            pbar.update(i + 1)  # Update the progress bar.
-
-        #plt.close(fig)
-        pbar.finish()  # Finish the progress bar.
-
     elif args.p:
 
-        print 'Starting parallel processing, using {0:1d} \
-               CPUs.'.format(args.p)
+        print('Starting parallel processing, using {0:1d} \
+               CPUs.'.format(args.p))
         start_time = time.time()  # Keep when it's started.
 
         # Create a pool of workers.
@@ -183,7 +173,7 @@ def main(argv=None):
 
         elapsed_time = time.time() - start_time
 
-        print 'It took {0:.1f} seconds.'.format(elapsed_time)
+        print ('It took {0:.1f} seconds.'.format(elapsed_time))
 
     # Filter bad pixels
     tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)

@@ -12,7 +12,7 @@ here you want row, column (load the row .ibw, find column pixel)
 """
 
 from ffta import pixel
-from ffta.utils import load
+from ffta.pixel_utils import load
 
 import numpy as np
 import scipy as sp
@@ -35,7 +35,7 @@ def load_csv(path):
 
     else:
 
-        print "Unrecognized file type!"
+        print("Unrecognized file type!")
         sys.exit(0)    
       
     return signal_array

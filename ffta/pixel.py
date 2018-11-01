@@ -1,7 +1,7 @@
 """pixel.py: Contains pixel class."""
 # pylint: disable=E1101,R0902,C0103
-__author__ = "Durmus U. Karatay, Rajiv Giridharagopal"
-__copyright__ = "Copyright 2016, Ginger Lab"
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2018, Ginger Lab"
 __maintainer__ = "Rajiv Giridharagopal"
 __email__ = "rgiri@uw.edu"
 __status__ = "Development"
@@ -12,18 +12,19 @@ from scipy import signal as sps
 from scipy import optimize as spo
 from scipy import interpolate as spi
 
-from ffta.utils import noise
-from ffta.utils import cwavelet
-from ffta.utils import parab
-from ffta.utils import fitting
-from ffta.utils import dwavelet
+from ffta.pixel_utils import noise
+from ffta.pixel_utils import cwavelet
+from ffta.pixel_utils import parab
+from ffta.pixel_utils import fitting
+from ffta.pixel_utils import dwavelet
 import nitime.timeseries as ts
-from nitime.analysis.spectral import MorletWaveletAnalyzer, SpectralAnalyzer
+
+from matplotlib import pyplot as plt
 
 from numba import autojit
-from utils.peakdetect import get_peaks
+from pixel_utils.peakdetect import get_peaks
 
-class Pixel(object):
+class Pixel:
     """
     Signal Processing to Extract Time-to-First-Peak.
 
@@ -62,7 +63,7 @@ class Pixel(object):
         Number of points in a signal.
     n_signals : int
         Number of signals to be averaged in a pixel.
-    signal_array : (n_points, n_signals) array_like
+    signal_array : (n_signals, n_points) array_like
         Array that contains original signals.
     signal : (n_points,) array_like
         Signal after phase-locking and averaging.
@@ -136,6 +137,10 @@ class Pixel(object):
         self.phase_fitting = False
         self.EMD_analysis = False
 
+        # Assign the fit parameter.
+        self.fit = fit
+        self.fit_form = 'PRODUCT'
+
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
 
@@ -144,12 +149,26 @@ class Pixel(object):
         # Assign values from inputs.
         self.signal_array = signal_array
         self.tidx = int(self.trigger * self.sampling_rate)
-        self.n_points, self.n_signals = signal_array.shape
+        
+        # Set dimensions correctly
+        # Three cases: 1) 2D (has many averages) 2) 1D (but set as 1xN) and 3) True 1D
+        if len(signal_array.shape) == 2:
+            if signal_array.shape[0] != 1:
+                self.n_signals, self.n_points = signal_array.shape
+                self._n_points_orig = signal_array.shape[1]
+            else:
+                self.n_signals = 1
+                self.signal_array = self.signal_array[0,:]
+                self.n_points = self.signal_array.shape[0]
+                self._n_points_orig = self.signal_array.shape[0]
+        else:
+            self.n_signals = 1
+            self.n_points = signal_array.shape[0]
+            self._n_points_orig = signal_array.shape[0]
 
         # Keep the original values for restoring the signal properties.
         self._tidx_orig = self.tidx
         self.tidx_orig = self.tidx
-        self._n_points_orig = signal_array.shape[0]
 
         # Initialize attributes that are going to be assigned later.
         self.signal = None
@@ -159,15 +178,24 @@ class Pixel(object):
         self.shift = None
         self.cwt_matrix = None
 
-        # Assign the fit parameter.
-        self.fit = fit
+        return
 
+    def clear_filter_flags(self):
+        """Removes flags from parameters for setting filters"""
+        
+#        self.window = 0
+        self.bandpass_filter = 0
+        
         return
 
     def remove_dc(self):
         """Removes DC components from signals."""
 
-        self.signal_array -= self.signal_array.mean(axis=0)
+        if self.n_signals != 1:
+        
+            for i in range(self.n_signals):
+            
+                self.signal_array[i] -= self.signal_array[i,:].mean()
 
         return
 
@@ -175,9 +203,8 @@ class Pixel(object):
         """Phase-locks signals in the signal array. This also cuts signals."""
 
         # Phase-lock signals.
-        self.signal_array, self.tidx = noise.phase_lock(
-            self.signal_array, self.tidx,
-            np.ceil(self.sampling_rate / self.drive_freq))
+        self.signal_array, self.tidx = noise.phase_lock(self.signal_array, self.tidx,
+                                                        np.ceil(self.sampling_rate / self.drive_freq))
 
         # Update number of points after phase-locking.
         self.n_points = self.signal_array.shape[0]
@@ -187,8 +214,12 @@ class Pixel(object):
     def average(self):
         """Averages signals."""
 
-        self.signal = self.signal_array.mean(axis=1)
-
+        if self.n_signals != 1: # if not multi-signal, don't average
+            self.signal = self.signal_array.mean(axis=0)
+            
+        else:
+            self.signal = self.signal_array
+            
         return
 
     def check_drive_freq(self):
@@ -205,10 +236,9 @@ class Pixel(object):
 
         # Difference between given and calculated drive frequencies.
         difference = np.abs(drive_freq - self.drive_freq)
-        
 
-        # If difference is too big, reassign. Otherwise, continue.
-        if difference >= dfreq:
+        # If difference is too big, reassign. Otherwise, continue. != 0 for accidental DC errors
+        if difference >= dfreq and drive_freq != 0:
 
             self.drive_freq = drive_freq
 
@@ -232,6 +262,7 @@ class Pixel(object):
 
         """Filters signal with a FIR bandpass filter."""
         # Calculate bandpass region from given parameters.
+
         nyq_rate = 0.5 * self.sampling_rate
         bw_half = self.filter_bandwidth / 2
 
@@ -241,8 +272,13 @@ class Pixel(object):
         band = [freq_low, freq_high]
 
         # Create taps using window method.
-        taps = sps.firwin(int(self.n_taps), band, pass_zero=False,
+        try:
+            taps = sps.firwin(int(self.n_taps), band, pass_zero=False,
                           window='blackman')
+        except:
+            print('band=', band)
+            print('nyq=',nyq_rate)
+            print('drive=',self.drive_freq)
 
         self.signal = sps.fftconvolve(self.signal, taps, mode='same')
 
@@ -325,7 +361,10 @@ class Pixel(object):
     def calculate_amplitude(self):
         """Calculates the amplitude of the analytic signal. Uses pre-filter
         signal to do this."""
-        self.signal_orig = self.signal_array.mean(axis=1)
+#       
+        if self.n_signals != 1:
+            self.signal_orig = self.signal_array.mean(axis=0)
+        
         self.signal_orig = sps.hilbert(self.signal_orig)
         self.amp = np.abs(self.signal_orig)
 
@@ -366,14 +405,6 @@ class Pixel(object):
 
         # Make sure cut starts from 0 and never goes over.
         cut = self.inst_freq[fidx:(fidx + ridx)] - self.inst_freq[fidx]
-
-        eidx = np.where(cut[(ridx / 2):] > cut[0])[0]
-
-        if eidx.shape[0] > 0:
-
-            eidx[:] += ridx/2
-  #          cut = cut[0:eidx[0]]
-
         t = np.arange(cut.shape[0]) / self.sampling_rate
 
         # Fit the cut to the model.
@@ -390,13 +421,14 @@ class Pixel(object):
         self.cut = cut
         self.popt = popt
         self.best_fit = -A*(np.exp(-t/tau1)-1)*np.exp(-t/tau2)
-        
+
         self.tfp = np.argmin(self.best_fit)/self.sampling_rate
         self.shift = np.min(self.best_fit)
-
+        
+        self.rms = np.sqrt(np.mean(np.square(self.best_fit - cut)))
 
         return
-    
+
     def fit_freq_sum(self):
         """Fits the frequency shift to an approximate functional form using
         an analytical fit with bounded values."""
@@ -412,17 +444,41 @@ class Pixel(object):
 
         # Fit the cut to the model.
         popt = fitting.fit_bounded_sum(self.Q, self.drive_freq, t, cut)
-
-        #A, tau1, tau2 = popt
         A1, A2, tau1, tau2 = popt
 
         # For diagnostic purposes.
         self.cut = cut
         self.popt = popt
         self.best_fit = A1*(np.exp(-t/tau1)-1) - A2*np.exp(-t/tau2)
-        
+
         self.tfp = np.argmin(self.best_fit)/self.sampling_rate
         self.shift = np.min(self.best_fit)
+
+        return
+
+    def fit_freq_exp(self):
+        """Fits the frequency shift to a single exponential in the case where
+        there is no return to 0 Hz offset (if drive is cut)."""
+
+        ridx = int(self.roi * self.sampling_rate)
+        fidx = self.tidx
+
+        # Make sure cut starts from 0 and never goes over.
+        cut = self.inst_freq[fidx:(fidx + ridx)] - self.inst_freq[fidx]
+
+        t = np.arange(cut.shape[0]) / self.sampling_rate
+
+        # Fit the cut to the model.
+        popt  = fitting.fit_bounded_exp(t, cut)
+
+        # For diagnostics
+        A, y0, tau = popt
+        self.cut = cut
+        self.popt = popt
+        self.best_fit = A*(np.exp(-t/tau)) + y0
+
+        self.shift = A
+        self.tfp = tau
 
         return
 
@@ -522,7 +578,7 @@ class Pixel(object):
                      (4 * np.pi * inst_freq[:] / self.sampling_rate))
 
         self.inst_freq = inst_freq - inst_freq[self.tidx]
-        
+
         return
 
     def calculate_cwt_freq(self):
@@ -532,16 +588,17 @@ class Pixel(object):
 
         # Generate necessary tools for wavelet transform.
         t1 = ts.TimeSeries(self.signal,sampling_rate=self.sampling_rate)
-        self.wavelet = MorletWaveletAnalyzer(t1, freqs=self.drive_freq, 
-                                   sd_rel=(self.filter_bandwidth / 
-                                           self.drive_freq))
+        self.wavelet = MorletWaveletAnalyzer(t1, freqs=self.drive_freq,
+                                             sd_rel=(self.filter_bandwidth /
+                                             self.drive_freq))
+              
         phase = np.unwrap(self.wavelet.phase.data)
 
-        self.inst_freq = sps.savgol_filter(phase, int(self.n_taps), 
+        self.inst_freq = sps.savgol_filter(phase, int(self.n_taps),
                                            1, deriv=1, delta=1e-7)
-        
+
         return
-    
+
     def EMD_signal(self):
         """Uses Empirical Mode Decomposition to denoise and analyze the
         input signal."""
@@ -555,54 +612,64 @@ class Pixel(object):
         sd = 1
 
         # loop controls how many EMD modes
-        modes = 1        
+        modes = 1
         for i in xrange(modes):
 
             # Continuously adjusts signal until offset within 0.1 f.o.m.
             while sd > .1:
-    
+
                 maxpeaks, minpeaks = get_peaks(x1)
-    
+
                 fmax = spi.UnivariateSpline(maxpeaks, x1[maxpeaks], k=3)
                 fmin = spi.UnivariateSpline(minpeaks, x1[minpeaks], k=3)
                 fmax.set_smoothing_factor(0)
                 fmin.set_smoothing_factor(0)
-                
+
                 smean = (fmax(tt) + fmin(tt)) / 2.0
-    
+
                 x2 = x1 - smean
-    
+
                 # figure of merit for EMD decomposition
                 sd = np.sum((x1 - x2)**2) / np.sum(x1**2)
-    
+
                 x1 = x2
-    
+
             imfs.append(x1)
             signal = signal - x1
 
         self.signal = imfs[0]
-        
+
         return
 
     def EMD_inst_freq(self):
-        """Calculates instantaneous frequency from EMD Mode 0."""      
-        
+        """Calculates instantaneous frequency from EMD Mode 0."""
+
         savgolc = int(self.n_taps)
 
         self.inst_freq = sps.savgol_filter(self.phase, savgolc, 1, deriv=1,
-                                           delta=1/self.sampling_rate)  
+                                           delta=1/self.sampling_rate)
         self.inst_freq = self.inst_freq/(2*np.pi) - self.drive_freq
 
         # Restores length
         self.inst_freq = np.pad(self.inst_freq, ((savgolc-1)/2,0),'constant')
         self.inst_freq = self.inst_freq[:len(self.signal)]
-        
+
         # Bring trigger to zero.
         self.tidx = int(self.tidx)
-        self.inst_freq -= self.inst_freq[self.tidx]    
+        self.inst_freq -= self.inst_freq[self.tidx]
 
         return
 
+    def plot(self, newplot=True, c1='r', c2='g'):
+        """ Quick visualization of best_fit and cut."""
+        
+        if newplot:
+            plt.figure()
+        
+        plt.plot(self.cut, c1+'-')
+        plt.plot(self.best_fit, c2+'--')
+                
+        return
 
     def analyze(self):
         """
@@ -651,14 +718,14 @@ class Pixel(object):
 
                 # Calculate signal by Hilbert-Huang transform.
                 self.EMD_signal()
-                
+
                 # Get the analytical signal doing a Hilbert transform.
                 self.hilbert_transform()
 
                 # Calculate the phase from analytic signal.
-                self.calculate_phase()           
-                
-                # Calculate the instantaneous frequency             
+                self.calculate_phase()
+
+                # Calculate the instantaneous frequency
                 self.EMD_inst_freq()
 
             elif self.wavelet_analysis:
@@ -670,7 +737,9 @@ class Pixel(object):
                 # Hilbert transform method
 
                 # Apply window.
-                self.apply_window()
+                if self.window != 0:
+                    
+                    self.apply_window()
 
                 # Filter the signal with a filter, if wanted.
                 if self.bandpass_filter == 1:
@@ -703,8 +772,18 @@ class Pixel(object):
                     self.fit_phase()
 
                 else:
+                   
+                    if self.fit_form == 'PRODUCT':
 
-                    self.fit_freq_product()
+                        self.fit_freq_product()
+
+                    elif self.fit_form == 'SUM':
+
+                        self.fit_freq_sum()
+
+                    elif self.fit_form == "EXP":
+                        
+                        self.fit_freq_exp()
 
             else:
 
@@ -713,7 +792,7 @@ class Pixel(object):
             # Restore the length.
             self.restore_signal()
 
-            # If caught any exception, set everything to zero and log it.
+        # If caught any exception, set everything to zero and log it.
         except Exception as exception:
             self.tfp = 0
             self.shift = 0
@@ -727,4 +806,7 @@ class Pixel(object):
 
         else:
 
+            if self.tfp == 5e-7:
+                return np.NaN, np.NaN, self.inst_freq
+                
             return self.tfp, self.shift, self.inst_freq

@@ -6,14 +6,14 @@ __maintainer__ = "Durmus U. Karatay"
 __email__ = "ukaratay@uw.edu"
 __status__ = "Production"
 
-import ConfigParser
+import configparser
 import sys
 from igor.binarywave import load as loadibw
 from numpy.lib.npyio import loadtxt
 from os.path import splitext
 
 
-def signal(path, skiprows=1):
+def signal(path, skiprows=0):
     """
     Loads .ibw or ASCII files and return it as a numpy.ndarray.
 
@@ -37,12 +37,12 @@ def signal(path, skiprows=1):
         signal_array = loadibw(path)['wave']['wData']  # Load data.
 
     elif ext.lower() == '.txt':
-
+        
         signal_array = loadtxt(path, skiprows=skiprows)
 
     else:
 
-        print "Unrecognized file type!"
+        print ("Unrecognized file type!")
         sys.exit(0)
 
     signal_array.flags.writeable = True  # Make array writable.
@@ -70,7 +70,8 @@ def configuration(path):
         total_time = float (in seconds)
         sampling_rate = int (in Hz)
         drive_freq = float (in Hz)
-
+        Q = float (default: 500)
+        
         roi = float (in seconds)
         window = string (see documentation of scipy.signal.get_window)
         bandpass_filter = int (0: no filtering, 1: FIR filter, 2: IIR filter)
@@ -81,18 +82,20 @@ def configuration(path):
         recombination = bool (0: FF-trEFMm, 1: Recombination)
         phase_fitting = bool (0: frequency fitting, 1: phase fitting)
         EMD_analysis = bool (0: Hilbert method, 1: Hilbert-Huang fitting)
+        
+        fit_form = string (EXP, PRODUCT, SUM for type of fit function)
 
     """
 
     # Create a parser for configuration file and parse it.
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     config.read(path)
     parameters = {}
 
     # These are the keys for parameters.
-    paraf_keys = ['trigger', 'total_time', 'drive_freq', 'sampling_rate']
-    procs_keys = ['window']
-    procf_keys = ['roi']
+    paraf_keys = ['trigger', 'total_time', 'drive_freq', 'sampling_rate', 'Q']
+    procs_keys = ['window', 'fit_form']
+    procf_keys = ['roi', 'FastScanSize', 'SlowScanSize', 'liftheight']
     proci_keys = ['n_taps', 'filter_bandwidth', 'bandpass_filter', 
                   'wavelet_analysis', 'wavelet_parameter', 'recombination',
                   'phase_fitting', 'EMD_analysis']
@@ -174,7 +177,7 @@ def simulation_configuration(path):
     """
 
     # Create a parser for configuration file and parse it.
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     config.read(path)
 
     sim_params = {}

@@ -6,7 +6,7 @@ fitting = Extension('ffta.utils.fitting_c', ['ffta/utils/fitting_c.pyx'],
                     include_dirs=[numpy.get_include()])
 setup(
     name='FFTA',
-    version='1.3',
+    version='1.4',
     description='FF-trEFM Analysis Package',
 
     author='Rajiv Giridharagopal',
@@ -18,8 +18,7 @@ setup(
     install_requires=['numpy>=1.9.2',
                       'scipy>=0.15.1',
                       'igor>=0.2',
-                      'progressbar>=2.2',
-					  'pywavelets>=0.3.0',
+                      'pywavelets>=0.3.0',
                       'nitime',
                       'numexpr'],
 
