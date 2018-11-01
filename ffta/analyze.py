@@ -16,7 +16,6 @@ import numpy as np
 import ffta.line as line
 from ffta.pixel_utils import load
 import badpixels
-from progressbar import ProgressBar, ETA, Percentage
 
 # Plotting imports
 import matplotlib as mpl
@@ -73,7 +72,7 @@ def main(argv=None):
     n_pixels, parameters = load.configuration(config_file)
 
     print('Recombination: ', parameters['recombination'])
-    if parameters.has_key('phase_fitting'):    
+    if 'phase_fitting' in parameters:    
 
         print('Phase fitting: ', parameters['phase_fitting'])
 
@@ -108,10 +107,6 @@ def main(argv=None):
         text = plt.figtext(0.4, 0.1, '')
         plt.show()
 
-        # Set the progress bar.
-        widgets = [Percentage(), ' / ', ETA()]
-        pbar = ProgressBar(widgets=widgets, maxval=len(data_files)).start()
-
         # Load every file in the file list one by one.
         for i, data_file in enumerate(data_files):
 
@@ -143,11 +138,6 @@ def main(argv=None):
             plt.pause(0.0001)
 
             del line_inst  # Delete the instance to open up memory.
-
-            pbar.update(i + 1)  # Update the progress bar.
-
-        #plt.close(fig)
-        pbar.finish()  # Finish the progress bar.
 
     elif args.p:
 
