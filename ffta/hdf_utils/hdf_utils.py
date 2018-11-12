@@ -46,10 +46,10 @@ def _which_h5_group(h5_path):
     # h5_path is a file path
     if 'str' in ftype:
         
-        hdf = px.ioHDF5(h5_path)
-        p = px.hdf_utils.find_results_groups(hdf.file, 'FF_Group')[0]
+        hdf = px.io.HDFwriter(h5_path)
+        p = px.hdf_utils.find_dataset(hdf.file, 'FF_Raw')[0]
     
-        return p
+        return p.parent
 
     # h5_path is an HDF Group
     if 'Group' in ftype:
@@ -57,7 +57,9 @@ def _which_h5_group(h5_path):
     
     # h5_path is an HDF File
     elif 'File' in ftype:
-        p = px.hdf_utils.find_results_groups(h5_path, 'FF_Group')[0]
+        p = px.hdf_utils.find_dataset(h5_path, 'FF_Raw')[0]
+        
+        p = p.parent
         
     elif 'Dataset' in ftype:
         p = h5_path.parent

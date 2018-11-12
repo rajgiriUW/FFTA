@@ -12,7 +12,7 @@ import h5py
 
 from matplotlib import pyplot as plt
 
-from ffta.utils import hdf_utils
+from ffta.hdf_utils import hdf_utils, get_utils
 import pycroscopy as px
 import pyUSID as usid
 
@@ -24,7 +24,7 @@ Analyzes an HDF_5 format trEFM data set and writes the result into that file
 
 def find_FF(h5_path):
     
-    parameters = hdf_utils.get_params(h5_path)
+    parameters = get_utils.get_params(h5_path)
     h5_gp = hdf_utils._which_h5_group(h5_path)
     
     return h5_gp, parameters
@@ -92,11 +92,11 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
     # Looks for a ref first before searching for ds, h5_ds is group to process
     if any(ref):
         h5_ds = h5_file[ref]
-        parameters = hdf_utils.get_params(h5_ds)
+        parameters = get_utils.get_params(h5_ds)
         
     elif ds != 'FF_Raw':
         h5_ds = px.hdf_utils.find_dataset(h5_file, ds)[-1]
-        parameters = hdf_utils.get_params(h5_ds)
+        parameters = get_utils.get_params(h5_ds)
     
     else:
         h5_ds, parameters = find_FF(h5_file)
@@ -154,7 +154,7 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
     # Load every file in the file list one by one.
     for i in range(num_rows):
 
-        line_inst = hdf_utils.get_line(h5_ds, i)
+        line_inst = get_utils.get_line(h5_ds, i)
         
         if clear_filter:
             line_inst.clear_filter_flags()

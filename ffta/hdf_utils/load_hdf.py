@@ -150,8 +150,8 @@ def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5', textlo
         raise Exception('XY Scan Size must be either empty (in .cfg) or length-2')
     
     if not any(folder_path):
-        folder_path = px.io_utils.uiGetFile(caption='Select Config File in FF-trEFM folder',
-                                                file_filter='Config Files (*.cfg)')
+        folder_path = px.io_utils.file_dialog(caption='Select Config File in FF-trEFM folder',
+                                              file_filter='Config Files (*.cfg)')
         folder_path = '/'.join(folder_path.split('/')[:-1])
     
     print(folder_path, 'folder path')    
@@ -166,6 +166,9 @@ def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5', textlo
         
         data_files = [os.path.join(folder_path, name)
                       for name in filelist if name[-3:] == 'txt']
+    
+    if not data_files:
+        raise OSError('No data files found! Are these text files?')
     
     config_file = [os.path.join(folder_path, name)
                    for name in filelist if name[-3:] == 'cfg'][0]
