@@ -17,6 +17,7 @@ from pycroscopy.io.write_utils import build_ind_val_dsets, Dimension
 from ffta.pixel_utils import load
 from ffta.hdf_utils import gl_ibw
 from ffta.hdf_utils import hdf_utils
+from ffta.hdf_utils import get_utils
 
 import warnings
 
@@ -368,10 +369,10 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=True):
     # Set up the position vectors for the data
     pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
                 Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
-    ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False, verbose=verbose)
+    ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False)
     
     spec_desc = [Dimension('Time', 's',np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
-    ds_spec_inds, ds_spec_vals = build_ind_val_dsets(spec_desc, is_spectral=True, verbose=verbose)
+    ds_spec_inds, ds_spec_vals = build_ind_val_dsets(spec_desc, is_spectral=True)
     
     ds_raw = px.io.VirtualDataset('FF_Avg', data=[[0],[0]], dtype=np.float32,
                                   parent=ff_avg_group, maxshape=[num_cols*num_rows, pnts_per_avg], 
@@ -400,7 +401,7 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=True):
         if verbose == True:
             print('#### Row:',i,'####')
                   
-        _ll = hdf_utils.get_line(h5_main, pnts=pnts_per_line, line_num=i, array_form=False, avg=False)  
+        _ll = get_utils.get_line(h5_main, pnts=pnts_per_line, line_num=i, array_form=False, avg=False)  
         _ll = _ll.pixel_wise_avg()
         h5_avg[i*num_cols:(i+1)*num_cols,:] = _ll[:,:]
     
@@ -564,7 +565,7 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         Path to hdf5 file on disk
     """
     
-    commands = ['from ffta.utils import hdf_utils']
+    commands = ['from ffta.hdf_utils import hdf_utils, get_utils']
 
     try:
         hdf = px.io.HDFwriter(h5_path)
@@ -585,20 +586,20 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         pass
     
     try:
-        parameters = hdf_utils.get_params(hdf.file)
-        commands.append("parameters = hdf_utils.get_params(hdf.file)")
+        parameters = get_utils.get_params(hdf.file)
+        commands.append("parameters = get_utils.get_params(hdf.file)")
     except:
         pass
     
     try:
-        h5_ll = hdf_utils.get_line(h5_path, line_num=0)
-        commands.append("h5_ll = hdf_utils.get_line(h5_path, line_num=0)")
+        h5_ll = get_utils.get_line(h5_path, line_num=0)
+        commands.append("h5_ll = get_utils.get_line(h5_path, line_num=0)")
     except:
         pass
     
     try:
-        h5_px = hdf_utils.get_pixel(h5_path, rc=[0,0])
-        commands.append("h5_px = hdf_utils.get_pixel(h5_path, rc=[0,0])")
+        h5_px = get_utils.get_pixel(h5_path, rc=[0,0])
+        commands.append("h5_px = get_utils.get_pixel(h5_path, rc=[0,0])")
     except:
         pass
     

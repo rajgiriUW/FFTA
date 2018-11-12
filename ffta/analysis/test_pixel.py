@@ -5,7 +5,7 @@ Created on Thu Mar  8 13:17:12 2018
 @author: Raj
 """
 
-from ffta.utils import hdf_utils
+from ffta.hdf_utils import hdf_utils
 from matplotlib import pyplot as plt
 
 def test_pixel(h5_file, param_changes={}, pxls = 1, showplots = True, 

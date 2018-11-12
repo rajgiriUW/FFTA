@@ -10,6 +10,8 @@ import pycroscopy as px
 from ffta.line import Line
 from ffta.pixel import Pixel
 
+import numpy as np
+
 '''
 Functions for extracting certain segments from an HDF FFtrEFM file
 '''
@@ -31,6 +33,9 @@ def get_params(h5_path, key='', verbose=False, del_indices=True):
     del_indices : bool, optional
         Deletes relative links within the H5Py and any quantity/units
     """
+    
+    if isinstance(h5_path, str):
+        h5_path = px.io.HDFwriter(h5_path).file
     
     parameters =  px.hdf_utils.get_attributes(h5_path)
     
@@ -143,8 +148,9 @@ def get_line(h5_path, line_num, pnts=1,
     if 'Dataset' not in str(type(h5_path)):
     
         parameters =  get_params(h5_path)
+        h5_file = px.io.HDFwriter(h5_path).file
 
-        d = h5_path['FF_Raw']
+        d = px.hdf_utils.find_dataset(h5_file, 'FF_Raw')[0]
         c = parameters['num_cols']
         pnts = parameters['pnts_per_line']
      
@@ -209,11 +215,12 @@ def get_pixel(h5_path, rc, pnts = 1,
     # If not a dataset, then find the associated Group
     if 'Dataset' not in str(type(h5_path)):
         p = get_params(h5_path)
+        h5_file = px.io.HDFwriter(h5_path).file
     
-        d = h5_path['FF_Raw']
-        c = p.attrs['num_cols']
-        pnts = int(p.attrs['pnts_per_pixel'])
-        parameters =  px.hdf_utils.get_attributes(p)
+        d = px.hdf_utils.find_dataset(h5_path, 'FF_Raw')[0]
+        c = p['num_cols']
+        pnts = int(p['pnts_per_pixel'])
+        parameters =  px.hdf_utils.get_attributes(d.parent)
         
     else:
         

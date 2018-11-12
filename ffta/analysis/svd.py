@@ -6,13 +6,15 @@ Created on Wed Mar  7 22:04:39 2018
 """
 
 import pycroscopy as px
+import pyUSID as usid
 import numpy as np
 
 from pycroscopy.processing.svd_utils import SVD
 
 from matplotlib import pyplot as plt
 
-from . import hdf_utils
+from ffta.hdf_utils import hdf_utils, get_utils
+
 
 """
 Wrapper to SVD functions, specific to ffta Class.
@@ -45,12 +47,12 @@ def FF_SVD(h5_main, num_components=128, show_plots=True, override=True):
     
     """
     
-    if not(isinstance(h5_main, px.core.io.pycro_data.PycroDataset)):
-        h5_main = px.core.PycroDataset(h5_main)
+    if not(isinstance(h5_main, usid.USIDataset)):
+        h5_main = usid.USIDataset(h5_main)
     
     h5_svd = SVD(h5_main, num_components=num_components)
     
-    parm_dict = hdf_utils.get_params(h5_main)
+    parm_dict = get_utils.get_params(h5_main)
     num_rows = parm_dict['num_rows']
     num_cols = parm_dict['num_cols']
     
