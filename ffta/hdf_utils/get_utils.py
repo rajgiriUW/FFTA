@@ -184,6 +184,7 @@ def get_pixel(h5_path, rc, pnts = 1,
     """
     Gets a pixel of data, returns all the averages within that pixel
     Returns a specific key if requested
+    Supplying a direct link to a Dataset is MUCH faster than just the file
     
     h5_path : str or h5py or Dataset
         Can pass either an h5_path to a file or a file already in use or specific Dataset
@@ -217,7 +218,7 @@ def get_pixel(h5_path, rc, pnts = 1,
         p = get_params(h5_path)
         h5_file = px.io.HDFwriter(h5_path).file
     
-        d = px.hdf_utils.find_dataset(h5_path, 'FF_Raw')[0]
+        d = px.hdf_utils.find_dataset(h5_file, 'FF_Raw')[0]
         c = p['num_cols']
         pnts = int(p['pnts_per_pixel'])
         parameters =  px.hdf_utils.get_attributes(d.parent)

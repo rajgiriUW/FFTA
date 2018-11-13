@@ -289,9 +289,14 @@ def create_HDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     spec_desc = [Dimension('Time', 's',np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
     ds_spec_inds, ds_spec_vals = build_ind_val_dsets(spec_desc, is_spectral=True, verbose=verbose)
     
-    ds_raw = px.io.VirtualDataset('FF_Raw', data=[[0],[0]], dtype=np.float32,
+    try:
+        ds_raw = px.io.VirtualDataset('FF_Raw', data=[[0],[0]], dtype=np.float32,
                                   parent=ff_group, maxshape=data_size, 
                                   chunking=(1, parm_dict['pnts_per_line']))
+    except:
+        ds_raw = px.io.VirtualDataset('FF_Raw', data=[[0],[0]], dtype=np.float32,
+                                  parent=ff_group, maxshape=data_size, 
+                                  chunking=(1, parm_dict['pnts_per_avg']))
 
     # Standard list of auxiliary datasets that get linked with the raw dataset:
     aux_ds_names = ['Position_Indices', 'Position_Values', 
@@ -374,9 +379,17 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=True):
     spec_desc = [Dimension('Time', 's',np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
     ds_spec_inds, ds_spec_vals = build_ind_val_dsets(spec_desc, is_spectral=True)
     
-    ds_raw = px.io.VirtualDataset('FF_Avg', data=[[0],[0]], dtype=np.float32,
-                                  parent=ff_avg_group, maxshape=[num_cols*num_rows, pnts_per_avg], 
-                                  chunking=(1, parm_dict['pnts_per_line']))
+    try:
+
+        ds_raw = px.io.VirtualDataset('FF_Avg', data=[[0],[0]], dtype=np.float32,
+                                      parent=ff_avg_group, maxshape=[num_cols*num_rows, pnts_per_avg], 
+                                      chunking=(1, parm_dict['pnts_per_line']))
+
+    except:
+        
+        ds_raw = px.io.VirtualDataset('FF_Avg', data=[[0],[0]], dtype=np.float32,
+                                      parent=ff_avg_group, maxshape=[num_cols*num_rows, pnts_per_avg], 
+                                      chunking=(1, parm_dict['pnts_per_avg']))
 
     # Standard list of auxiliary datasets that get linked with the raw dataset:
     aux_ds_names = ['Position_Indices', 'Position_Values', 
