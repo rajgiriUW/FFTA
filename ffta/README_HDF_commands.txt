@@ -27,7 +27,7 @@ Quick example:
 import pycroscopy as px
 from ffta import hdf_utils
 h5_path = 'E:/Data/20180216_BAPI_IDep/FF1_x10_test9.h5'
-hdf = px.ioHDF5(h5_path)
+hdf = px.io.HDFwriter(h5_path)
 h5_file = hdf.file
 h5_main = px.hdf_utils.find_dataset(hdf.file, 'FF_Raw')[0]
 parameters = px.hdf_utils.get_attributes(h5_main.parent)

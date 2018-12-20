@@ -77,6 +77,8 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
     inst_freq : ndarray (2D)
         instantaneous frequency array, an N x p array of N=rows*cols points
             and where p = points_per_signal (e.g. 16000 for 1.6 ms @10 MHz sampling)
+    h5_if : USIDataset of h5_if (instantaneous frequency)
+    
     """
 #    logging.basicConfig(filename='error.log', level=logging.INFO)
     ftype = str(type(h5_file))
@@ -201,8 +203,8 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
     _, _,_, tfp_fixed = save_ht_outs(h5_file, h5_if.parent, tfp, shift, parameters, verbose=verbose)
     
     #save_CSV(h5_path, tfp, shift, tfp_fixed, append=ds)
-
-    return tfp, shift, inst_freq
+       
+    return tfp, shift, inst_freq, h5_if
 
 def save_process(h5_file, h5_gp, inst_freq, parm_dict, verbose=False):
     """ Adds Instantaneous Frequency as a main dataset """

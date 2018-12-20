@@ -114,7 +114,9 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False,
         
         return h5_path, parm_dict, h5_avg
     
-    return h5_path, parm_dict
+    h5_avg = []
+    
+    return h5_path, parm_dict, h5_avg
 
 def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5', textload = False):
     """
