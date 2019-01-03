@@ -41,8 +41,8 @@ hdf_commands : Creates workspace-compatible commands for common HDF variable sta
 *For debugging, not in active use
 
 Example usage:
-    >>from ffta.utils import loadHDF5
-    >>h5_path, parameters = loadHDF5.loadHDF5_ibw(ibw_file_path='E:/Data/FF_image_file.ibw', 
+    >>from ffta.hdf_utils import load_hdf
+    >>h5_path, parameters = load_hdf.loadHDF5_ibw(ibw_file_path='E:/Data/FF_image_file.ibw', 
                                                   ff_file_path=r'E:\Data\FF_Folder')
     >>loadHDF5.hdf_commands(h5_path) #prints out commands available
 """
@@ -269,8 +269,10 @@ def create_HDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
     dt = 1/parm_dict['sampling_rate']
     def_vec= np.arange(0, parm_dict['total_time'], dt)
     if def_vec.shape[0] != parm_dict['pnts_per_avg']:
+
         def_vec = def_vec[:-1]
         warnings.warn('Time-per-point calculation error')
+        
 
     # This takes a very long time but creates a giant NxM matrix of the data
     # N = number of points in each spectra, M = number of rows * columns
@@ -602,19 +604,19 @@ def hdf_commands(h5_path, ds='FF_Raw'):
     
     try:
         parameters = get_utils.get_params(hdf.file)
-        commands.append("parameters = get_utils.get_params(hdf.file)")
+        commands.append("parameters = ffta.hdf_utils.get_utils.get_params(hdf.file)")
     except:
         pass
     
     try:
         h5_ll = get_utils.get_line(h5_path, line_num=0)
-        commands.append("h5_ll = get_utils.get_line(h5_path, line_num=0)")
+        commands.append("h5_ll = ffta.hdf_utils.get_utils.get_line(h5_path, line_num=0)")
     except:
         pass
     
     try:
         h5_px = get_utils.get_pixel(h5_path, rc=[0,0])
-        commands.append("h5_px = get_utils.get_pixel(h5_path, rc=[0,0])")
+        commands.append("h5_px = ffta.hdf_utils.get_utils.get_pixel(h5_path, rc=[0,0])")
     except:
         pass
     
