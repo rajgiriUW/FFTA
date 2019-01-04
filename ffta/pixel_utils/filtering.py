@@ -6,10 +6,11 @@ Created on Mon Feb 26 17:15:36 2018
 """
 
 import pycroscopy as px
-from ffta.utils import hdf_utils
+from ffta.hdf_utils import get_utils, hdf_utils
 import numpy as np
 
 from ffta import pixel
+from matplotlib import pyplot as plt
 
 import warnings
 
@@ -20,16 +21,13 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
     
     Usage:
     >> h5_ll = hdf_utils.get_line(h5_file, linenum, avg=True)
-    >> filt_sig, freq_filts, _,_ = filtering.FFT_testfilter(h5_avg, 
+    >> filt_sig, freq_filts, _,_ = filtering.FFT_testfilter(h5_ll, 
                                                             parameters, 
                                                             narrowband=True, 
                                                             noise_tolerance=1e-5, 
                                                             show_plots=True)
     
-    Some important notes:
-        1) This works on any line. However, you should have the filter work on a single signal
-        2) Meaning, 
-    
+    This works on any line. However, you should have the filter work on a single signal
     
     hdf_file : h5Py file or Nx1 NumPy array (preferred is NumPy array)
         hdf_file to work on, e.g. hdf.file['/FF-raw'] if that's a Dataset
@@ -76,8 +74,8 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
     ftype = str(type(hdf_file))
     if ('h5py' in ftype) or ('Dataset' in ftype):   #hdf file
         
-        parameters = hdf_utils.get_params(hdf_file)
-        hdf_file = hdf_utils.get_line(hdf_file, linenum, array_form=True, transpose=False)
+        parameters = get_utils.get_params(hdf_file)
+        hdf_file = get_utils.get_line(hdf_file, linenum, array_form=True, transpose=False)
         hdf_file = hdf_file.flatten()
     
     if len(hdf_file.shape) == 2:
@@ -120,8 +118,8 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
         nbf = px.processing.fft.HarmonicPassFilter(num_pts, samp_rate, drive, bandwidth, 7)
         freq_filts = [nbf]
 
-    composite_filter = px.fft.build_composite_freq_filter(freq_filts)
-    print('Composite filter of len:', len(composite_filter))
+#    composite_filter = px.fft.build_composite_freq_filter(freq_filts)
+#    print('Composite filter of len:', len(composite_filter))
 
     # Test filter on a single line:
     filt_line, fig_filt, axes_filt = px.processing.gmode_utils.test_filter(hdf_file,
@@ -135,25 +133,19 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
         
     # Test filter out in Pixel
     if check_filter:
+        plt.figure()
+        plt.plot(hdf_file, 'b')
+        plt.plot(filt_line, 'k')
+        
         h5_px_filt = pixel.Pixel(filt_line, parameters)
         h5_px_filt.clear_filter_flags()
         h5_px_filt.analyze()
-        h5_px_filt.plot(newplot=True)
+        h5_px_filt.plot(newplot=True, c1='b', c2='k')
         
-        h5_px_filt = pixel.Pixel(filt_line, parameters)
-        
-        h5_px_filt.analyze()
-        h5_px_filt.plot(newplot=True)
-            
         h5_px_raw = pixel.Pixel(hdf_file, parameters)
         h5_px_raw.analyze()
-        h5_px_raw.plot(newplot=True,c1='b', c2='k')
+        h5_px_raw.plot(newplot=True, c1='b', c2='k')
 
-        h5_px_raw = pixel.Pixel(hdf_file, parameters)
-        h5_px_raw.clear_filter_flags()
-        h5_px_raw.analyze()
-        h5_px_raw.plot(newplot=True,c1='r', c2='y')
-    
 #    h5_px_raw_unfilt = pixel.Pixel(hdf_file, parameters)
 #    h5_px_raw_unfilt.clear_filter_flags()
 #    h5_px_raw_unfilt.analyze()
@@ -200,8 +192,8 @@ def FFT_filter(h5_main, freq_filts, noise_tolerance=5e-7, make_new=False):
         print('Taking previously computed results')
     
     h5_filt = h5_filt_grp['Filtered_Data']
-    px.hdf_utils.copyAttributes(h5_main.parent, h5_filt)
-    px.hdf_utils.copyAttributes(h5_main.parent, h5_filt.parent)
+    px.hdf_utils.copy_attributes(h5_main.parent, h5_filt)
+    px.hdf_utils.copy_attributes(h5_main.parent, h5_filt.parent)
 
 
     return h5_filt

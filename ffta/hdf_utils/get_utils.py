@@ -95,17 +95,13 @@ def change_params(h5_path, new_vals = {}, verbose=False):
             print(key,':',parameters[key])
     
     for key in new_vals:
-        gp.attrs[key] = new_vals[key]
+        h5_path.attrs[key] = new_vals[key]
         
-    parameters =  px.hdf_utils.get_attributes(gp)
-    
     if verbose:
         print('\nNew parameters:')
         for key in new_vals:
             print(key,':',parameters[key])
 
-    parameters =  px.hdf_utils.get_attributes(gp)
-    
     return parameters
     
 def get_line(h5_path, line_num, pnts=1, 
