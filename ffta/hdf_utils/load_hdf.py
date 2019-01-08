@@ -104,7 +104,7 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False,
 
     if verbose:
         print("### Loading file folder ###")
-    h5_path, _, parm_dict = loadHDF5_folder(folder_path=ff_file_path,
+    h5_path, _, parm_dict = loadHDF5_folder(folder_path=ff_file_path, verbose=verbose,
                                             xy_scansize=xy_scansize, file_name=h5_path)
 
     if average:
@@ -204,6 +204,7 @@ def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5', textlo
     # Check ratio is correct
     ratio = parm_dict['FastScanSize'] / parm_dict['SlowScanSize']
     if n_pixels/len(data_files) != ratio:
+        print(parm_dict['FastScanSize'],parm_dict['SlowScanSize'], n_pixels/len(data_files), len(data_files))
         raise Exception('X-Y Dimensions do not match filelist. Add manually to config file. Check n-pixels.')
 
     folder_path = folder_path.replace('/','\\')
