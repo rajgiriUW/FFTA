@@ -153,6 +153,8 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
     text = tfp_ax.text(num_cols/2,num_rows+3, '')
     plt.show()
 
+    print('Analyzing with roi of', parameters['roi'])
+
     # Load every file in the file list one by one.
     for i in range(num_rows):
 
