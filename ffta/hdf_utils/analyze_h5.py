@@ -12,7 +12,7 @@ import h5py
 
 from matplotlib import pyplot as plt
 
-from ffta.utils import hdf_utils
+from ffta.hdf_utils import hdf_utils, get_utils
 import pycroscopy as px
 import pyUSID as usid
 
@@ -24,7 +24,7 @@ Analyzes an HDF_5 format trEFM data set and writes the result into that file
 
 def find_FF(h5_path):
     
-    parameters = hdf_utils.get_params(h5_path)
+    parameters = get_utils.get_params(h5_path)
     h5_gp = hdf_utils._which_h5_group(h5_path)
     
     return h5_gp, parameters
@@ -77,6 +77,8 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
     inst_freq : ndarray (2D)
         instantaneous frequency array, an N x p array of N=rows*cols points
             and where p = points_per_signal (e.g. 16000 for 1.6 ms @10 MHz sampling)
+    h5_if : USIDataset of h5_if (instantaneous frequency)
+    
     """
 #    logging.basicConfig(filename='error.log', level=logging.INFO)
     ftype = str(type(h5_file))
@@ -92,11 +94,11 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
     # Looks for a ref first before searching for ds, h5_ds is group to process
     if any(ref):
         h5_ds = h5_file[ref]
-        parameters = hdf_utils.get_params(h5_ds)
+        parameters = get_utils.get_params(h5_ds)
         
     elif ds != 'FF_Raw':
         h5_ds = px.hdf_utils.find_dataset(h5_file, ds)[-1]
-        parameters = hdf_utils.get_params(h5_ds)
+        parameters = get_utils.get_params(h5_ds)
     
     else:
         h5_ds, parameters = find_FF(h5_file)
@@ -151,10 +153,12 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
     text = tfp_ax.text(num_cols/2,num_rows+3, '')
     plt.show()
 
+    print('Analyzing with roi of', parameters['roi'])
+
     # Load every file in the file list one by one.
     for i in range(num_rows):
 
-        line_inst = hdf_utils.get_line(h5_ds, i)
+        line_inst = get_utils.get_line(h5_ds, i)
         
         if clear_filter:
             line_inst.clear_filter_flags()
@@ -201,8 +205,8 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
     _, _,_, tfp_fixed = save_ht_outs(h5_file, h5_if.parent, tfp, shift, parameters, verbose=verbose)
     
     #save_CSV(h5_path, tfp, shift, tfp_fixed, append=ds)
-
-    return tfp, shift, inst_freq
+       
+    return tfp, shift, inst_freq, h5_if
 
 def save_process(h5_file, h5_gp, inst_freq, parm_dict, verbose=False):
     """ Adds Instantaneous Frequency as a main dataset """
@@ -220,9 +224,9 @@ def save_process(h5_file, h5_gp, inst_freq, parm_dict, verbose=False):
     # Create dimensions
     pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
                 Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
-    ds_pos_ind, ds_pos_val = build_ind_val_matrices(pos_desc, is_spectral=False, verbose=verbose)
+    #ds_pos_ind, ds_pos_val = build_ind_val_matrices(pos_desc, is_spectral=False)
     spec_desc = [Dimension('Time', 's',np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
-    ds_spec_inds, ds_spec_vals = build_ind_val_matrices(spec_desc, is_spectral=True, verbose=verbose)
+    #ds_spec_inds, ds_spec_vals = build_ind_val_matrices(spec_desc, is_spectral=True)
 
     # Writes main dataset
     h5_if = px.hdf_utils.write_main_dataset(h5_meas_group,  

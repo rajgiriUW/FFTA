@@ -1,9 +1,9 @@
 """analyze.py: Runs the FF-trEFM Analysis for a set of given files."""
 
-__author__ = "Durmus U. Karatay"
-__copyright__ = "Copyright 2014, Ginger Lab"
-__maintainer__ = "Durmus U. Karatay"
-__email__ = "ukaratay@uw.edu"
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2019, Ginger Lab"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 __status__ = "Development"
 
 import os

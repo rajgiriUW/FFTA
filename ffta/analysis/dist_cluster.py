@@ -13,7 +13,8 @@ from pyUSID.processing.process import Process
 from pyUSID.io.write_utils import build_ind_val_matrices, Dimension
 from matplotlib import pyplot as plt
 import matplotlib.animation as animation
-from ffta.pixel_utils import mask_utils, hdf_utils
+from ffta.analysis import mask_utils
+from ffta.hdf_utils import hdf_utils
 from ffta import pixel
 """
 Creates a Class with various data grouped based on distance to masked edges

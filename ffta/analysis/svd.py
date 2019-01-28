@@ -6,13 +6,15 @@ Created on Wed Mar  7 22:04:39 2018
 """
 
 import pycroscopy as px
+import pyUSID as usid
 import numpy as np
 
 from pycroscopy.processing.svd_utils import SVD
 
 from matplotlib import pyplot as plt
 
-from . import hdf_utils
+from ffta.hdf_utils import hdf_utils, get_utils
+
 
 """
 Wrapper to SVD functions, specific to ffta Class.
@@ -45,12 +47,12 @@ def FF_SVD(h5_main, num_components=128, show_plots=True, override=True):
     
     """
     
-    if not(isinstance(h5_main, px.core.io.pycro_data.PycroDataset)):
-        h5_main = px.core.PycroDataset(h5_main)
+    if not(isinstance(h5_main, usid.USIDataset)):
+        h5_main = usid.USIDataset(h5_main)
     
     h5_svd = SVD(h5_main, num_components=num_components)
     
-    parm_dict = hdf_utils.get_params(h5_main)
+    parm_dict = get_utils.get_params(h5_main)
     num_rows = parm_dict['num_rows']
     num_cols = parm_dict['num_cols']
     
@@ -65,7 +67,7 @@ def FF_SVD(h5_main, num_components=128, show_plots=True, override=True):
 
     # abundance maps (eigenvalues) and eigenvectors    
     abun_maps = np.reshape(h5_U[:,:25], (num_rows, num_cols,-1))
-    eigen_vecs = h5_V[:9, :]
+    eigen_vecs = h5_V[:16, :]
     h5_spec_vals = h5_main.get_spec_values('Time')
     
     if show_plots:
@@ -81,12 +83,12 @@ def FF_SVD(h5_main, num_components=128, show_plots=True, override=True):
         
         fig_skree, axes =px.plot_utils.plot_scree(h5_S, title='Skree plot')
         
-        fig_abun, axes = px.plot_utils.plot_map_stack(abun_maps, num_comps=25, title='SVD Abundance Maps',
+        fig_abun, axes = px.plot_utils.plot_map_stack(abun_maps, num_comps=16, title='SVD Abundance Maps',
                                                       color_bar_mode='single', cmap='inferno', reverse_dims=True, fig_mult=(3.5,3.5))
 
         fig_eigvec, axes = px.plot_utils.plot_curves(h5_spec_vals*1e3, eigen_vecs, use_rainbow_plots=False, 
                                                      x_label='Time (ms)', y_label='Displacement (a.u.)', 
-                                                     num_plots=9, subtitle_prefix='Component', 
+                                                     num_plots=16, subtitle_prefix='Component', 
                                                      title='SVD Eigenvectors', evenly_spaced=False)
         
         fig_eigvec.tight_layout()
@@ -105,12 +107,12 @@ def FF_SVD_filter(h5_main, clean_components=None):
         This must be the same as where SVD was performed
     
     """
-    if not(isinstance(h5_main, px.core.io.pycro_data.PycroDataset)):
-        h5_main = px.core.PycroDataset(h5_main)
+    if not(isinstance(h5_main, usid.USIDataset)):
+        h5_main = usid.USIDataset(h5_main)
         
     h5_rb = px.processing.svd_utils.rebuild_svd(h5_main, components=clean_components)
     
-    parameters = hdf_utils.get_params(h5_main)
+    parameters = get_utils.get_params(h5_main)
     
     for key in parameters:
         if key not in h5_rb.attrs:

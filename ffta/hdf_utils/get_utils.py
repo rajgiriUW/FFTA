@@ -10,6 +10,8 @@ import pycroscopy as px
 from ffta.line import Line
 from ffta.pixel import Pixel
 
+import numpy as np
+
 '''
 Functions for extracting certain segments from an HDF FFtrEFM file
 '''
@@ -31,6 +33,9 @@ def get_params(h5_path, key='', verbose=False, del_indices=True):
     del_indices : bool, optional
         Deletes relative links within the H5Py and any quantity/units
     """
+    
+    if isinstance(h5_path, str):
+        h5_path = px.io.HDFwriter(h5_path).file
     
     parameters =  px.hdf_utils.get_attributes(h5_path)
     
@@ -90,17 +95,13 @@ def change_params(h5_path, new_vals = {}, verbose=False):
             print(key,':',parameters[key])
     
     for key in new_vals:
-        gp.attrs[key] = new_vals[key]
+        h5_path.attrs[key] = new_vals[key]
         
-    parameters =  px.hdf_utils.get_attributes(gp)
-    
     if verbose:
         print('\nNew parameters:')
         for key in new_vals:
             print(key,':',parameters[key])
 
-    parameters =  px.hdf_utils.get_attributes(gp)
-    
     return parameters
     
 def get_line(h5_path, line_num, pnts=1, 
@@ -143,8 +144,9 @@ def get_line(h5_path, line_num, pnts=1,
     if 'Dataset' not in str(type(h5_path)):
     
         parameters =  get_params(h5_path)
+        h5_file = px.io.HDFwriter(h5_path).file
 
-        d = h5_path['FF_Raw']
+        d = px.hdf_utils.find_dataset(h5_file, 'FF_Raw')[0]
         c = parameters['num_cols']
         pnts = parameters['pnts_per_line']
      
@@ -178,6 +180,7 @@ def get_pixel(h5_path, rc, pnts = 1,
     """
     Gets a pixel of data, returns all the averages within that pixel
     Returns a specific key if requested
+    Supplying a direct link to a Dataset is MUCH faster than just the file
     
     h5_path : str or h5py or Dataset
         Can pass either an h5_path to a file or a file already in use or specific Dataset
@@ -209,11 +212,12 @@ def get_pixel(h5_path, rc, pnts = 1,
     # If not a dataset, then find the associated Group
     if 'Dataset' not in str(type(h5_path)):
         p = get_params(h5_path)
+        h5_file = px.io.HDFwriter(h5_path).file
     
-        d = h5_path['FF_Raw']
-        c = p.attrs['num_cols']
-        pnts = int(p.attrs['pnts_per_pixel'])
-        parameters =  px.hdf_utils.get_attributes(p)
+        d = px.hdf_utils.find_dataset(h5_file, 'FF_Raw')[0]
+        c = p['num_cols']
+        pnts = int(p['pnts_per_pixel'])
+        parameters =  px.hdf_utils.get_attributes(d.parent)
         
     else:
         
