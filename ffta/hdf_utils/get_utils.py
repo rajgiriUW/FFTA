@@ -37,18 +37,18 @@ def get_params(h5_path, key='', verbose=False, del_indices=True):
     if isinstance(h5_path, str):
         h5_path = px.io.HDFwriter(h5_path).file
     
-    parameters =  px.hdf_utils.get_attributes(h5_path)
+    parameters =  usid.hdf_utils.get_attributes(h5_path)
     
     # if this dataset does not have complete FFtrEFM parameters
     if 'trigger' not in parameters:
-        parameters =  px.hdf_utils.get_attributes(h5_path.parent)
+        parameters =  usid.hdf_utils.get_attributes(h5_path.parent)
 
     # still not there? hard-select the main dataset
     if 'trigger' not in parameters:
         
         try:
             h5_file = px.io.HDFwriter(h5_path).file
-            parameters = px.hdf_utils.get_attributes(h5_file['FF_Group'])
+            parameters = usid.hdf_utils.get_attributes(h5_file['FF_Group'])
             
         except:
             raise TypeError('No proper parameters file found.')
@@ -87,7 +87,7 @@ def change_params(h5_path, new_vals = {}, verbose=False):
         Prints all parameters to console
     
     """
-    parameters =  px.hdf_utils.get_attributes(h5_path)
+    parameters =  usid.hdf_utils.get_attributes(h5_path)
     
     if verbose:
         print('Old parameters:')
@@ -146,7 +146,7 @@ def get_line(h5_path, line_num, pnts=1,
         parameters =  get_params(h5_path)
         h5_file = px.io.HDFwriter(h5_path).file
 
-        d = px.hdf_utils.find_dataset(h5_file, 'FF_Raw')[0]
+        d = usid.hdf_utils.find_dataset(h5_file, 'FF_Raw')[0]
         c = parameters['num_cols']
         pnts = parameters['pnts_per_line']
      
@@ -214,10 +214,10 @@ def get_pixel(h5_path, rc, pnts = 1,
         p = get_params(h5_path)
         h5_file = px.io.HDFwriter(h5_path).file
     
-        d = px.hdf_utils.find_dataset(h5_file, 'FF_Raw')[0]
+        d = usid.hdf_utils.find_dataset(h5_file, 'FF_Raw')[0]
         c = p['num_cols']
         pnts = int(p['pnts_per_pixel'])
-        parameters =  px.hdf_utils.get_attributes(d.parent)
+        parameters =  usid.hdf_utils.get_attributes(d.parent)
         
     else:
         

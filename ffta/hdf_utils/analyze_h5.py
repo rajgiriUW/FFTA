@@ -97,7 +97,7 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
         parameters = get_utils.get_params(h5_ds)
         
     elif ds != 'FF_Raw':
-        h5_ds = px.hdf_utils.find_dataset(h5_file, ds)[-1]
+        h5_ds = usid.hdf_utils.find_dataset(h5_file, ds)[-1]
         parameters = get_utils.get_params(h5_ds)
     
     else:
@@ -219,7 +219,7 @@ def save_process(h5_file, h5_gp, inst_freq, parm_dict, verbose=False):
     num_cols = parm_dict['num_cols']
     pnts_per_avg = parm_dict['pnts_per_avg']
 
-    h5_meas_group = px.hdf_utils.create_indexed_group(h5_gp, 'processed')
+    h5_meas_group = usid.hdf_utils.create_indexed_group(h5_gp, 'processed')
 
     # Create dimensions
     pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
@@ -229,7 +229,7 @@ def save_process(h5_file, h5_gp, inst_freq, parm_dict, verbose=False):
     #ds_spec_inds, ds_spec_vals = build_ind_val_matrices(spec_desc, is_spectral=True)
 
     # Writes main dataset
-    h5_if = px.hdf_utils.write_main_dataset(h5_meas_group,  
+    h5_if = usid.hdf_utils.write_main_dataset(h5_meas_group,  
                                              inst_freq,
                                              'inst_freq',  # Name of main dataset
                                              'Frequency',  # Physical quantity contained in Main dataset
@@ -239,7 +239,7 @@ def save_process(h5_file, h5_gp, inst_freq, parm_dict, verbose=False):
                                              dtype=np.float32,  # data type / precision
                                              main_dset_attrs=parm_dict)
 
-    px.hdf_utils.copy_attributes(h5_if, h5_gp)
+    usid.hdf_utils.copy_attributes(h5_if, h5_gp)
 
     return h5_if
 
@@ -286,9 +286,9 @@ def save_CSV_from_file(h5_file, h5_path='/', append=''):
     """
     
     h5_file = px.io.HDFwriter(h5_file).file
-    tfp = px.hdf_utils.find_dataset(h5_file[h5_path], 'tfp')[0].value
-    tfp_fixed = px.hdf_utils.find_dataset(h5_file[h5_path], 'tfp_fixed')[0].value
-    shift = px.hdf_utils.find_dataset(h5_file[h5_path], 'shift')[0].value
+    tfp = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp')[0].value
+    tfp_fixed = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp_fixed')[0].value
+    shift = usid.hdf_utils.find_dataset(h5_file[h5_path], 'shift')[0].value
     
     path = h5_file.file.filename.replace('\\','/')
     path = '/'.join(path.split('/')[:-1])+'/'
@@ -320,7 +320,7 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
     
     h5_file = px.io.HDFwriter(h5_file).file
 
-    parm_dict = px.hdf_utils.get_attributes(h5_file[h5_path])
+    parm_dict = usid.hdf_utils.get_attributes(h5_file[h5_path])
 
     if 'trigger' not in parm_dict:
         parm_dict = hdf_utils.get_params(h5_file)
@@ -328,9 +328,9 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
     if 'Dataset' in str(type(h5_file[h5_path])):
         h5_path = h5_file[h5_path].parent.name
     
-    tfp = px.hdf_utils.find_dataset(h5_file[h5_path], 'tfp')[0].value
-    tfp_fixed = px.hdf_utils.find_dataset(h5_file[h5_path], 'tfp_fixed')[0].value
-    shift = px.hdf_utils.find_dataset(h5_file[h5_path], 'shift')[0].value
+    tfp = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp')[0].value
+    tfp_fixed = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp_fixed')[0].value
+    shift = usid.hdf_utils.find_dataset(h5_file[h5_path], 'shift')[0].value
     
     xs = parm_dict['FastScanSize']
     ys = parm_dict['SlowScanSize']

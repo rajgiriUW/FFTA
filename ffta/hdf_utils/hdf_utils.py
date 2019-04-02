@@ -47,7 +47,7 @@ def _which_h5_group(h5_path):
     if 'str' in ftype:
         
         hdf = px.io.HDFwriter(h5_path)
-        p = px.hdf_utils.find_dataset(hdf.file, 'FF_Raw')[0]
+        p = usid.hdf_utils.find_dataset(hdf.file, 'FF_Raw')[0]
     
         return p.parent
 
@@ -57,7 +57,7 @@ def _which_h5_group(h5_path):
     
     # h5_path is an HDF File
     elif 'File' in ftype:
-        p = px.hdf_utils.find_dataset(h5_path, 'FF_Raw')[0]
+        p = usid.hdf_utils.find_dataset(h5_path, 'FF_Raw')[0]
         
         p = p.parent
         
@@ -160,12 +160,12 @@ def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6,
     h5_main = hdf.file[grp.name]
     
     if any(ds):
-        h5_main = px.hdf_utils.find_dataset(hdf.file[grp.name], ds)[0]
+        h5_main = usid.hdf_utils.find_dataset(hdf.file[grp.name], ds)[0]
     
     try:
-        px.hdf_utils.link_h5_objects_as_attrs(h5_main, px.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
+        usid.hdf_utils.link_h5_objects_as_attrs(h5_main, usid.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
     except:
-        px.hdf_utils.link_h5_objects_as_attrs(h5_main, px.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
+        usid.hdf_utils.link_h5_objects_as_attrs(h5_main, usid.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
 
     
     hdf.flush()
@@ -205,7 +205,7 @@ def add_single_dataset(h5_path, group, dset, dset_name, verbose=False):
 
     if verbose:
         hdf.write(grp_tr,print_log=True)
-        px.hdf_utils.print_tree(h5_file, rel_paths=True)
+        usid.hdf_utils.print_tree(h5_file, rel_paths=True)
     
     else:
         hdf.write(grp_tr,print_log=False)

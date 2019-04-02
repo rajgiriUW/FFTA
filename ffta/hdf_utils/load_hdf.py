@@ -12,6 +12,7 @@ import numpy as np
 import os
 
 import pycroscopy as px
+import pyUSID as usid
 from pycroscopy.io.write_utils import build_ind_val_dsets, Dimension
 
 from ffta.pixel_utils import load
@@ -318,7 +319,7 @@ def create_HDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
 
     pnts_per_line = parm_dict['pnts_per_line']
 
-    h5_raw = px.hdf_utils.find_dataset(hdf.file, 'FF_Raw')[0]
+    h5_raw = usid.hdf_utils.find_dataset(hdf.file, 'FF_Raw')[0]
     h5_raw.attrs['quantity'] = 'Deflection'
     h5_raw.attrs['units'] = 'V'
 
@@ -335,11 +336,11 @@ def create_HDF5_single_dataset(data_files, parm_dict, h5_path, verbose=False):
         f = hdf.file[h5_raw.name]
         f[pnts_per_line*num:pnts_per_line*(num+1), :] = line_file[:,:]
 
-    h5_main = px.hdf_utils.get_h5_obj_refs(['FF_Raw'], h5_refs)[0]
-    px.hdf_utils.link_h5_objects_as_attrs(h5_main, px.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
+    h5_main = usid.hdf_utils.get_h5_obj_refs(['FF_Raw'], h5_refs)[0]
+    usid.hdf_utils.link_h5_objects_as_attrs(h5_main, usid.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
 
     if verbose == True:
-        px.hdf_utils.print_tree(hdf.file, rel_paths=True)
+        usid.hdf_utils.print_tree(hdf.file, rel_paths=True)
 
     hdf.flush()
 
@@ -368,11 +369,11 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=True):
     """
 
     hdf = px.io.HDFwriter(h5_file)
-    h5_main = px.hdf_utils.find_dataset(hdf.file, 'FF_Raw' )[0]
+    h5_main = usid.hdf_utils.find_dataset(hdf.file, 'FF_Raw' )[0]
 
     ff_avg_group = px.io.VirtualGroup('FF_Group_Avg', parent=h5_main.parent.name)
     root_group = px.io.VirtualGroup('/')
-    parm_dict = px.hdf_utils.get_attributes(h5_main.parent)
+    parm_dict = usid.hdf_utils.get_attributes(h5_main.parent)
 
     num_rows = parm_dict['num_rows']
     num_cols = parm_dict['num_cols']
@@ -411,7 +412,7 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=True):
     ff_avg_group.attrs['pnts_per_pixel'] = 1 # to change number of pnts in a pixel
     h5_refs = hdf.write(ff_avg_group, print_log=True)
 
-    h5_avg = px.hdf_utils.find_dataset(hdf.file, 'FF_Avg')[0]
+    h5_avg = usid.hdf_utils.find_dataset(hdf.file, 'FF_Avg')[0]
     h5_avg.attrs['quantity'] = 'Deflection'
     h5_avg.attrs['units'] = 'V'
 
@@ -427,12 +428,12 @@ def create_HDF_pixel_wise_averaged(h5_file, verbose=True):
         _ll = _ll.pixel_wise_avg()
         h5_avg[i*num_cols:(i+1)*num_cols,:] = _ll[:,:]
 
-    h5_r = px.hdf_utils.get_h5_obj_refs(['FF_Avg'], h5_refs)[0]
-    px.hdf_utils.link_h5_objects_as_attrs(h5_r, px.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
+    h5_r = usid.hdf_utils.get_h5_obj_refs(['FF_Avg'], h5_refs)[0]
+    usid.hdf_utils.link_h5_objects_as_attrs(h5_r, usid.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
 
     if verbose == True:
-        px.hdf_utils.print_tree(hdf.file, rel_paths=True)
-        h5_avg = px.hdf_utils.find_dataset(hdf.file, 'FF_Avg')[0]
+        usid.hdf_utils.print_tree(hdf.file, rel_paths=True)
+        h5_avg = usid.hdf_utils.find_dataset(hdf.file, 'FF_Avg')[0]
 
         print('H5_avg of size:', h5_avg.shape)
 
@@ -506,7 +507,7 @@ def createHDF5_separate_lines(data_files, parm_dict, h5_path):
         line_file = load.signal(k)
         hdf.file[ff_group.name+'/'+fname] = line_file.transpose()
 
-    px.hdf_utils.print_tree(hdf.file)
+    usid.hdf_utils.print_tree(hdf.file)
 
     hdf.flush()
 
@@ -547,7 +548,7 @@ def createHDF5_file(signal, parm_dict, h5_path='', ds_name='FF_Raw'):
         fname = h5_path
 
     hdf = px.ioHDF5(h5_path)
-    px.hdf_utils.print_tree(hdf.file)
+    usid.hdf_utils.print_tree(hdf.file)
 
     ff_group = px.MicroDataGroup('FF_Group', parent='/')
     root_group = px.MicroDataGroup('/')
@@ -602,8 +603,8 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         pass
 
     try:
-        h5_main = px.hdf_utils.find_dataset(hdf.file, ds)[0]
-        commands.append("h5_main = px.hdf_utils.find_dataset(hdf.file, '"+ds+"')[0]")
+        h5_main = usid.hdf_utils.find_dataset(hdf.file, ds)[0]
+        commands.append("h5_main = usid.hdf_utils.find_dataset(hdf.file, '"+ds+"')[0]")
     except:
         pass
 
@@ -626,32 +627,32 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         pass
 
     try:
-        h5_if = px.hdf_utils.find_dataset(hdf.file, 'inst_freq')[-1]
-        commands.append("h5_if = px.hdf_utils.find_dataset(hdf.file, 'inst_freq')[-1]")
+        h5_if = usid.hdf_utils.find_dataset(hdf.file, 'inst_freq')[-1]
+        commands.append("h5_if = usid.hdf_utils.find_dataset(hdf.file, 'inst_freq')[-1]")
     except:
         pass
 
     try:
-        h5_avg = px.hdf_utils.find_dataset(hdf.file, 'FF_Avg')[-1]
-        commands.append("h5_avg = px.hdf_utils.find_dataset(hdf.file, 'FF_Avg')[-1]")
+        h5_avg = usid.hdf_utils.find_dataset(hdf.file, 'FF_Avg')[-1]
+        commands.append("h5_avg = usid.hdf_utils.find_dataset(hdf.file, 'FF_Avg')[-1]")
     except:
         pass
 
     try:
-        h5_filt = px.hdf_utils.find_dataset(hdf.file, 'Filtered_Data')[-1]
-        commands.append("h5_filt = px.hdf_utils.find_dataset(hdf.file, 'Filtered_Data')[-1]")
+        h5_filt = usid.hdf_utils.find_dataset(hdf.file, 'Filtered_Data')[-1]
+        commands.append("h5_filt = usid.hdf_utils.find_dataset(hdf.file, 'Filtered_Data')[-1]")
     except:
         pass
 
     try:
-        h5_rb = px.hdf_utils.find_dataset(hdf.file, 'Rebuilt_Data')[-1]
-        commands.append("h5_rb = px.hdf_utils.find_dataset(hdf.file, 'Rebuilt_Data')[-1]")
+        h5_rb = usid.hdf_utils.find_dataset(hdf.file, 'Rebuilt_Data')[-1]
+        commands.append("h5_rb = usid.hdf_utils.find_dataset(hdf.file, 'Rebuilt_Data')[-1]")
     except:
         pass
 
     try:
-        h5_svd = px.hdf_utils.find_dataset(hdf.file, 'U')[-1]
-        commands.append("h5_svd = px.hdf_utils.find_dataset(hdf.file, 'U')[-1]")
+        h5_svd = usid.hdf_utils.find_dataset(hdf.file, 'U')[-1]
+        commands.append("h5_svd = usid.hdf_utils.find_dataset(hdf.file, 'U')[-1]")
     except:
         pass
 
