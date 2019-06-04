@@ -15,7 +15,6 @@ from matplotlib import pyplot as plt
 
 from ffta.hdf_utils import hdf_utils, get_utils
 
-
 """
 Wrapper to SVD functions, specific to ffta Class.
 

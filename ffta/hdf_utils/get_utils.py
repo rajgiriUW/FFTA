@@ -4,8 +4,8 @@ Created on Fri Aug 24 13:40:54 2018
 
 @author: Raj
 """
-
 import pycroscopy as px
+import pyUSID as usid
 
 from ffta.line import Line
 from ffta.pixel import Pixel
