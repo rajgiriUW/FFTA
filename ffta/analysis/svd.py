@@ -80,12 +80,12 @@ def FF_SVD(h5_main, num_components=128, show_plots=True, override=True):
         print('Need', skree_sum[skree_sum<0.95].shape[0],'components for 95%')
         print('Need', skree_sum[skree_sum<0.99].shape[0],'components for 99%')
         
-        fig_skree, axes =px.plot_utils.plot_scree(h5_S, title='Skree plot')
+        fig_skree, axes = usid.viz.plot_utils.plot_scree(h5_S, title='Skree plot')
         
-        fig_abun, axes = px.plot_utils.plot_map_stack(abun_maps, num_comps=16, title='SVD Abundance Maps',
+        fig_abun, axes = usid.viz.plot_utils.plot_map_stack(abun_maps, num_comps=16, title='SVD Abundance Maps',
                                                       color_bar_mode='single', cmap='inferno', reverse_dims=True, fig_mult=(3.5,3.5))
 
-        fig_eigvec, axes = px.plot_utils.plot_curves(h5_spec_vals*1e3, eigen_vecs, use_rainbow_plots=False, 
+        fig_eigvec, axes = usid.viz.plot_utils.plot_curves(h5_spec_vals*1e3, eigen_vecs, use_rainbow_plots=False, 
                                                      x_label='Time (ms)', y_label='Displacement (a.u.)', 
                                                      num_plots=16, subtitle_prefix='Component', 
                                                      title='SVD Eigenvectors', evenly_spaced=False)

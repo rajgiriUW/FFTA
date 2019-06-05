@@ -138,7 +138,7 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
         ht = h5_file['/height/Raw_Data'][:,0]
         ht = np.reshape(ht, [num_cols, num_rows]).transpose()
         ht_ax = a[0][0]
-        ht_image, cbar = px.plot_utils.plot_map(ht_ax, np.fliplr(ht)*1e9, cmap='gray', **kwargs)
+        ht_image, cbar = usid.viz.plot_utils.plot_map(ht_ax, np.fliplr(ht)*1e9, cmap='gray', **kwargs)
         cbar.set_label('Height (nm)', rotation=270, labelpad=16)
     except:
         pass
@@ -146,9 +146,9 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
     tfp_ax.set_title('tFP Image')
     shift_ax.set_title('Shift Image')
 
-    tfp_image, cbar_tfp = px.plot_utils.plot_map(tfp_ax, tfp * 1e6, 
+    tfp_image, cbar_tfp = usid.viz.plot_utils.plot_map(tfp_ax, tfp * 1e6, 
                                                  cmap='inferno', show_cbar=False, **kwargs)
-    shift_image, cbar_sh = px.plot_utils.plot_map(shift_ax, shift, 
+    shift_image, cbar_sh = usid.viz.plot_utils.plot_map(shift_ax, shift, 
                                                   cmap='inferno', show_cbar=False, **kwargs)
     text = tfp_ax.text(num_cols/2,num_rows+3, '')
     plt.show()
@@ -166,9 +166,9 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
         tfp[i, :], shift[i, :], inst_freq[i*num_cols:(i+1)*num_cols,:] = line_inst.analyze()
 
         if liveplots:
-            tfp_image, _ = px.plot_utils.plot_map(tfp_ax, tfp * 1e6, 
+            tfp_image, _ = usid.viz.plot_utils.plot_map(tfp_ax, tfp * 1e6, 
                                                   cmap='inferno', show_cbar=False, **kwargs)
-            shift_image, _ = px.plot_utils.plot_map(shift_ax, shift, 
+            shift_image, _ = usid.viz.plot_utils.plot_map(shift_ax, shift, 
                                                           cmap='inferno', show_cbar=False, **kwargs)
 
             tfp_sc = tfp[tfp.nonzero()] * 1e6
@@ -193,9 +193,9 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
 
         del line_inst  # Delete the instance to open up memory.
 
-    tfp_image, cbar_tfp = px.plot_utils.plot_map(tfp_ax, tfp * 1e6, cmap='inferno', **kwargs)
+    tfp_image, cbar_tfp = usid.viz.plot_utils.plot_map(tfp_ax, tfp * 1e6, cmap='inferno', **kwargs)
     cbar_tfp.set_label('Time (us)', rotation=270, labelpad=16)
-    shift_image, cbar_sh = px.plot_utils.plot_map(shift_ax, shift, cmap='inferno', **kwargs)
+    shift_image, cbar_sh = usid.viz.plot_utils.plot_map(shift_ax, shift, cmap='inferno', **kwargs)
     cbar_sh.set_label('Frequency Shift (Hz)', rotation=270, labelpad=16)
     text = tfp_ax.text(num_cols/2,num_rows+3, '')
     
@@ -343,11 +343,11 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
     [vmint, vmaxt] = np.mean(tfp)-2*np.std(tfp), np.mean(tfp)-2*np.std(tfp)
     [vmins, vmaxs] = np.mean(shift)-2*np.std(shift), np.mean(shift)-2*np.std(shift)
     
-    _, cbar_t = px.plot_utils.plot_map(a[0], tfp_fixed*1e6, x_vec = xs*1e6, y_vec= ys*1e6,
+    _, cbar_t = usid.viz.plot_utils.plot_map(a[0], tfp_fixed*1e6, x_vec = xs*1e6, y_vec= ys*1e6,
                                        aspect=asp, cmap='inferno', stdevs=stdevs)
-    _, cbar_r = px.plot_utils.plot_map(a[1], 1/(1e3*tfp_fixed), x_vec = xs*1e6, y_vec = ys*1e6,
+    _, cbar_r = usid.viz.plot_utils.plot_map(a[1], 1/(1e3*tfp_fixed), x_vec = xs*1e6, y_vec = ys*1e6,
                                        aspect=asp, cmap='inferno', stdevs=stdevs)
-    _, cbar_s = px.plot_utils.plot_map(a[2], shift, x_vec = xs*1e6, y_vec = ys*1e6,
+    _, cbar_s = usid.viz.plot_utils.plot_map(a[2], shift, x_vec = xs*1e6, y_vec = ys*1e6,
                                        aspect=asp, cmap='inferno', stdevs=stdevs)
 
     cbar_t.set_label('tfp (us)', rotation=270, labelpad=16)
