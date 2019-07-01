@@ -22,13 +22,6 @@ from pyUSID.io.write_utils import build_ind_val_matrices, Dimension
 Analyzes an HDF_5 format trEFM data set and writes the result into that file
 """
 
-def find_FF(h5_path):
-    
-    parameters = get_utils.get_params(h5_path)
-    h5_gp = hdf_utils._which_h5_group(h5_path)
-    
-    return h5_gp, parameters
-
 def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, liveplots=True):
     """
     Processes FF_Raw dataset in the HDF5 file
@@ -369,3 +362,9 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
 
     return
 
+def find_FF(h5_path):
+    
+    parameters = get_utils.get_params(h5_path)
+    h5_gp = hdf_utils._which_h5_group(h5_path)
+    
+    return h5_gp, parameters
