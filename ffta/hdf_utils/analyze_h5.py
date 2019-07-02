@@ -22,7 +22,8 @@ from pyUSID.io.write_utils import build_ind_val_matrices, Dimension
 Analyzes an HDF_5 format trEFM data set and writes the result into that file
 """
 
-def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, liveplots=True):
+def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, 
+            verbose=True, liveplots=True):
     """
     Processes FF_Raw dataset in the HDF5 file
     
@@ -36,8 +37,8 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
     Typical usage:
     >> import pycroscopy as px
     >> h5_file = px.io.HDFwriter('path_to_h5_file.h5').file
-    >> from ffta import analyze_HDF5
-    >> tfp, shift, inst_freq = analyze_HDF5.process(h5_file, ref = '/FF_Group/FF_Avg/FF_Avg')
+    >> from ffta import analyze_h5
+    >> tfp, shift, inst_freq = analyze_h5.process(h5_file, ref = '/FF_Group/FF_Avg/FF_Avg')
     
     
     h5_file : h5Py file or str
@@ -156,7 +157,10 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
         if clear_filter:
             line_inst.clear_filter_flags()
         
-        tfp[i, :], shift[i, :], inst_freq[i*num_cols:(i+1)*num_cols,:] = line_inst.analyze()
+        _tfp, _shf, _if = line_inst.analyze()
+        tfp[i, :] = _tfp.T
+        shift[i, :] = _shf.T
+        inst_freq[i*num_cols:(i+1)*num_cols,:] = _if.T
 
         if liveplots:
             tfp_image, _ = usid.viz.plot_utils.plot_map(tfp_ax, tfp * 1e6, 

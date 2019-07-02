@@ -170,7 +170,7 @@ def get_line(h5_path, line_num, pnts=1,
     if array_form == True or avg == True:
         return signal_line
     
-    line_inst = Line(signal_line, parameters, c)
+    line_inst = Line(signal_line, parameters, c, pycroscopy=True)
     
     return line_inst
     
@@ -242,6 +242,6 @@ def get_pixel(h5_path, rc, pnts = 1,
         
         signal_pixel = np.reshape(signal_pixel, [signal_pixel.shape[1]])
         
-    pixel_inst = Pixel(signal_pixel, parameters)
+    pixel_inst = Pixel(signal_pixel, parameters, pycroscopy=True)
     
     return pixel_inst    

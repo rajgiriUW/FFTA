@@ -89,10 +89,10 @@ class Line:
         # Initialize tFP and shift arrays.
         self.tfp = np.empty(self.n_pixels)
         self.shift = np.empty(self.n_pixels)
-        self.inst_freq = np.empty((signal_array.shape[0], self.n_pixels))
+        self.inst_freq = np.empty((self.signal_array.shape[0], self.n_pixels))
         
-        self.avgs_per_pixel = int(signal_array.shape[1]/self.n_pixels)
-        self.n_signals = signal_array.shape[0]
+        self.avgs_per_pixel = int(self.signal_array.shape[1]/self.n_pixels)
+        self.n_signals = self.signal_array.shape[0]
 
         return
 
