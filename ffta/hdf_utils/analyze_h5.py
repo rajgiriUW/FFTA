@@ -198,14 +198,14 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False,
     
     plt.show()
 
-    h5_if = save_process(h5_file, h5_ds.parent, inst_freq, parameters, verbose=verbose)
-    _, _,_, tfp_fixed = save_ht_outs(h5_file, h5_if.parent, tfp, shift, parameters, verbose=verbose)
+    h5_if = save_IF(h5_file, h5_ds.parent, inst_freq, parameters, verbose=verbose)
+    _,_, tfp_fixed = save_ht_outs(h5_file, h5_if.parent, tfp, shift, parameters, verbose=verbose)
     
     #save_CSV(h5_path, tfp, shift, tfp_fixed, append=ds)
        
     return tfp, shift, inst_freq, h5_if
 
-def save_process(h5_file, h5_gp, inst_freq, parm_dict, verbose=False):
+def save_IF(h5_file, h5_gp, inst_freq, parm_dict, verbose=False):
     """ Adds Instantaneous Frequency as a main dataset """
     # Error check
     if isinstance(h5_gp, h5py.Dataset):
@@ -251,23 +251,26 @@ def save_ht_outs(h5_file, h5_gp, tfp, shift, parameters, verbose=False):
     tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)
     tfp_fixed = np.array(tfp_fixed)
     
-    # write data
-    grp_name = h5_gp.name
-    grp_tr = px.io.VirtualGroup(grp_name)
-    tfp_px = px.io.VirtualDataset('tfp', tfp, parent = h5_gp)
-    shift_px = px.io.VirtualDataset('shift', shift, parent = h5_gp)
-    tfp_fixed_px = px.io.VirtualDataset('tfp_fixed', tfp_fixed, parent = h5_gp)
-
-    grp_tr.attrs['timestamp'] = get_time_stamp()
-    grp_tr.add_children([tfp_px])
-    grp_tr.add_children([shift_px])
-    grp_tr.add_children([tfp_fixed_px])
+    # write data; note that this is all actually deprecated and should be fixed
+#    grp_name = h5_gp.name
+#    grp_tr = px.io.VirtualGroup(grp_name)
+#    tfp_px = px.io.VirtualDataset('tfp', tfp, parent = h5_gp)
+#    shift_px = px.io.VirtualDataset('shift', shift, parent = h5_gp)
+#    tfp_fixed_px = px.io.VirtualDataset('tfp_fixed', tfp_fixed, parent = h5_gp)
+#
+#    grp_tr.attrs['timestamp'] = get_time_stamp()
+#    grp_tr.add_children([tfp_px])
+#    grp_tr.add_children([shift_px])
+#    grp_tr.add_children([tfp_fixed_px])
     
-    # Find folder, write to it
-    hdf = px.io.HDFwriter(h5_file)
-    h5_refs = hdf.write(grp_tr, print_log=verbose), 
+    # write data using current pyUSID implementations
+#    grp_tr = h5_file.create_group(h5_gp.name)
+    tfp_px = h5_gp.create_dataset('tfp', data=tfp, dtype=np.float32)
+    shift_px = h5_gp.create_dataset('shift', data=shift, dtype=np.float32)
+    tfp_fixed_px = h5_gp.create_dataset('tfp_fixed', data=tfp_fixed, dtype=np.float32)
+    h5_gp.attrs['timestamp'] = get_time_stamp()
     
-    return h5_refs, tfp, shift, tfp_fixed
+    return tfp_px, shift_px, tfp_fixed_px
 
 def save_CSV_from_file(h5_file, h5_path='/', append=''):
     """

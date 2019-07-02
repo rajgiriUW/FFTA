@@ -133,7 +133,8 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF',
         # Then optionally the average
         if raw_avg:
             
-            h5_avg = load_pixel_averaged_from_raw
+            h5_avg = load_pixel_averaged_from_raw(h5_file=h5_path, loadverbose=loadverbose,
+                                                  verbose=verbose)
             return h5_path, parm_dict, h5_avg
         
         else:
@@ -153,7 +154,7 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF',
 def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5', 
                     textload = False, verbose=False):
     """
-    Sets up loading the HDF5 files. Parses the data file list and creates the .H5 file
+    Sets up loading the HDF5 files. Parses the data file list and creates the .H5 file path
 
     Parameters
     ----------
@@ -272,8 +273,7 @@ def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5',
     return h5_path, data_files, parm_dict
 
 
-def load_raw_FF(data_files, parm_dict, h5_path, 
-                               verbose=False, loadverbose=True):
+def load_raw_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True):
     """
     Generates the HDF5 file given path to files_list and parameters dictionary
 
@@ -325,8 +325,6 @@ def load_raw_FF(data_files, parm_dict, h5_path,
 
     # To do: Fix the labels/atrtibutes on the relevant data sets
     hdf = px.io.HDFwriter(h5_path)
-#    ff_group = px.io.VirtualGroup('FF_Group', parent='/')
-#    root_group = px.io.VirtualGroup('/')
     try:
         ff_group = hdf.file.create_group('FF_Group')
     except:
@@ -356,30 +354,7 @@ def load_raw_FF(data_files, parm_dict, h5_path,
                                                compression='gzip',
                                                main_dset_attrs=parm_dict)
 
-#    try:
-#        ds_raw = px.io.VirtualDataset('FF_Raw', data=[[0],[0]], dtype=np.float32,
-#                                  parent=ff_group, maxshape=data_size,
-#                                  chunking=(1, parm_dict['pnts_per_line']))
-#    except:
-#        ds_raw = px.io.VirtualDataset('FF_Raw', data=[[0],[0]], dtype=np.float32,
-#                                  parent=ff_group, maxshape=data_size,
-#                                  chunking=(1, parm_dict['pnts_per_avg']))
-
-    # Standard list of auxiliary datasets that get linked with the raw dataset:
-#    aux_ds_names = ['Position_Indices', 'Position_Values',
-#                    'Spectroscopic_Indices', 'Spectroscopic_Values']
-#
-#    ff_group.add_children([ds_raw, ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals])
-
-    # Get reference for writing the data
-#    ff_group.attrs = parm_dict
-#    h5_refs = hdf.write(ff_group, print_log=verbose)
-
     pnts_per_line = parm_dict['pnts_per_line']
-
-#    h5_raw = usid.hdf_utils.find_dataset(hdf.file, 'FF_Raw')[0]
-#    h5_raw.attrs['quantity'] = 'Deflection'
-#    h5_raw.attrs['units'] = 'V'
 
     # Cycles through the remaining files. This takes a while (~few minutes)
     for k, num in zip(data_files, np.arange(0,len(data_files))):
@@ -393,9 +368,6 @@ def load_raw_FF(data_files, parm_dict, h5_path,
 
         f = hdf.file[h5_raw.name]
         f[pnts_per_line*num:pnts_per_line*(num+1), :] = line_file[:,:]
-
-#    h5_main = usid.hdf_utils.get_h5_obj_refs(['FF_Raw'], h5_refs)[0]
-#    usid.hdf_utils.link_h5_objects_as_attrs(h5_main, usid.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
 
     if verbose == True:
         usid.hdf_utils.print_tree(hdf.file, rel_paths=True)
@@ -432,7 +404,6 @@ def load_pixel_averaged_from_raw(h5_file, verbose=True, loadverbose = True):
     hdf = px.io.HDFwriter(h5_file)
     h5_main = usid.hdf_utils.find_dataset(hdf.file, 'FF_Raw' )[0]
 
-#    ff_avg_group = usid.hdf_utils.create_indexed_group(h5_main.parent, 'FF_Avg')
     try:
         ff_avg_group = h5_main.parent.create_group('FF_Avg')
     except:
@@ -485,9 +456,6 @@ def load_pixel_averaged_from_raw(h5_file, verbose=True, loadverbose = True):
         _ll = get_utils.get_line(h5_main, pnts=pnts_per_line, line_num=i, array_form=False, avg=False)
         _ll = _ll.pixel_wise_avg()
         h5_avg[i*num_cols:(i+1)*num_cols,:] = _ll[:,:]
-
-#    h5_r = usid.hdf_utils.get_h5_obj_refs(['FF_Avg'], h5_refs)[0]
-#    usid.hdf_utils.link_h5_objects_as_attrs(h5_r, usid.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
 
     if verbose == True:
         usid.hdf_utils.print_tree(hdf.file, rel_paths=True)
@@ -588,9 +556,6 @@ def load_pixel_averaged_FF(data_files, parm_dict, h5_path,
         _ll = line.Line(line_file, parm_dict, n_pixels=n_pix, pycroscopy=False)
         _ll = _ll.pixel_wise_avg().T
         h5_avg[n*num_cols:(n+1)*num_cols,:] = _ll[:,:]
-    
-#    h5_r = usid.hdf_utils.get_h5_obj_refs(['FF_Avg'], h5_refs)[0]
-#    usid.hdf_utils.link_h5_objects_as_attrs(h5_r, usid.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
 
     if verbose == True:
         usid.hdf_utils.print_tree(hdf.file, rel_paths=True)
