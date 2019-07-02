@@ -10,7 +10,7 @@ import numpy as np
 from ffta import pixel
 
 
-class Line(object):
+class Line:
     """
     Signal Processing to Extract Time-to-First-Peak.
 
@@ -37,10 +37,12 @@ class Line(object):
         n_taps = integer (default: 999)
         wavelet_analysis = bool (0: Hilbert method, 1: Wavelet Method)
         wavelet_parameter = int (default: 5)
-        recombination = bool (0: FF-trEFMm, 1: Recombination)
+        recombination = bool (0: FF-trEFM, 1: Recombination)
     n_pixels : int
         Number of pixels in a line.
-
+    pycroscopy : bool, optional
+        Pycroscopy requires different orientation, so this corrects for this effect.
+        
     Attributes
     ----------
     n_points : int
@@ -75,20 +77,22 @@ class Line(object):
 
     """
 
-    def __init__(self, signal_array, params, n_pixels):
+    def __init__(self, signal_array, params, n_pixels, pycroscopy=False):
 
         # Pass inputs to the object.
         self.signal_array = signal_array
+        if pycroscopy: 
+            self.signal_array = signal_array.T
         self.n_pixels = int(n_pixels)
         self.params = params
 
         # Initialize tFP and shift arrays.
         self.tfp = np.empty(self.n_pixels)
         self.shift = np.empty(self.n_pixels)
-        self.inst_freq = np.empty((self.n_pixels, signal_array.shape[1]))
+        self.inst_freq = np.empty((signal_array.shape[0], self.n_pixels))
         
-        self.avgs_per_pixel = int(signal_array.shape[0]/self.n_pixels)
-        self.n_signals = signal_array.shape[1]
+        self.avgs_per_pixel = int(signal_array.shape[1]/self.n_pixels)
+        self.n_signals = signal_array.shape[0]
 
         return
 
@@ -103,39 +107,26 @@ class Line(object):
         shift : (n_pixels,) array_like
             Frequency shift from trigger to first-peak, in Hz.
         inst_freq : (n_points, n_pixels) array_like
-            Instantenous frequencies of the line.
+            Instantaneous frequencies of the line.
 
         """
 
         # Split the signal array into pixels.
-
-        # for pycroscopy the array is arranged differently (n_pixels, n_points). 
-        # This code preserves existing functionality but the format should be deprecated
-        try:
-      
-            pixel_signals = np.split(self.signal_array, self.n_pixels, axis=0)
-
-        # exception = non-pycroscopy format
-        except:
-
-            self.inst_freq = np.empty((self.n_pixels, self.signal_array.shape[0]))
-            self.avgs_per_pixel = int(self.signal_array.shape[1]/self.n_pixels)
-            self.n_signals = self.signal_array.shape[0]
-            
-            pixel_signals = np.split(self.signal_array.transpose(), self.n_pixels, axis=0)
+        pixel_signals = np.split(self.signal_array, self.n_pixels, axis=1)
 
         # Iterate over pixels and return tFP and shift arrays.
         for i, pixel_signal in enumerate(pixel_signals):
 
             p = pixel.Pixel(pixel_signal, self.params)
             
-            (self.tfp[i], self.shift[i], self.inst_freq[i, :]) = p.analyze()
+            (self.tfp[i], self.shift[i], self.inst_freq[:, i]) = p.analyze()
 
         return (self.tfp, self.shift, self.inst_freq)
 
     def pixel_wise_avg(self):
         """
         Averages the line per pixel and saves the result as signal_avg_array
+        This functionality is primarily used in Pycroscopy-loading functions
         
         Returns
         -------
@@ -143,13 +134,12 @@ class Line(object):
             Returns signal_averaged time-domain signal at each pixel
         """
         
-        self.signal_avg_array = np.empty((self.n_pixels, self.signal_array.shape[1]))
+        self.signal_avg_array = np.empty((self.signal_array.shape[0], self.n_pixels))
                 
         for i in range(self.n_pixels):
         
-            avg = self.signal_array[i*self.avgs_per_pixel:(i+1)*self.avgs_per_pixel]
-            self.signal_avg_array[i, :] = avg.mean(axis=0)
-            
+            avg = self.signal_array[:, i*self.avgs_per_pixel:(i+1)*self.avgs_per_pixel]
+            self.signal_avg_array[:, i] = avg.mean(axis=1)
         
         return self.signal_avg_array
     
