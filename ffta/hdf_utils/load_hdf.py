@@ -325,8 +325,12 @@ def load_raw_FF(data_files, parm_dict, h5_path,
 
     # To do: Fix the labels/atrtibutes on the relevant data sets
     hdf = px.io.HDFwriter(h5_path)
-    ff_group = px.io.VirtualGroup('FF_Group', parent='/')
-    root_group = px.io.VirtualGroup('/')
+#    ff_group = px.io.VirtualGroup('FF_Group', parent='/')
+#    root_group = px.io.VirtualGroup('/')
+    try:
+        ff_group = hdf.file.create_group('FF_Group')
+    except:
+        ff_group = usid.hdf_utils.create_indexed_group(hdf.file['/'], 'FF_Group')
 
     # Set up the position vectors for the data
     pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols*pnts_per_pixel)),
@@ -336,30 +340,46 @@ def load_raw_FF(data_files, parm_dict, h5_path,
     spec_desc = [Dimension('Time', 's',np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
     ds_spec_inds, ds_spec_vals = build_ind_val_dsets(spec_desc, is_spectral=True, verbose=verbose)
 
-    try:
-        ds_raw = px.io.VirtualDataset('FF_Raw', data=[[0],[0]], dtype=np.float32,
-                                  parent=ff_group, maxshape=data_size,
-                                  chunking=(1, parm_dict['pnts_per_line']))
-    except:
-        ds_raw = px.io.VirtualDataset('FF_Raw', data=[[0],[0]], dtype=np.float32,
-                                  parent=ff_group, maxshape=data_size,
-                                  chunking=(1, parm_dict['pnts_per_avg']))
+    for p in parm_dict:
+        ff_group.attrs[p] = parm_dict[p]
+    ff_group.attrs['pnts_per_line'] = num_cols # to change number of pnts in a line
+    ff_group.attrs['pnts_per_pixel'] = 1 # to change number of pnts in a pixel
+
+    h5_raw = usid.hdf_utils.write_main_dataset(ff_group,  # parent HDF5 group
+                                               (data_size[0], data_size[1]),  # shape of Main dataset
+                                               'FF_Raw',  # Name of main dataset
+                                               'Deflection',  # Physical quantity contained in Main dataset
+                                               'V',  # Units for the physical quantity
+                                               pos_desc,  # Position dimensions
+                                               spec_desc,  # Spectroscopic dimensions
+                                               dtype=np.float32,  # data type / precision
+                                               compression='gzip',
+                                               main_dset_attrs=parm_dict)
+
+#    try:
+#        ds_raw = px.io.VirtualDataset('FF_Raw', data=[[0],[0]], dtype=np.float32,
+#                                  parent=ff_group, maxshape=data_size,
+#                                  chunking=(1, parm_dict['pnts_per_line']))
+#    except:
+#        ds_raw = px.io.VirtualDataset('FF_Raw', data=[[0],[0]], dtype=np.float32,
+#                                  parent=ff_group, maxshape=data_size,
+#                                  chunking=(1, parm_dict['pnts_per_avg']))
 
     # Standard list of auxiliary datasets that get linked with the raw dataset:
-    aux_ds_names = ['Position_Indices', 'Position_Values',
-                    'Spectroscopic_Indices', 'Spectroscopic_Values']
-
-    ff_group.add_children([ds_raw, ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals])
+#    aux_ds_names = ['Position_Indices', 'Position_Values',
+#                    'Spectroscopic_Indices', 'Spectroscopic_Values']
+#
+#    ff_group.add_children([ds_raw, ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals])
 
     # Get reference for writing the data
-    ff_group.attrs = parm_dict
-    h5_refs = hdf.write(ff_group, print_log=verbose)
+#    ff_group.attrs = parm_dict
+#    h5_refs = hdf.write(ff_group, print_log=verbose)
 
     pnts_per_line = parm_dict['pnts_per_line']
 
-    h5_raw = usid.hdf_utils.find_dataset(hdf.file, 'FF_Raw')[0]
-    h5_raw.attrs['quantity'] = 'Deflection'
-    h5_raw.attrs['units'] = 'V'
+#    h5_raw = usid.hdf_utils.find_dataset(hdf.file, 'FF_Raw')[0]
+#    h5_raw.attrs['quantity'] = 'Deflection'
+#    h5_raw.attrs['units'] = 'V'
 
     # Cycles through the remaining files. This takes a while (~few minutes)
     for k, num in zip(data_files, np.arange(0,len(data_files))):
@@ -374,15 +394,15 @@ def load_raw_FF(data_files, parm_dict, h5_path,
         f = hdf.file[h5_raw.name]
         f[pnts_per_line*num:pnts_per_line*(num+1), :] = line_file[:,:]
 
-    h5_main = usid.hdf_utils.get_h5_obj_refs(['FF_Raw'], h5_refs)[0]
-    usid.hdf_utils.link_h5_objects_as_attrs(h5_main, usid.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
+#    h5_main = usid.hdf_utils.get_h5_obj_refs(['FF_Raw'], h5_refs)[0]
+#    usid.hdf_utils.link_h5_objects_as_attrs(h5_main, usid.hdf_utils.get_h5_obj_refs(aux_ds_names, h5_refs))
 
     if verbose == True:
         usid.hdf_utils.print_tree(hdf.file, rel_paths=True)
 
     hdf.flush()
 
-    return h5_main
+    return h5_raw
 
 def load_pixel_averaged_from_raw(h5_file, verbose=True, loadverbose = True):
     """
@@ -412,9 +432,14 @@ def load_pixel_averaged_from_raw(h5_file, verbose=True, loadverbose = True):
     hdf = px.io.HDFwriter(h5_file)
     h5_main = usid.hdf_utils.find_dataset(hdf.file, 'FF_Raw' )[0]
 
-    ff_avg_group = usid.hdf_utils.create_indexed_group(h5_main.parent, 'FF_Avg')
+#    ff_avg_group = usid.hdf_utils.create_indexed_group(h5_main.parent, 'FF_Avg')
+    try:
+        ff_avg_group = h5_main.parent.create_group('FF_Avg')
+    except:
+        ff_avg_group = usid.hdf_utils.create_indexed_group(h5_main.parent, 'FF_Avg')
+        
     parm_dict = usid.hdf_utils.get_attributes(h5_main.parent)
-
+    
     num_rows = parm_dict['num_rows']
     num_cols = parm_dict['num_cols']
     pnts_per_avg = parm_dict['pnts_per_avg']
