@@ -505,7 +505,15 @@ def load_pixel_averaged_FF(data_files, parm_dict, h5_path,
 
     hdf = px.io.HDFwriter(h5_path)
     
-    ff_avg_group = usid.hdf_utils.create_indexed_group(hdf.file['/FF_Group'], 'FF_Avg')
+    try:
+        ff_avg_group = hdf.file.create_group('FF_Group')
+    except:
+        ff_avg_group = usid.hdf_utils.create_indexed_group(hdf.file['/'], 'FF_Group')
+        
+    try:
+        ff_avg_group = hdf.file[ff_avg_group.name].create_group('FF_Avg')
+    except:
+        ff_avg_group = usid.hdf_utils.create_indexed_group(ff_avg_group, 'FF_Avg')
 
     num_rows = parm_dict['num_rows']
     num_cols = parm_dict['num_cols']
@@ -513,7 +521,7 @@ def load_pixel_averaged_FF(data_files, parm_dict, h5_path,
     pnts_per_line = parm_dict['pnts_per_line']
     pnts_per_pixel = parm_dict['pnts_per_pixel']
     parm_dict['pnts_per_pixel'] = 1 #only 1 average per pixel now
-    parm_dict['pnts_per_line'] = 1
+    parm_dict['pnts_per_line'] = num_cols # equivalent now with averaged data
     n_pix = int(pnts_per_line / pnts_per_pixel)
     dt = 1/parm_dict['sampling_rate']
 
