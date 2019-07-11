@@ -51,8 +51,9 @@ Example usage:
 """
 
 def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', 
-                 verbose=False, loadverbose = False,
-                 subfolder='/', average=False, raw_avg = False):
+                 verbose=False, subfolder='/', 
+                 loadverbose = False, average=False, 
+                 raw_avg = False, mirror = True):
     """
     Wrapper function for processing a .ibw file and associated FF data
     
@@ -90,6 +91,9 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF',
         
     raw_avg : bool, optional
         Whether to automatically call the load_pixel_averaged_from_raw function to average data at each pixel
+        
+    mirror : bool, optional
+        Whether to reverse the data on each line read (since data are usually saved during a retrace)
 
     Returns
     -------
@@ -128,7 +132,7 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF',
             print("### Loading file folder ###")
                   
         h5_main = load_raw_FF(data_files, parm_dict, h5_path, 
-                              verbose=verbose,loadverbose=loadverbose)
+                              verbose=verbose,loadverbose=loadverbose, mirror=mirror)
         
         # Then optionally the average
         if raw_avg:
@@ -146,7 +150,7 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF',
             print('### Creating averaged set ###')
                   
         h5_avg = load_pixel_averaged_FF(data_files, parm_dict, h5_path, 
-                                        verbose=verbose, loadverbose=loadverbose)
+                                        verbose=verbose, loadverbose=loadverbose, mirror=mirror)
 
         return h5_path, parm_dict, h5_avg
 
@@ -273,7 +277,7 @@ def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5',
     return h5_path, data_files, parm_dict
 
 
-def load_raw_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True):
+def load_raw_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True, mirror=False):
     """
     Generates the HDF5 file given path to files_list and parameters dictionary
 
@@ -333,6 +337,9 @@ def load_raw_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True)
     # Set up the position vectors for the data
     pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols*pnts_per_pixel)),
                 Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
+#    pos_desc = [Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows)),
+#                Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols*pnts_per_pixel))]
+
     ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False, verbose=verbose)
 
     spec_desc = [Dimension('Time', 's',np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
@@ -367,8 +374,12 @@ def load_raw_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True)
         line_file = load.signal(k).transpose()
 
         f = hdf.file[h5_raw.name]
-        f[pnts_per_line*num:pnts_per_line*(num+1), :] = line_file[:,:]
-
+        
+        if mirror:
+            f[pnts_per_line*num:pnts_per_line*(num+1), :] = np.flipud(line_file[:,:])
+        else:
+            f[pnts_per_line*num:pnts_per_line*(num+1), :] = line_file[:,:]
+            
     if verbose == True:
         usid.hdf_utils.print_tree(hdf.file, rel_paths=True)
 
@@ -455,8 +466,9 @@ def load_pixel_averaged_from_raw(h5_file, verbose=True, loadverbose = True):
 
         _ll = get_utils.get_line(h5_main, pnts=pnts_per_line, line_num=i, array_form=False, avg=False)
         _ll = _ll.pixel_wise_avg()
+        
         h5_avg[i*num_cols:(i+1)*num_cols,:] = _ll[:,:]
-
+            
     if verbose == True:
         usid.hdf_utils.print_tree(hdf.file, rel_paths=True)
         h5_avg = usid.hdf_utils.find_dataset(hdf.file, 'FF_Avg')[0]
@@ -468,7 +480,7 @@ def load_pixel_averaged_from_raw(h5_file, verbose=True, loadverbose = True):
     return h5_avg
 
 def load_pixel_averaged_FF(data_files, parm_dict, h5_path, 
-                               verbose=False, loadverbose=True):
+                               verbose=False, loadverbose=True, mirror=False):
     """
     Creates a new group FF_Avg where the raw FF files are averaged together
 
@@ -555,7 +567,11 @@ def load_pixel_averaged_FF(data_files, parm_dict, h5_path,
 
         _ll = line.Line(line_file, parm_dict, n_pixels=n_pix, pycroscopy=False)
         _ll = _ll.pixel_wise_avg().T
-        h5_avg[n*num_cols:(n+1)*num_cols,:] = _ll[:,:]
+        
+        if mirror:
+            h5_avg[n*num_cols:(n+1)*num_cols,:] = np.flipud(_ll[:,:])
+        else:
+            h5_avg[n*num_cols:(n+1)*num_cols,:] = _ll[:,:]
 
     if verbose == True:
         usid.hdf_utils.print_tree(hdf.file, rel_paths=True)

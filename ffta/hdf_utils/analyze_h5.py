@@ -132,7 +132,7 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False,
         ht = h5_file['/height/Raw_Data'][:,0]
         ht = np.reshape(ht, [num_cols, num_rows]).transpose()
         ht_ax = a[0][0]
-        ht_image, cbar = usid.viz.plot_utils.plot_map(ht_ax, np.fliplr(ht)*1e9, cmap='gray', **kwargs)
+        ht_image, cbar = usid.viz.plot_utils.plot_map(ht_ax, ht*1e9, cmap='gray', **kwargs)
         cbar.set_label('Height (nm)', rotation=270, labelpad=16)
     except:
         pass
@@ -221,6 +221,7 @@ def save_IF(h5_file, h5_gp, inst_freq, parm_dict, verbose=False):
     # Create dimensions
     pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
                 Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
+
     #ds_pos_ind, ds_pos_val = build_ind_val_matrices(pos_desc, is_spectral=False)
     spec_desc = [Dimension('Time', 's',np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
     #ds_spec_inds, ds_spec_vals = build_ind_val_matrices(spec_desc, is_spectral=True)
@@ -272,14 +273,15 @@ def save_ht_outs(h5_file, h5_gp, tfp, shift, parameters, verbose=False):
     
     return tfp_px, shift_px, tfp_fixed_px
 
-def save_CSV_from_file(h5_file, h5_path='/', append=''):
+def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     """
     Saves the tfp, shift, and fixed_tfp as CSV files
     
     h5_file : H5Py file
+        Reminder you can always type: h5_svd.file or h5_avg.file for this
     
     h5_path : str, optional
-        specific folder path to write to
+        specific folder path to search for the tfp data. Usually not needed.
     
     append : str, optional
         text to append to file name
@@ -293,10 +295,15 @@ def save_CSV_from_file(h5_file, h5_path='/', append=''):
     path = h5_file.file.filename.replace('\\','/')
     path = '/'.join(path.split('/')[:-1])+'/'
     os.chdir(path)
-    np.savetxt('tfp-'+append+'.csv', np.fliplr(tfp).T, delimiter=',')
-    np.savetxt('shift-'+append+'.csv', np.fliplr(shift).T, delimiter=',')
-    np.savetxt('tfp_fixed-'+append+'.csv', np.fliplr(tfp_fixed).T, delimiter=',')
     
+    if mirror:
+        np.savetxt('tfp-'+append+'.csv', np.fliplr(tfp).T, delimiter=',')
+        np.savetxt('shift-'+append+'.csv', np.fliplr(shift).T, delimiter=',')
+        np.savetxt('tfp_fixed-'+append+'.csv', np.fliplr(tfp_fixed).T, delimiter=',')
+    else:
+        np.savetxt('tfp-'+append+'.csv', tfp.T, delimiter=',')
+        np.savetxt('shift-'+append+'.csv', shift.T, delimiter=',')
+        np.savetxt('tfp_fixed-'+append+'.csv', tfp_fixed.T, delimiter=',')
     return
 
 def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
