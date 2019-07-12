@@ -239,6 +239,8 @@ def save_IF(h5_file, h5_gp, inst_freq, parm_dict, verbose=False):
 
     usid.hdf_utils.copy_attributes(h5_if, h5_gp)
 
+    h5_if.file.flush()
+
     return h5_if
 
 
