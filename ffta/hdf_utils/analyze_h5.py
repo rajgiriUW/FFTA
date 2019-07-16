@@ -294,6 +294,8 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     tfp_fixed = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp_fixed')[0].value
     shift = usid.hdf_utils.find_dataset(h5_file[h5_path], 'shift')[0].value
     
+    print(usid.hdf_utils.find_dataset(h5_file[h5_path], 'shift')[0].parent.name)
+    
     path = h5_file.file.filename.replace('\\','/')
     path = '/'.join(path.split('/')[:-1])+'/'
     os.chdir(path)
