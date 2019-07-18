@@ -7,12 +7,12 @@ Created on Thu Feb 22 13:16:05 2018
 
 import os
 import numpy as np
-import badpixels
 import h5py
 
 from matplotlib import pyplot as plt
 
 from ffta.hdf_utils import hdf_utils, get_utils
+from ffta.pixel_utils import badpixels
 import pycroscopy as px
 import pyUSID as usid
 
@@ -22,14 +22,8 @@ from pyUSID.io.write_utils import build_ind_val_matrices, Dimension
 Analyzes an HDF_5 format trEFM data set and writes the result into that file
 """
 
-def find_FF(h5_path):
-    
-    parameters = get_utils.get_params(h5_path)
-    h5_gp = hdf_utils._which_h5_group(h5_path)
-    
-    return h5_gp, parameters
-
-def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, liveplots=True):
+def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, 
+            verbose=True, liveplots=True):
     """
     Processes FF_Raw dataset in the HDF5 file
     
@@ -43,8 +37,8 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
     Typical usage:
     >> import pycroscopy as px
     >> h5_file = px.io.HDFwriter('path_to_h5_file.h5').file
-    >> from ffta import analyze_HDF5
-    >> tfp, shift, inst_freq = analyze_HDF5.process(h5_file, ref = '/FF_Group/FF_Avg/FF_Avg')
+    >> from ffta import analyze_h5
+    >> tfp, shift, inst_freq = analyze_h5.process(h5_file, ref = '/FF_Group/FF_Avg/FF_Avg')
     
     
     h5_file : h5Py file or str
@@ -138,7 +132,7 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
         ht = h5_file['/height/Raw_Data'][:,0]
         ht = np.reshape(ht, [num_cols, num_rows]).transpose()
         ht_ax = a[0][0]
-        ht_image, cbar = px.plot_utils.plot_map(ht_ax, np.fliplr(ht)*1e9, cmap='gray', **kwargs)
+        ht_image, cbar = usid.viz.plot_utils.plot_map(ht_ax, ht*1e9, cmap='gray', **kwargs)
         cbar.set_label('Height (nm)', rotation=270, labelpad=16)
     except:
         pass
@@ -146,9 +140,9 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
     tfp_ax.set_title('tFP Image')
     shift_ax.set_title('Shift Image')
 
-    tfp_image, cbar_tfp = px.plot_utils.plot_map(tfp_ax, tfp * 1e6, 
+    tfp_image, cbar_tfp = usid.viz.plot_utils.plot_map(tfp_ax, tfp * 1e6, 
                                                  cmap='inferno', show_cbar=False, **kwargs)
-    shift_image, cbar_sh = px.plot_utils.plot_map(shift_ax, shift, 
+    shift_image, cbar_sh = usid.viz.plot_utils.plot_map(shift_ax, shift, 
                                                   cmap='inferno', show_cbar=False, **kwargs)
     text = tfp_ax.text(num_cols/2,num_rows+3, '')
     plt.show()
@@ -163,12 +157,15 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
         if clear_filter:
             line_inst.clear_filter_flags()
         
-        tfp[i, :], shift[i, :], inst_freq[i*num_cols:(i+1)*num_cols,:] = line_inst.analyze()
+        _tfp, _shf, _if = line_inst.analyze()
+        tfp[i, :] = _tfp.T
+        shift[i, :] = _shf.T
+        inst_freq[i*num_cols:(i+1)*num_cols,:] = _if.T
 
         if liveplots:
-            tfp_image, _ = px.plot_utils.plot_map(tfp_ax, tfp * 1e6, 
+            tfp_image, _ = usid.viz.plot_utils.plot_map(tfp_ax, tfp * 1e6, 
                                                   cmap='inferno', show_cbar=False, **kwargs)
-            shift_image, _ = px.plot_utils.plot_map(shift_ax, shift, 
+            shift_image, _ = usid.viz.plot_utils.plot_map(shift_ax, shift, 
                                                           cmap='inferno', show_cbar=False, **kwargs)
 
             tfp_sc = tfp[tfp.nonzero()] * 1e6
@@ -193,22 +190,28 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False, verbose=True, 
 
         del line_inst  # Delete the instance to open up memory.
 
-    tfp_image, cbar_tfp = px.plot_utils.plot_map(tfp_ax, tfp * 1e6, cmap='inferno', **kwargs)
+    tfp_image, cbar_tfp = usid.viz.plot_utils.plot_map(tfp_ax, tfp * 1e6, cmap='inferno', **kwargs)
     cbar_tfp.set_label('Time (us)', rotation=270, labelpad=16)
-    shift_image, cbar_sh = px.plot_utils.plot_map(shift_ax, shift, cmap='inferno', **kwargs)
+    shift_image, cbar_sh = usid.viz.plot_utils.plot_map(shift_ax, shift, cmap='inferno', **kwargs)
     cbar_sh.set_label('Frequency Shift (Hz)', rotation=270, labelpad=16)
     text = tfp_ax.text(num_cols/2,num_rows+3, '')
     
     plt.show()
 
-    h5_if = save_process(h5_file, h5_ds.parent, inst_freq, parameters, verbose=verbose)
-    _, _,_, tfp_fixed = save_ht_outs(h5_file, h5_if.parent, tfp, shift, parameters, verbose=verbose)
+    h5_if = save_IF(h5_file, h5_ds.parent, inst_freq, parameters, verbose=verbose)
+    _,_, tfp_fixed = save_ht_outs(h5_file, h5_if.parent, tfp, shift, parameters, verbose=verbose)
     
     #save_CSV(h5_path, tfp, shift, tfp_fixed, append=ds)
-       
+      
+    if verbose:
+        print('Please remember to close the H5 file explicitly when you are done to retain these data',
+              'e.g.:',
+              'h5_if.file.close()',
+              '...and then reopen the file as needed.')
+
     return tfp, shift, inst_freq, h5_if
 
-def save_process(h5_file, h5_gp, inst_freq, parm_dict, verbose=False):
+def save_IF(h5_file, h5_gp, inst_freq, parm_dict, verbose=False):
     """ Adds Instantaneous Frequency as a main dataset """
     # Error check
     if isinstance(h5_gp, h5py.Dataset):
@@ -224,6 +227,7 @@ def save_process(h5_file, h5_gp, inst_freq, parm_dict, verbose=False):
     # Create dimensions
     pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
                 Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
+
     #ds_pos_ind, ds_pos_val = build_ind_val_matrices(pos_desc, is_spectral=False)
     spec_desc = [Dimension('Time', 's',np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
     #ds_spec_inds, ds_spec_vals = build_ind_val_matrices(spec_desc, is_spectral=True)
@@ -241,6 +245,8 @@ def save_process(h5_file, h5_gp, inst_freq, parm_dict, verbose=False):
 
     usid.hdf_utils.copy_attributes(h5_if, h5_gp)
 
+    h5_if.file.flush()
+
     return h5_if
 
 
@@ -254,32 +260,36 @@ def save_ht_outs(h5_file, h5_gp, tfp, shift, parameters, verbose=False):
     tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)
     tfp_fixed = np.array(tfp_fixed)
     
-    # write data
-    grp_name = h5_gp.name
-    grp_tr = px.io.VirtualGroup(grp_name)
-    tfp_px = px.io.VirtualDataset('tfp', tfp, parent = h5_gp)
-    shift_px = px.io.VirtualDataset('shift', shift, parent = h5_gp)
-    tfp_fixed_px = px.io.VirtualDataset('tfp_fixed', tfp_fixed, parent = h5_gp)
-
-    grp_tr.attrs['timestamp'] = get_time_stamp()
-    grp_tr.add_children([tfp_px])
-    grp_tr.add_children([shift_px])
-    grp_tr.add_children([tfp_fixed_px])
+    # write data; note that this is all actually deprecated and should be fixed
+#    grp_name = h5_gp.name
+#    grp_tr = px.io.VirtualGroup(grp_name)
+#    tfp_px = px.io.VirtualDataset('tfp', tfp, parent = h5_gp)
+#    shift_px = px.io.VirtualDataset('shift', shift, parent = h5_gp)
+#    tfp_fixed_px = px.io.VirtualDataset('tfp_fixed', tfp_fixed, parent = h5_gp)
+#
+#    grp_tr.attrs['timestamp'] = get_time_stamp()
+#    grp_tr.add_children([tfp_px])
+#    grp_tr.add_children([shift_px])
+#    grp_tr.add_children([tfp_fixed_px])
     
-    # Find folder, write to it
-    hdf = px.io.HDFwriter(h5_file)
-    h5_refs = hdf.write(grp_tr, print_log=verbose), 
+    # write data using current pyUSID implementations
+#    grp_tr = h5_file.create_group(h5_gp.name)
+    tfp_px = h5_gp.create_dataset('tfp', data=tfp, dtype=np.float32)
+    shift_px = h5_gp.create_dataset('shift', data=shift, dtype=np.float32)
+    tfp_fixed_px = h5_gp.create_dataset('tfp_fixed', data=tfp_fixed, dtype=np.float32)
+    h5_gp.attrs['timestamp'] = get_time_stamp()
     
-    return h5_refs, tfp, shift, tfp_fixed
+    return tfp_px, shift_px, tfp_fixed_px
 
-def save_CSV_from_file(h5_file, h5_path='/', append=''):
+def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     """
     Saves the tfp, shift, and fixed_tfp as CSV files
     
     h5_file : H5Py file
+        Reminder you can always type: h5_svd.file or h5_avg.file for this
     
     h5_path : str, optional
-        specific folder path to write to
+        specific folder path to search for the tfp data. Usually not needed.
     
     append : str, optional
         text to append to file name
@@ -290,13 +300,20 @@ def save_CSV_from_file(h5_file, h5_path='/', append=''):
     tfp_fixed = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp_fixed')[0].value
     shift = usid.hdf_utils.find_dataset(h5_file[h5_path], 'shift')[0].value
     
+    print(usid.hdf_utils.find_dataset(h5_file[h5_path], 'shift')[0].parent.name)
+    
     path = h5_file.file.filename.replace('\\','/')
     path = '/'.join(path.split('/')[:-1])+'/'
     os.chdir(path)
-    np.savetxt('tfp-'+append+'.csv', np.fliplr(tfp).T, delimiter=',')
-    np.savetxt('shift-'+append+'.csv', np.fliplr(shift).T, delimiter=',')
-    np.savetxt('tfp_fixed-'+append+'.csv', np.fliplr(tfp_fixed).T, delimiter=',')
     
+    if mirror:
+        np.savetxt('tfp-'+append+'.csv', np.fliplr(tfp).T, delimiter=',')
+        np.savetxt('shift-'+append+'.csv', np.fliplr(shift).T, delimiter=',')
+        np.savetxt('tfp_fixed-'+append+'.csv', np.fliplr(tfp_fixed).T, delimiter=',')
+    else:
+        np.savetxt('tfp-'+append+'.csv', tfp.T, delimiter=',')
+        np.savetxt('shift-'+append+'.csv', shift.T, delimiter=',')
+        np.savetxt('tfp_fixed-'+append+'.csv', tfp_fixed.T, delimiter=',')
     return
 
 def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
@@ -343,11 +360,11 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
     [vmint, vmaxt] = np.mean(tfp)-2*np.std(tfp), np.mean(tfp)-2*np.std(tfp)
     [vmins, vmaxs] = np.mean(shift)-2*np.std(shift), np.mean(shift)-2*np.std(shift)
     
-    _, cbar_t = px.plot_utils.plot_map(a[0], tfp_fixed*1e6, x_vec = xs*1e6, y_vec= ys*1e6,
+    _, cbar_t = usid.viz.plot_utils.plot_map(a[0], tfp_fixed*1e6, x_vec = xs*1e6, y_vec= ys*1e6,
                                        aspect=asp, cmap='inferno', stdevs=stdevs)
-    _, cbar_r = px.plot_utils.plot_map(a[1], 1/(1e3*tfp_fixed), x_vec = xs*1e6, y_vec = ys*1e6,
+    _, cbar_r = usid.viz.plot_utils.plot_map(a[1], 1/(1e3*tfp_fixed), x_vec = xs*1e6, y_vec = ys*1e6,
                                        aspect=asp, cmap='inferno', stdevs=stdevs)
-    _, cbar_s = px.plot_utils.plot_map(a[2], shift, x_vec = xs*1e6, y_vec = ys*1e6,
+    _, cbar_s = usid.viz.plot_utils.plot_map(a[2], shift, x_vec = xs*1e6, y_vec = ys*1e6,
                                        aspect=asp, cmap='inferno', stdevs=stdevs)
 
     cbar_t.set_label('tfp (us)', rotation=270, labelpad=16)
@@ -369,3 +386,9 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
 
     return
 
+def find_FF(h5_path):
+    
+    parameters = get_utils.get_params(h5_path)
+    h5_gp = hdf_utils._which_h5_group(h5_path)
+    
+    return h5_gp, parameters

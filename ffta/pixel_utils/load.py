@@ -1,10 +1,10 @@
 """load.py: Includes routines for loading data and configuration files."""
 
-__author__ = "Durmus U. Karatay"
-__copyright__ = "Copyright 2014, Ginger Lab"
-__maintainer__ = "Durmus U. Karatay"
-__email__ = "ukaratay@uw.edu"
-__status__ = "Production"
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2018, Ginger Lab"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
+__status__ = "Development"
 
 import configparser
 import sys
@@ -45,7 +45,7 @@ def signal(path, skiprows=0):
         print ("Unrecognized file type!")
         sys.exit(0)
 
-    signal_array.flags.writeable = True  # Make array writable.
+    #signal_array.flags.writeable = True  # Make array writable.
 
     return signal_array
 

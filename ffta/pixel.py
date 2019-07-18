@@ -56,6 +56,10 @@ class Pixel:
         wavelet_parameter = int (default: 5)
         recombination = bool (0: Data are for Charging up, 1: Recombination)
         fit_phase = bool (0: fit to frequency, 1: fit to phase)
+    fit : bool, optional
+        Find tFP by just raw minimum (False) or fitting product of 2 exponentials (True)
+    pycroscopy : bool, optional
+        Pycroscopy requires different orientation, so this corrects for this effect.
 
     Attributes
     ----------
@@ -124,7 +128,7 @@ class Pixel:
 
     """
 
-    def __init__(self, signal_array, params, fit=True):
+    def __init__(self, signal_array, params, fit=True, pycroscopy=False):
 
         # Create parameter attributes for optional parameters.
         # They will be overwritten by following for loop if they exist.
@@ -148,23 +152,26 @@ class Pixel:
 
         # Assign values from inputs.
         self.signal_array = signal_array
+        if pycroscopy: 
+            self.signal_array = signal_array.T
         self.tidx = int(self.trigger * self.sampling_rate)
         
         # Set dimensions correctly
         # Three cases: 1) 2D (has many averages) 2) 1D (but set as 1xN) and 3) True 1D
+        
         if len(signal_array.shape) == 2:
-            if signal_array.shape[0] != 1:
-                self.n_signals, self.n_points = signal_array.shape
-                self._n_points_orig = signal_array.shape[1]
+            if signal_array.shape[1] != 1:
+                self.n_points, self.n_signals = self.signal_array.shape
+                self._n_points_orig = self.signal_array.shape[0]
             else:
                 self.n_signals = 1
-                self.signal_array = self.signal_array[0,:]
+                self.signal_array = self.signal_array[:, 0]
                 self.n_points = self.signal_array.shape[0]
                 self._n_points_orig = self.signal_array.shape[0]
         else:
             self.n_signals = 1
-            self.n_points = signal_array.shape[0]
-            self._n_points_orig = signal_array.shape[0]
+            self.n_points = self.signal_array.shape[0]
+            self._n_points_orig = self.signal_array.shape[0]
 
         # Keep the original values for restoring the signal properties.
         self._tidx_orig = self.tidx
@@ -215,7 +222,7 @@ class Pixel:
         """Averages signals."""
 
         if self.n_signals != 1: # if not multi-signal, don't average
-            self.signal = self.signal_array.mean(axis=0)
+            self.signal = self.signal_array.mean(axis=1)
             
         else:
             self.signal = self.signal_array

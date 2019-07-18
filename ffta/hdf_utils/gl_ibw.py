@@ -148,9 +148,10 @@ class GLIBWTranslator(Translator):
             folder_path, base_name = path.split(file_path)
             base_name = base_name[:-4]
             h5_path = path.join(folder_path, base_name + '.h5')
+            # hard-coded exception, rarely occurs but can be useful
             if path.exists(h5_path):
-                remove(h5_path)
-
+                h5_path = path.join(folder_path, base_name + '_00.h5')
+            
         # Write head of tree to file:
         hdf = HDFwriter(h5_path)
         hdf.write(spm_data, print_log=verbose)

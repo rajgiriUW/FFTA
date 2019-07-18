@@ -4,8 +4,8 @@ Created on Fri Aug 24 13:40:54 2018
 
 @author: Raj
 """
-
 import pycroscopy as px
+import pyUSID as usid
 
 from ffta.line import Line
 from ffta.pixel import Pixel
@@ -170,7 +170,7 @@ def get_line(h5_path, line_num, pnts=1,
     if array_form == True or avg == True:
         return signal_line
     
-    line_inst = Line(signal_line, parameters, c)
+    line_inst = Line(signal_line, parameters, c, pycroscopy=True)
     
     return line_inst
     
@@ -181,9 +181,11 @@ def get_pixel(h5_path, rc, pnts = 1,
     Gets a pixel of data, returns all the averages within that pixel
     Returns a specific key if requested
     Supplying a direct link to a Dataset is MUCH faster than just the file
+    Note that you should supply the deflection data, not instantaneous_frequency
     
     h5_path : str or h5py or Dataset
         Can pass either an h5_path to a file or a file already in use or specific Dataset
+        Again, should pass the deflection data (Rebuilt_Data, or FF_Avg)
     
     rc : list [r, c]
         Pixel location in terms of ROW, COLUMN
@@ -242,6 +244,6 @@ def get_pixel(h5_path, rc, pnts = 1,
         
         signal_pixel = np.reshape(signal_pixel, [signal_pixel.shape[1]])
         
-    pixel_inst = Pixel(signal_pixel, parameters)
+    pixel_inst = Pixel(signal_pixel, parameters, pycroscopy=True)
     
     return pixel_inst    

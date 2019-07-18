@@ -5,11 +5,14 @@ Created on Thu Feb 22 14:28:28 2018
 @author: Raj
 """
 import pycroscopy as px
+import pyUSID as usid
 
 import warnings
 import numpy as np
 
-from pycroscopy.io.write_utils import build_ind_val_dsets, Dimension
+from ffta.hdf_utils import get_utils
+
+from pycroscopy.io.write_utils import build_ind_val_dsets, build_ind_val_matrices, Dimension
 
 """
 Common HDF interfacing functions
@@ -118,7 +121,7 @@ def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6,
     hdf = px.io.HDFwriter(h5_path)
     
     if not any(parm_dict):
-        parm_dict = get_params(h5_path)
+        parm_dict = get_utils.get_params(h5_path)
     
     if 'FastScanSize' in parm_dict:
         fast_x = parm_dict['FastScanSize']
