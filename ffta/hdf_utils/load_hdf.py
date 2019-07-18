@@ -729,7 +729,8 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         Path to hdf5 file on disk
     """
 
-    commands = ['from ffta.hdf_utils import hdf_utils, get_utils']
+    commands = ['***Copy-paste all commands below this line, then hit ENTER***',
+                'from ffta.hdf_utils import hdf_utils, get_utils']
 
     try:
         hdf = px.io.HDFwriter(h5_path)

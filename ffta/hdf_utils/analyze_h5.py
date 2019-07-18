@@ -202,7 +202,13 @@ def process(h5_file, ds = 'FF_Raw', ref='', clear_filter = False,
     _,_, tfp_fixed = save_ht_outs(h5_file, h5_if.parent, tfp, shift, parameters, verbose=verbose)
     
     #save_CSV(h5_path, tfp, shift, tfp_fixed, append=ds)
-       
+      
+    if verbose:
+        print('Please remember to close the H5 file explicitly when you are done to retain these data',
+              'e.g.:',
+              'h5_if.file.close()',
+              '...and then reopen the file as needed.')
+
     return tfp, shift, inst_freq, h5_if
 
 def save_IF(h5_file, h5_gp, inst_freq, parm_dict, verbose=False):
