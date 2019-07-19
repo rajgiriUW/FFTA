@@ -1,11 +1,11 @@
-from ffta import simulation, pixel
+from ffta.simulation import simulate, pixel
 from ffta.utils import load
 from matplotlib import pyplot as plt
 
 path = 'sim_parameters.cfg'
 can_params, force_params, sim_params = load.simulation_configuration(path)
 
-c = simulation.Cantilever(can_params, force_params, sim_params)
+c = simulate.Cantilever(can_params, force_params, sim_params)
 c.simulate(trigger_phase=0)
 
 parameters = {'bandpass_filter': 1.0,
