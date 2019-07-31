@@ -52,7 +52,7 @@ Example usage:
 
 def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', 
                  verbose=False, subfolder='/', 
-                 loadverbose = False, average=False, 
+                 loadverbose = True, average=False, 
                  raw_avg = False, mirror = True):
     """
     Wrapper function for processing a .ibw file and associated FF data
@@ -240,8 +240,9 @@ def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5',
         parm_dict['SlowScanSize'] = height
 
     # Check ratio is correct
-    ratio = parm_dict['FastScanSize'] / parm_dict['SlowScanSize']
+    ratio = np.round(parm_dict['FastScanSize']*1e6,1) / np.round(parm_dict['SlowScanSize']*1e6, 1)
     if n_pixels/len(data_files) != ratio:
+        print(ratio)
         print(parm_dict['FastScanSize'],parm_dict['SlowScanSize'], n_pixels/len(data_files), len(data_files))
         raise Exception('X-Y Dimensions do not match filelist. Add manually to config file. Check n-pixels.')
 
