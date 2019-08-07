@@ -9,12 +9,14 @@ import numpy as np
 import sklearn as sk
 import pycroscopy as px
 from pycroscopy.processing.cluster import Cluster
+import pyUSID as usid
 from pyUSID.processing.process import Process
 from pyUSID.io.write_utils import build_ind_val_matrices, Dimension
 from matplotlib import pyplot as plt
 import matplotlib.animation as animation
 from ffta.analysis import mask_utils
 from ffta.hdf_utils import hdf_utils
+from ffta.hdf_utils import get_utils
 from ffta import pixel
 """
 Creates a Class with various data grouped based on distance to masked edges
@@ -61,9 +63,9 @@ class dist_cluster:
         self.h5_main = h5_main
         
         if isinstance(data_avg, str):
-            self.data_avg = px.hdf_utils.find_dataset(h5_main.parent, data_avg)[0].value
+            self.data_avg = usid.hdf_utils.find_dataset(h5_main.parent, data_avg)[0].value
         elif isinstance(data_avg, np.ndarray):
-            self.data_avg = px.hdf_utils.find_dataset(h5_main.parent, 'tfp')[0].value
+            self.data_avg = usid.hdf_utils.find_dataset(h5_main.parent, 'tfp')[0].value
         else:
             raise ValueError ('Wrong format for data_avg')
 
@@ -77,7 +79,7 @@ class dist_cluster:
         self.parms_dict = parms_dict
         if parms_dict == None:
             print('get params')
-            self.parms_dict = hdf_utils.get_params(h5_main)
+            self.parms_dict = get_utils.get_params(h5_main)
         
         self._params()
 
@@ -155,7 +157,7 @@ class dist_cluster:
         if self.data_avg is not None:
             
             fig, ax = plt.subplots(nrows=1, figsize=(12, 6))
-            _, cbar = px.plot_utils.plot_map(ax, self.data_avg*1e6, 
+            _, cbar = usid.plot_utils.plot_map(ax, self.data_avg*1e6, 
                                              x_vec=self.xvec*1e6, y_vec=self.yvec*1e6, 
                                              cmap='inferno', aspect=self.aspect)
             cbar.set_label('tFP (us)', rotation=270, labelpad=16)
@@ -461,7 +463,7 @@ class dist_cluster:
 
         if newImage:
             fig, ax = plt.subplots(nrows=1, figsize=(8, 6))
-            im0,_ = px.plot_utils.plot_map(ax, self.data_on_avg, x_vec=self.FastScanSize,
+            im0,_ = usid.plot_utils.plot_map(ax, self.data_on_avg, x_vec=self.FastScanSize,
                                    y_vec=self.SlowScanSize, show_cbar=False, 
                                    cmap='inferno')
            
