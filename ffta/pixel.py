@@ -620,7 +620,7 @@ class Pixel:
 
         # loop controls how many EMD modes
         modes = 1
-        for i in xrange(modes):
+        for i in range(modes):
 
             # Continuously adjusts signal until offset within 0.1 f.o.m.
             while sd > .1:
