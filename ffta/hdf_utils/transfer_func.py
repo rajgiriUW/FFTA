@@ -51,9 +51,10 @@ def transfer_function(h5_file, tf_file = '', params_file = '',
     
     if plot:
         plt.figure()
-        plt.plot(freq, data)
+        plt.plot(freq, tf)
         plt.xlabel('Frequency (Hz)')
         plt.ylabel('Amplitude (m)')
+        plt.yscale('log')
         plt.title('Transfer Function')
     
     return h5_file['Transfer_Function']
