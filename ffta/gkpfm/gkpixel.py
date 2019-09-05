@@ -5,11 +5,8 @@ Created on Tue Sep  3 11:55:14 2019
 @author: Raj
 """
 
-import logging
 import numpy as np
-from scipy import signal as sps
 from scipy import optimize as spo
-from scipy import interpolate as spi
 
 from ffta.pixel_utils import noise
 from ffta.pixel_utils import cwavelet
@@ -17,11 +14,6 @@ from ffta.pixel_utils import parab
 from ffta.pixel_utils import fitting
 from ffta.pixel_utils import dwavelet
 import nitime.timeseries as ts
-
-from matplotlib import pyplot as plt
-
-from numba import autojit
-from pixel_utils.peakdetect import get_peaks
 
 class GKPixel:
     '''
@@ -48,7 +40,7 @@ class GKPixel:
             Simple average of the CPD trace, useful for plotting
     '''
     
-    def __init__(self, signal_array, params, ncycles = 4):
+    def __init__(self, signal_array, params, phase, ncycles = 4):
         
         self.signal_array = signal_array
         
@@ -69,22 +61,26 @@ class GKPixel:
         self.num_ncycles = int(self.n_points / self.pts_per_ncycle)
         self.excess_n = self.n_points % self.pts_per_ncycle
         
+        # create response waveform
+        txl = np.linspace(0, self.total_time, self.signal_array.shape[0])
+        self.resp_wfm = np.sin(txl * 2 * np.pi * self.drive_freq + phase)
+        
         return
     
     def analyze(self):
         
-        tx = np.arange(0,self.total_time, self.total_time/len(self.signal_array))
-        tx_cycle = np.arange(0, self.total_time, self.ncycles * self.total_time/len(self.signal_array))
+#        tx = np.arange(0,self.total_time, self.total_time/len(self.signal_array))
+#        tx_cycle = np.arange(0, self.total_time, self.ncycles * self.total_time/len(self.signal_array))
         
-        CPD = np.zeros(len(tx_cycle))
-        capacitance = np.zeros(len(tx_cycle))
+        CPD = np.zeros(self.num_ncycles)
+        capacitance = np.zeros(self.num_ncycles)
         
         for p in np.arange(self.num_ncycles):
             
             st = self.pts_per_ncycle * p
             sp = self.pts_per_ncycle * (p+1)
             
-            popt, _ = spo.curve_fit(poly2, tx[st:sp], self.signal_array[st:sp])
+            popt, _ = spo.curve_fit(poly2, self.resp_wfm[st:sp], self.signal_array[st:sp])
             CPD[p] = -0.5 * popt[1] / popt[0]
             capacitance[p] = popt[0]
         

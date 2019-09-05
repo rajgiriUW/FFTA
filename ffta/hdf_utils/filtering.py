@@ -6,16 +6,18 @@ Created on Mon Feb 26 17:15:36 2018
 """
 
 import pycroscopy as px
-from ffta.hdf_utils import get_utils, hdf_utils
+import pyUSID as usid
 import numpy as np
+
+from ffta.hdf_utils import get_utils
 
 from ffta import pixel
 from matplotlib import pyplot as plt
 
 import warnings
 
-def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = True, 
-               narrowband = False, noise_tolerance = 5e-7, bandwidth=-1, check_filter=True):
+def FFT_testfilter(hdf_file, parameters={}, DC=True, pixelnum = [0,0], show_plots = True, 
+                   narrowband = False, noise_tolerance = 5e-7, bandwidth=-1, check_filter=True):
     """
     Applies FFT Filter to the file at a specific line and displays the result
     
@@ -41,8 +43,8 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
         Contains parameters in FF-raw file for constructing filters. Automatic if a Dataset/File
         Must contain num_pts and samp_rate to be functional
     
-    linenum : int, optional
-        For extracting a specific line to do FFT Filtering on
+    pixelnum : int, optional
+        For extracting a specific pixel to do FFT Filtering on
         
     show_plots : bool, optional
         Turns on FFT plots from Pycroscopy
@@ -75,7 +77,8 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
     if ('h5py' in ftype) or ('Dataset' in ftype):   #hdf file
         
         parameters = get_utils.get_params(hdf_file)
-        hdf_file = get_utils.get_line(hdf_file, linenum, array_form=True, transpose=False)
+        #hdf_file = get_utils.get_line(hdf_file, linenum, array_form=True, transpose=False)
+        hdf_file = get_utils.get_pixel(hdf_file, [pixelnum[0], pixelnum[1]], array_form=True, transpose=False)
         hdf_file = hdf_file.flatten()
     
     if len(hdf_file.shape) == 2:
@@ -153,7 +156,7 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, linenum = 0, show_plots = T
     
     return filt_line, freq_filts, fig_filt, axes_filt
 
-def FFT_filter(h5_main, freq_filts, noise_tolerance=5e-7, make_new=False):
+def FFT_filter(h5_main, freq_filts, noise_tolerance=5e-7, make_new=False, verbose=False):
     """
     Stub for applying filter above to the entire FF image set
     
@@ -177,23 +180,24 @@ def FFT_filter(h5_main, freq_filts, noise_tolerance=5e-7, make_new=False):
         
     """
     
-    h5_filt_grp = px.hdf_utils.check_for_old(h5_main, 'FFT_Filtering')
+    h5_filt_grp = usid.hdf_utils.check_for_old(h5_main, 'FFT_Filtering')
     
-    if h5_filt_grp == None or make_new == True:
+    if make_new == True or not any(h5_filt_grp):
         
         sig_filt = px.processing.SignalFilter(h5_main, frequency_filters=freq_filts, 
                                               noise_threshold=noise_tolerance,
                                               write_filtered=True, write_condensed=False, 
-                                              num_pix=1,verbose=True, cores=2, max_mem_mb=512)
+                                              num_pix=1,verbose=verbose, cores=2, max_mem_mb=512)
         
         h5_filt_grp = sig_filt.compute()
         
     else:
         print('Taking previously computed results')
+        h5_filt = h5_filt_grp[0]['Filtered_Data']
     
     h5_filt = h5_filt_grp['Filtered_Data']
-    px.hdf_utils.copy_attributes(h5_main.parent, h5_filt)
-    px.hdf_utils.copy_attributes(h5_main.parent, h5_filt.parent)
+    usid.hdf_utils.copy_attributes(h5_main.parent, h5_filt)
+    usid.hdf_utils.copy_attributes(h5_main.parent, h5_filt.parent)
 
 
     return h5_filt
