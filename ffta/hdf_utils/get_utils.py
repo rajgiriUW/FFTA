@@ -152,7 +152,7 @@ def get_line(h5_path, line_num, pnts=1,
      
     else: # if a Dataset, extract parameters from the shape. 
         
-        d = h5_path
+        d = h5_path[()]
         parameters =  get_params(h5_path)
         
         c = parameters['num_cols']
@@ -223,7 +223,7 @@ def get_pixel(h5_path, rc, pnts = 1,
         
     else:
         
-        d = h5_path
+        d = h5_path[()]
         parameters =  get_params(h5_path)
 
         c = parameters['num_cols']

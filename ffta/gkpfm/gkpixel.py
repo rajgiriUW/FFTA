@@ -8,13 +8,6 @@ Created on Tue Sep  3 11:55:14 2019
 import numpy as np
 from scipy import optimize as spo
 
-from ffta.pixel_utils import noise
-from ffta.pixel_utils import cwavelet
-from ffta.pixel_utils import parab
-from ffta.pixel_utils import fitting
-from ffta.pixel_utils import dwavelet
-import nitime.timeseries as ts
-
 class GKPixel:
     '''
     Class for processing G-KPFM data

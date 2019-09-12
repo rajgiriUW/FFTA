@@ -21,7 +21,6 @@ import nitime.timeseries as ts
 
 from matplotlib import pyplot as plt
 
-from numba import autojit
 from pixel_utils.peakdetect import get_peaks
 
 class Pixel:
@@ -137,6 +136,8 @@ class Pixel:
         self.filter_bandwidth = 5000
         self.wavelet_analysis = False
         self.wavelet_parameter = 5
+        self.fft_analysis = False
+        self.fft_cycles = 2
         self.recombination = False
         self.phase_fitting = False
         self.EMD_analysis = False
@@ -550,7 +551,6 @@ class Pixel:
 
         return
 
-    @autojit
     def __get_cwt__(self):
         """Generates the CWT using Morlet wavelet. Returns a 2D Matrix."""
 
@@ -575,7 +575,7 @@ class Pixel:
         _, n_points = np.shape(self.cwt_matrix)
         inst_freq = np.empty(n_points)
 
-        for i in xrange(n_points):
+        for i in range(n_points):
 
             cut = self.cwt_matrix[:, i]
             inst_freq[i], _ = parab.fit(cut, np.argmax(cut))
@@ -667,6 +667,68 @@ class Pixel:
 
         return
 
+    def slidingt_fft(self):
+        '''
+        Sliding FFT approach
+        -Take self.fft_cycles number of cycles of data
+        -multiply by a window function
+        -Take FFT
+        -Find frequency corresponding to the peak
+        -set the data to that frequency
+        -slide by one pixel and repeat
+        '''
+        
+        pts_per_cycle = int(self.sampling_rate / self.drive_freq)
+        num_cycles = int(self.n_points / pts_per_cycle)
+        pts_per_ncycle = self.fft_cycles * int(self.sampling_rate / self.drive_freq)
+        num_ncycles = int(self.n_points / pts_per_ncycle)
+        excess_n = self.n_points % pts_per_ncycle
+        
+        time_res = 1e-6 # calculates window size by desired time-resolution
+        pts_per_ncycle = int(time_res * self.sampling_rate) 
+        num_ncycles = int(self.n_points / pts_per_ncycle)
+        excess_n = self.n_points % pts_per_ncycle
+                
+        #inst_freq_decimated = np.zeros(num_ncycles)
+#        freq = np.linspace(0, self.sampling_rate, pts_per_ncycle) 
+        inst_freq = np.zeros(self.n_points)
+        freq = np.linspace(0, self.sampling_rate, self.n_points)        
+        
+        for c in range(self.n_points):
+        
+            sig = self.signal_array[c:c+pts_per_ncycle]
+            win = sps.windows.get_window('blackman', len(sig))
+            sig = sig * win
+            
+            SIG = np.fft.fft(sig, n=self.n_points)
+            pk = np.argmax(np.abs(SIG[:int(len(SIG)*0.5)]))
+            
+            popt = np.polyfit(freq[pk-20:pk+20], np.abs(SIG[pk-20:pk+20]), 2)
+            fq = -0.5 * popt[1] / popt[0]
+#            fq = freq[np.argmax(np.abs(SIG[:int(len(SIG)*0.5)]))]
+            
+            inst_freq[c] = fq
+        
+        inst_freq = np.zeros(num_ncycles)
+        freq = np.linspace(0, self.sampling_rate, self.n_points)     
+        
+        for c in range(num_ncycles):
+        
+            sig = self.signal_array[c*pts_per_ncycle:(c+1)*pts_per_ncycle]
+            win = sps.windows.get_window('blackman', len(sig))
+            sig = sig * win
+            
+            SIG = np.fft.fft(sig, n=self.n_points)
+            pk = np.argmax(np.abs(SIG[:int(len(SIG)*0.5)]))
+            
+            popt = np.polyfit(freq[pk-20:pk+20], np.abs(SIG[pk-20:pk+20]), 2)
+            fq = -0.5 * popt[1] / popt[0]
+#            fq = freq[np.argmax(np.abs(SIG[:int(len(SIG)*0.5)]))]
+            
+            inst_freq[c] = fq
+        
+        return
+
     def plot(self, newplot=True, c1='r', c2='g'):
         """ Quick visualization of best_fit and cut."""
         
@@ -739,6 +801,11 @@ class Pixel:
 
                 # Calculate instantenous frequency using wavelet transform.
                 self.calculate_cwt_freq()
+                
+            elif self.fft_analysis:
+                
+                # Calculate instantenous frequency using sliding FFT
+                self.sliding_fft()
 
             else:
                 # Hilbert transform method
