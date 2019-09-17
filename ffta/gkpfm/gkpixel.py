@@ -55,8 +55,8 @@ class GKPixel:
         self.excess_n = self.n_points % self.pts_per_ncycle
         
         # create response waveform
-        txl = np.linspace(0, self.total_time, self.signal_array.shape[0])
-        self.resp_wfm = np.sin(txl * 2 * np.pi * self.drive_freq + phase)
+        self.txl = np.linspace(0, self.total_time, self.signal_array.shape[0])
+        self.resp_wfm = np.sin(self.txl * 2 * np.pi * self.drive_freq + phase)[:self.pts_per_ncycle]
         
         return
     
@@ -73,12 +73,45 @@ class GKPixel:
             st = self.pts_per_ncycle * p
             sp = self.pts_per_ncycle * (p+1)
             
-            popt, _ = spo.curve_fit(poly2, self.resp_wfm[st:sp], self.signal_array[st:sp])
+            # calculate phase, since this is offset at each pixel due to software lag
+            ph = self.min_phase(self.signal_array[st:sp])
+            resp_wfm = np.sin(self.txl * 2 * np.pi * self.drive_freq + ph)[:self.pts_per_ncycle]
+            
+#            popt, _ = spo.curve_fit(poly2, self.resp_wfm[st:sp], self.signal_array[st:sp])
+            popt, _ = spo.curve_fit(poly2, resp_wfm, self.signal_array[st:sp])
             CPD[p] = -0.5 * popt[1] / popt[0]
             capacitance[p] = popt[0]
         
         return CPD, capacitance, np.mean(CPD)
     
+    def min_phase(self,signal):
+        
+        fits = []
+        xpts = np.arange(-2*np.pi, 2*np.pi, 0.1)
+        for i in xpts:
+            
+            txl = np.linspace(0, self.total_time, self.signal_array.shape[0])
+            resp_wfm = np.sin(txl * 2 * np.pi * self.drive_freq + i)[:signal.shape[0]]
+            
+            st = int(self.pts_per_cycle / 2)
+            
+            p1 = np.polyfit(resp_wfm[:st], signal[:st], 2)
+            p2 = np.polyfit(resp_wfm[-st:], signal[-st:], 2)
+            
+            fit1 = -0.5 * p1[1]/p1[0]
+            fit2 = -0.5 * p2[1]/p2[0]
+            fits.append(np.abs(fit2-fit1))
+        
+        ph = xpts[np.argmin(fits)]
+        
+        resp_wfm = np.sin(txl * 2 * np.pi * self.drive_freq + ph)[:signal.shape[0]]
+        p1 = np.polyfit(resp_wfm, signal, 2)
+        
+        if p1[0] > 0:
+            ph = ph + np.pi/2
+        
+        return ph
+        
 def poly2(t, a, b, c):
     
     return a*t**2 + b*t + c
