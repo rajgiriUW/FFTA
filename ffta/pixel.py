@@ -203,7 +203,7 @@ class Pixel:
         
             for i in range(self.n_signals):
             
-                self.signal_array[i] -= self.signal_array[i,:].mean()
+                self.signal_array[:, i] -= np.mean(self.signal_array[:, i])
 
         return
 
@@ -667,7 +667,7 @@ class Pixel:
 
         return
 
-    def slidingt_fft(self):
+    def sliding_fft(self, time_res = 20e-6, decimate=True):
         '''
         Sliding FFT approach
         -Take self.fft_cycles number of cycles of data
@@ -676,58 +676,60 @@ class Pixel:
         -Find frequency corresponding to the peak
         -set the data to that frequency
         -slide by one pixel and repeat
+        
+        time_res : float, optional
+            What timescale to evaluate each FFT over
+            
+        decimate : bool, optional
+            Whether to shift window by time_res or by single point
+        
         '''
         
-        pts_per_cycle = int(self.sampling_rate / self.drive_freq)
-        num_cycles = int(self.n_points / pts_per_cycle)
-        pts_per_ncycle = self.fft_cycles * int(self.sampling_rate / self.drive_freq)
-        num_ncycles = int(self.n_points / pts_per_ncycle)
-        excess_n = self.n_points % pts_per_ncycle
-        
-        time_res = 1e-6 # calculates window size by desired time-resolution
         pts_per_ncycle = int(time_res * self.sampling_rate) 
         num_ncycles = int(self.n_points / pts_per_ncycle)
         excess_n = self.n_points % pts_per_ncycle
                 
-        #inst_freq_decimated = np.zeros(num_ncycles)
-#        freq = np.linspace(0, self.sampling_rate, pts_per_ncycle) 
-        inst_freq = np.zeros(self.n_points)
-        freq = np.linspace(0, self.sampling_rate, self.n_points)        
+        if not decimate:
         
-        for c in range(self.n_points):
+            inst_freq = np.zeros(self.n_points)
+            freq = np.linspace(0, self.sampling_rate, self.n_points)        
+            
+            for c in range(self.n_points):
+            
+                sig = self.signal_array[c:c+pts_per_ncycle]
+                win = sps.windows.get_window('blackman', len(sig))
+                sig = sig * win
+                
+                SIG = np.fft.fft(sig, n=self.n_points)
+                pk = np.argmax(np.abs(SIG[:int(len(SIG)*0.5)]))
+                
+                popt = np.polyfit(freq[pk-20:pk+20], np.abs(SIG[pk-20:pk+20]), 2)
+                fq = -0.5 * popt[1] / popt[0]
+                
+                inst_freq[c] = fq
         
-            sig = self.signal_array[c:c+pts_per_ncycle]
-            win = sps.windows.get_window('blackman', len(sig))
-            sig = sig * win
+        else: 
+
+            inst_freq = np.zeros(num_ncycles)
+            freq = np.linspace(0, self.sampling_rate, self.n_points)     
             
-            SIG = np.fft.fft(sig, n=self.n_points)
-            pk = np.argmax(np.abs(SIG[:int(len(SIG)*0.5)]))
+            for c in range(num_ncycles):
             
-            popt = np.polyfit(freq[pk-20:pk+20], np.abs(SIG[pk-20:pk+20]), 2)
-            fq = -0.5 * popt[1] / popt[0]
-#            fq = freq[np.argmax(np.abs(SIG[:int(len(SIG)*0.5)]))]
-            
-            inst_freq[c] = fq
+                sig = self.signal_array[c*pts_per_ncycle:(c+1)*pts_per_ncycle]
+                win = sps.windows.get_window('blackman', len(sig))
+                sig = sig * win
+                
+                SIG = np.fft.fft(sig, n=self.n_points)
+                pk = np.argmax(np.abs(SIG[:int(len(SIG)*0.5)]))
+                
+                popt = np.polyfit(freq[pk-20:pk+20], np.abs(SIG[pk-20:pk+20]), 2)
+                fq = -0.5 * popt[1] / popt[0]
+                
+                inst_freq[c] = fq
         
-        inst_freq = np.zeros(num_ncycles)
-        freq = np.linspace(0, self.sampling_rate, self.n_points)     
+        self.inst_freq = inst_freq
         
-        for c in range(num_ncycles):
-        
-            sig = self.signal_array[c*pts_per_ncycle:(c+1)*pts_per_ncycle]
-            win = sps.windows.get_window('blackman', len(sig))
-            sig = sig * win
-            
-            SIG = np.fft.fft(sig, n=self.n_points)
-            pk = np.argmax(np.abs(SIG[:int(len(SIG)*0.5)]))
-            
-            popt = np.polyfit(freq[pk-20:pk+20], np.abs(SIG[pk-20:pk+20]), 2)
-            fq = -0.5 * popt[1] / popt[0]
-#            fq = freq[np.argmax(np.abs(SIG[:int(len(SIG)*0.5)]))]
-            
-            inst_freq[c] = fq
-        
-        return
+        return 
 
     def plot(self, newplot=True, c1='r', c2='g'):
         """ Quick visualization of best_fit and cut."""
@@ -766,7 +768,7 @@ class Pixel:
 
         try:
             # Remove DC component, first.
-            self.remove_dc()
+            #self.remove_dc()
 
             # Phase-lock signals.
             #self.phase_lock()
@@ -775,7 +777,7 @@ class Pixel:
             self.average()
 
             # Remove DC component again, introduced by phase-locking.
-            self.remove_dc()
+            #self.remove_dc()
 
             # Check the drive frequency.
             self.check_drive_freq()
