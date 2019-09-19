@@ -10,6 +10,7 @@ __status__ = "Development"
 
 import numpy as np
 import os
+import h5py
 
 import pycroscopy as px
 import pyUSID as usid
@@ -731,11 +732,12 @@ def hdf_commands(h5_path, ds='FF_Raw'):
     """
 
     commands = ['***Copy-paste all commands below this line, then hit ENTER***',
-                'from ffta.hdf_utils import hdf_utils, get_utils']
+                'from ffta.hdf_utils import hdf_utils, get_utils',
+                'import h5py']
 
     try:
-        hdf = px.io.HDFwriter(h5_path)
-        commands.append("hdf = px.io.HDFwriter(h5_path)")
+        hdf = h5py.File(h5_path, 'r+')
+        commands.append("hdf = h5py.File(h5_path, 'r+')")
     except:
         pass
 

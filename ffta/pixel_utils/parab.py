@@ -1,9 +1,5 @@
 """parab.py: Parabola fit around three points to find a true vertex."""
 
-from numba import autojit
-
-
-@autojit
 def fit(f, x):
     """
     f = array
