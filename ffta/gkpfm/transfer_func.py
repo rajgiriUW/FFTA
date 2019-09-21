@@ -6,7 +6,7 @@ Created on Mon Aug 19 12:10:38 2019
 """
 
 import pyUSID as usid
-from pyUSID.io.write_utils import  Dimension
+from pyUSID.io.write_utils import Dimension
 
 from igor import binarywave as bw
 import numpy as np

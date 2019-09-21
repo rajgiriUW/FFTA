@@ -732,7 +732,6 @@ def hdf_commands(h5_path, ds='FF_Raw'):
     """
 
     commands = ['***Copy-paste all commands below this line, then hit ENTER***',
-                'from ffta.hdf_utils import hdf_utils, get_utils',
                 'import h5py']
 
     try:

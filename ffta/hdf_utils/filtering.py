@@ -9,6 +9,7 @@ import pycroscopy as px
 from pycroscopy.processing.fft import FrequencyFilter
 import pyUSID as usid
 import numpy as np
+from scipy import signal as sps
 
 from ffta.hdf_utils import get_utils
 
@@ -18,29 +19,145 @@ from matplotlib import pyplot as plt
 import warnings
 
 
-def FFT_testfilter(hdf_file, parameters={}, DC=True, pixelnum=[0, 0], show_plots=True,
-                   narrowband=False, noise_tolerance=5e-7, bandwidth=-1, check_filter=True):
+def lowpass(hdf_file, parameters={}, pixelnum=[0, 0], f_cutoff=None):
+    '''
+    Interfaces to px.pycroscopy.fft.LowPassFilter
+    :param hdf_file:
+    :param parameters:
+    :param pixelnum:
+        See test_filter below
+    :param f_cutoff: int
+        frequency to cut off. Defaults to 2*drive frequency rounded to nearest 100 kHz
+
+    '''
+    hdf_file, num_pts, drive, samp_rate = _get_pixel_for_filtering(hdf_file, parameters, pixelnum)
+
+    if not f_cutoff:
+        lpf_cutoff = np.round(drive / 1e5, decimals=0) * 2 * 1e5  # 2times the drive frequency, round up
+
+    lpf = px.processing.fft.LowPassFilter(num_pts, samp_rate, lpf_cutoff)
+
+    return lpf
+
+
+def bandpass(hdf_file, parameters={}, pixelnum=[0, 0], f_center=None, f_width=10e3, harmonic=None, fir=False):
+    '''
+    Interfaces to pycroscopy.processing.fft.BandPassFilter
+    Note that this is effectively a Harmonic Filter of number_harmonics 1, but with finite impulse response option
+
+    :param hdf_file:
+    :param parameters:
+    :param pixelnum:
+        See test_filter below
+    :param f_center: int
+        center frequency for the specific band to pass
+    :param f_width: int
+        width of frequency to pass
+    :param harmonic: int
+        if specified, sets the band to this specific multiple of the drive frequency
+    :param fir: bool
+        uses an Finite Impulse Response filter instead of a normal boxcar
+    '''
+
+    hdf_file, num_pts, drive, samp_rate = _get_pixel_for_filtering(hdf_file, parameters, pixelnum)
+
+    # default is the 2*w signal (second harmonic for KPFM)
+    if not f_center:
+        f_center = drive * 2
+    elif harmonic:
+        f_center = int(drive * harmonic)
+
+    bpf = px.processing.fft.BandPassFilter(num_pts, samp_rate, f_center, f_width, fir=fir)
+
+    return bpf
+
+
+def harmonic(hdf_file, parameters={}, pixelnum=[0, 0], first_harm=1, bandwidth=None, num_harmonics=5):
+    '''
+    Interfaces with px.processing.fft.HarmonicFilter
+
+    hdf_file, parameters, pixelnum : see comments in test_filter below
+
+    first_harm : int
+        The first harmonic based on the drive frequency to use
+        For G-KPFM this should be explicitly set to 2
+
+    bandwidth : int
+        bandwidth for filtering. For computational purposes this is hard-set to 2500 (2.5 kHz)
+
+    num_harmonics : int
+        The number of harmonics to use (omega, 2*omega, 3*omega, etc)
+    '''
+
+    hdf_file, num_pts, drive, samp_rate = _get_pixel_for_filtering(hdf_file, parameters, pixelnum)
+
+    if not bandwidth:
+        bandwidth = 2500
+    elif bandwidth > 2500:
+        warnings.warn('Bandwidth of that level might cause errors')
+        bandwidth = 2500
+
+    first_harm = drive * first_harm
+
+    hbf = px.processing.fft.HarmonicPassFilter(num_pts, samp_rate, first_harm, bandwidth, num_harmonics)
+
+    return hbf
+
+
+def noise_filter(hdf_file, parameters={}, pixelnum=[0, 0],
+                 centers=[10E3, 50E3, 100E3, 150E3, 200E3],
+                 widths=[20E3, 1E3, 1E3, 1E3, 1E3]):
+    '''
+    Interfaces with pycroscopy.processing.fft.NoiseBandFilter
+
+    :param hdf_file:
+    :param parameters:
+    :param pixelnum:
+        See test_filter
+    :param centers: list
+        List of Frequencies to filter out
+    :param widths:
+        List of frequency widths for each filter. e,g. in default case (10 kHz center, 20 kHz width) is from 0 to 20 kHz
+    '''
+
+    hdf_file, num_pts, drive, samp_rate = _get_pixel_for_filtering(hdf_file, parameters, pixelnum)
+
+    nf = px.processing.fft.NoiseBandFilter(num_pts, samp_rate, centers, widths)
+
+    return nf
+
+
+def _get_pixel_for_filtering(hdf_file, parameters={}, pixelnum=[0, 0]):
+    ftype = str(type(hdf_file))
+    if ('h5py' in ftype) or ('Dataset' in ftype):  # hdf file
+
+        parameters = usid.hdf_utils.get_attributes(hdf_file)
+        hdf_file = get_utils.get_pixel(hdf_file, [pixelnum[0], pixelnum[1]], array_form=True, transpose=False)
+        hdf_file = hdf_file.flatten()
+
+    if len(hdf_file.shape) == 2:
+        hdf_file = hdf_file.flatten()
+
+    num_pts = hdf_file.shape[0]
+    drive = parameters['drive_freq']
+    samp_rate = parameters['sampling_rate']
+
+    return hdf_file, num_pts, drive, samp_rate
+
+
+def test_filter(hdf_file, freq_filts, parameters={}, pixelnum=[0, 0], noise_tolerance=5e-7,
+                show_plots=True, check_filter=True):
     """
     Applies FFT Filter to the file at a specific line and displays the result
-    
-    Usage:
-    >> h5_ll = hdf_utils.get_line(h5_file, linenum, avg=True)
-    >> filt_sig, freq_filts, _,_ = filtering.FFT_testfilter(h5_ll, 
-                                                            parameters, 
-                                                            narrowband=True, 
-                                                            noise_tolerance=1e-5, 
-                                                            show_plots=True)
-    
-    This works on any line. However, you should have the filter work on a single signal
-    
+
     hdf_file : h5Py file or Nx1 NumPy array (preferred is NumPy array)
         hdf_file to work on, e.g. hdf.file['/FF-raw'] if that's a Dataset
         if ndarray, uses passed or default parameters
         Use ndarray.flatten() to ensure correct dimensions
-        
-    DC : bool, optional
-        Determines whether to remove mean (DC-offset)
-        
+
+    freq_filts : list of FrequencyFilter class objects
+        Contains the filters to apply to the test signal
+
     parameters : dict, optional
         Contains parameters in FF-raw file for constructing filters. Automatic if a Dataset/File
         Must contain num_pts and samp_rate to be functional
@@ -50,18 +167,10 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, pixelnum=[0, 0], show_plots
         
     show_plots : bool, optional
         Turns on FFT plots from Pycroscopy
-    
-    narrowband : bool, optional
-        Sets noiseband filter to be a narrow pass filter centered on the drive_frequency
-        Sometimes fails for very large datasets for unknown reasons.
-    
+
     noise_tolerance : float 0 to 1
         Amount of noise below which signal is set to 0
-        
-    bandwidth : int, optional
-        Total bandwidth (each side is half-bandwidth) is capped at 2500 Hz for computational reasons
-        This overrides the parameters value
-        
+
     Returns
     -------
     filt_line : numpy.ndarray
@@ -79,50 +188,14 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, pixelnum=[0, 0], show_plots
     if ('h5py' in ftype) or ('Dataset' in ftype):  # hdf file
 
         parameters = get_utils.get_params(hdf_file)
-        # hdf_file = get_utils.get_line(hdf_file, linenum, array_form=True, transpose=False)
         hdf_file = get_utils.get_pixel(hdf_file, [pixelnum[0], pixelnum[1]], array_form=True, transpose=False)
         hdf_file = hdf_file.flatten()
 
     if len(hdf_file.shape) == 2:
-        sh = hdf_file.shape
         reshape = True
         hdf_file = hdf_file.flatten()
 
-    num_pts = hdf_file.shape[0]
-    drive = parameters['drive_freq']
-    lpf_cutoff = np.round(drive / 1e5, decimals=0) * 2 * 1e5  # 2times the drive frequency, round up
-    samp_rate = parameters['sampling_rate']
-
-    # default filtering, note the bandwidths --> DC filtering and certain noise peaks
-    lpf = px.processing.fft.LowPassFilter(num_pts, samp_rate, lpf_cutoff)
-    nbf = px.processing.fft.NoiseBandFilter(num_pts, samp_rate,
-                                            [10E3, 50E3, 100E3, 150E3, 200E3],
-                                            [20E3, 1E3, 1E3, 1E3, 1E3])
-
-    freq_filts = [lpf, nbf]
-
-    # Remove DC Offset
-    if DC:
-        hdf_file -= hdf_file.mean(axis=0)
-
-    # Generate narrowband signal
-    if narrowband:
-
-        if bandwidth == -1:  # unspecified
-            try:
-                bandwidth = parameters['filter_bandwidth']
-                if bandwidth > 2500:
-                    warnings.warn('Bandwidth of that level might cause errors')
-                    bandwidth = 2500
-            except:
-                print('No bandwidth parameters')
-                bandwidth = 2500
-
-        nbf = px.processing.fft.HarmonicPassFilter(num_pts, samp_rate, drive, bandwidth, 7)
-        freq_filts = [nbf]
-
-    #    composite_filter = px.fft.build_composite_freq_filter(freq_filts)
-    #    print('Composite filter of len:', len(composite_filter))
+    sh = hdf_file.shape
 
     # Test filter on a single line:
     filt_line, fig_filt, axes_filt = px.processing.gmode_utils.test_filter(hdf_file,
@@ -157,7 +230,7 @@ def FFT_testfilter(hdf_file, parameters={}, DC=True, pixelnum=[0, 0], show_plots
     return filt_line, freq_filts, fig_filt, axes_filt
 
 
-def FFT_filter(h5_main, freq_filts, noise_tolerance=5e-7, make_new=False, verbose=False):
+def fft_filter(h5_main, freq_filts, noise_tolerance=5e-7, make_new=False, verbose=False):
     """
     Stub for applying filter above to the entire FF image set
     
@@ -203,10 +276,12 @@ def FFT_filter(h5_main, freq_filts, noise_tolerance=5e-7, make_new=False, verbos
     return h5_filt
 
 
+# placeholder until accepted in pull request
 class BandPassFilter(FrequencyFilter):
-    def __init__(self, signal_length, samp_rate, f_center, f_width, roll_off=0.05, fir=False):
+    def __init__(self, signal_length, samp_rate, f_center, f_width,
+                 fir=False, fir_taps=1999):
         """
-        Builds a low pass filter
+        Builds a bandpass filter
 
         Parameters
         ----------
@@ -214,15 +289,18 @@ class BandPassFilter(FrequencyFilter):
             Points in the FFT. Assuming Signal in frequency space (ie - after FFT shifting)
         samp_rate : unsigned integer
             Sampling rate
-        f_cutoff : unsigned integer
-            Cutoff frequency for filter
-        roll_off : 0 < float < 1
-            Frequency band over which the filter rolls off. rol off = 0.05 on a
-            100 kHz low pass filter -> roll off from 95 kHz (1) to 100 kHz (0)
+        f_center : unsigned integer
+            Center frequency for filter
+        f_width : unsigned integer
+            Frequency width of the pass band
+        fir : bool, optional
+            True uses a finite impulse response (FIR) response instead of a standard boxcar. FIR is causal
+        fir_taps : int
+            Number of taps (length of filter) for finite impulse response filter
 
         Returns
         -------
-        BPF : 1D numpy array describing the low pass filter
+        bpf : 1D numpy array describing the bandpass filter
 
         """
 
@@ -242,19 +320,21 @@ class BandPassFilter(FrequencyFilter):
 
         bpf = np.zeros(signal_length, dtype=np.float32)
 
-        # FIR filter or not; note that FIR filters are causal in nature
+        # Finite Impulse Response or Boxcar
         if not fir:
+
             bpf[cent - ind - sz:cent - ind + sz + 1] = 1
             bpf[cent + ind - sz:cent + ind + sz + 1] = 1
+
         else:
 
-            freq_low = (f_center - f_width) / nyq_rate
-            freq_high = (f_center + f_width) / nyq_rate
+            freq_low = (f_center - f_width) / (0.5 * samp_rate)
+            freq_high = (f_center + f_width) / (0.5 * samp_rate)
 
             band = [freq_low, freq_high]
 
-            taps = sps.firwin(int(1999), band, pass_zero=False,
-                                  window='blackman')
+            taps = sps.firwin(int(fir_taps), band, pass_zero=False,
+                              window='blackman')
             bpf = np.abs(np.fft.fftshift(np.fft.fft(taps, n=signal_length)))
 
         self.value = bpf
@@ -262,6 +342,6 @@ class BandPassFilter(FrequencyFilter):
     def get_parms(self):
         basic_parms = super(BandPassFilter, self).get_parms()
         prefix = 'band_pass_'
-        this_parms = {prefix+'start_freq': self.f_center, prefix+'band_width': self.f_width}
+        this_parms = {prefix + 'start_freq': self.f_center, prefix + 'band_width': self.f_width}
         this_parms.update(basic_parms)
         return this_parms
