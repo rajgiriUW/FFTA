@@ -63,9 +63,10 @@ def bandpass(hdf_file, parameters={}, pixelnum=[0, 0], f_center=None, f_width=10
 
     # default is the 2*w signal (second harmonic for KPFM)
     if not f_center:
-        f_center = drive * 2
-    elif harmonic:
-        f_center = int(drive * harmonic)
+        if not harmonic:
+            f_center = drive * 2
+        else:
+            f_center = int(drive * harmonic)
 
     bpf = px.processing.fft.BandPassFilter(num_pts, samp_rate, f_center, f_width, fir=fir)
 

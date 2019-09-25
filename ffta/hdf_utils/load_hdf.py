@@ -46,7 +46,7 @@ hdf_commands : Creates workspace-compatible commands for common HDF variable sta
 
 Example usage:
     >>from ffta.hdf_utils import load_hdf
-    >>h5_path, parameters = load_hdf.loadHDF5_ibw(ibw_file_path='E:/Data/FF_image_file.ibw',
+    >>h5_path, parameters, h5_avg = load_hdf.loadHDF5_ibw(ibw_file_path='E:/Data/FF_image_file.ibw',
                                                   ff_file_path=r'E:\Data\FF_Folder')
     >>loadHDF5.hdf_commands(h5_path) #prints out commands available
 """

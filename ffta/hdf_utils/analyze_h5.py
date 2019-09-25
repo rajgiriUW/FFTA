@@ -25,7 +25,7 @@ Analyzes an HDF_5 format trEFM data set and writes the result into that file
 
 
 def process(h5_file, ds='FF_Raw', ref='', clear_filter=False,
-            verbose=True, liveplots=True):
+            verbose=True, liveplots=True, **kwargs):
     """
     Processes FF_Raw dataset in the HDF5 file
     
@@ -108,6 +108,12 @@ def process(h5_file, ds='FF_Raw', ref='', clear_filter=False,
     pnts_per_pixel = parameters['pnts_per_pixel']
     pnts_per_avg = parameters['pnts_per_avg']
 
+    for key, value in kwargs.items():
+        _temp = parameters[key]
+        parameters[key] = value
+        if verbose:
+            print('Changing', key, 'from', _temp, 'to', value)
+
     if verbose:
         print('Recombination: ', parameters['recombination'])
         print('ROI: ', parameters['roi'])
@@ -154,7 +160,7 @@ def process(h5_file, ds='FF_Raw', ref='', clear_filter=False,
     # Load every file in the file list one by one.
     for i in range(num_rows):
 
-        line_inst = get_utils.get_line(h5_ds, i)
+        line_inst = get_utils.get_line(h5_ds, i, params=parameters)
 
         if clear_filter:
             line_inst.clear_filter_flags()
@@ -200,8 +206,8 @@ def process(h5_file, ds='FF_Raw', ref='', clear_filter=False,
 
     plt.show()
 
-    h5_if = save_IF(h5_file, h5_ds.parent, inst_freq, parameters, verbose=verbose)
-    _, _, tfp_fixed = save_ht_outs(h5_file, h5_if.parent, tfp, shift, parameters, verbose=verbose)
+    h5_if = save_IF(h5_ds.parent, inst_freq, parameters)
+    _, _, tfp_fixed = save_ht_outs(h5_if.parent, tfp, shift)
 
     # save_CSV(h5_path, tfp, shift, tfp_fixed, append=ds)
 

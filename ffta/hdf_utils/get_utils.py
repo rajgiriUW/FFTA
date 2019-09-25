@@ -104,7 +104,7 @@ def change_params(h5_path, new_vals = {}, verbose=False):
 
     return parameters
     
-def get_line(h5_path, line_num, pnts=1, 
+def get_line(h5_path, line_num, params=None,
              array_form=False, avg=False, transpose=False):    
     """
     Gets a line of data.
@@ -118,8 +118,9 @@ def get_line(h5_path, line_num, pnts=1,
     line_num : int
         Returns specific line in the dataset
     
-    pnts : int, optional
-        Number of points in a line. Same as parm_dict['pnts_per_line']
+    params: dict
+        If explicitly changing parameters (to test a feature), you can pass any subset and this will overwrite it
+        e.g. parameters  = {'drive_freq': 10} will extract the Line, then change Line.drive_freq = 10
     
     array_form : bool, optional
         Returns the raw array contents rather than Line class
@@ -169,13 +170,17 @@ def get_line(h5_path, line_num, pnts=1,
     
     if array_form == True or avg == True:
         return signal_line
-    
+
+    if any(params):
+        for key, val in params.items():
+            parameters[key] = val
+
     line_inst = Line(signal_line, parameters, c, pycroscopy=True)
     
     return line_inst
     
 
-def get_pixel(h5_path, rc, pnts = 1, 
+def get_pixel(h5_path, rc, params=None,
               array_form=False, avg=False, transpose=False):    
     """
     Gets a pixel of data, returns all the averages within that pixel
@@ -189,10 +194,11 @@ def get_pixel(h5_path, rc, pnts = 1,
     
     rc : list [r, c]
         Pixel location in terms of ROW, COLUMN
-        
-    pnts : int
-        Number of signals to average together. By default is extracted from parm_dict/attributes    
-    
+
+     params: dict
+        If explicitly changing parameters (to test a feature), you can pass any subset and this will overwrite it
+        e.g. parameters  = {'drive_freq': 10} will extract the Pixel, then change Pixel.drive_freq = 10
+
     array_form : bool, optional
         Returns the raw array contents rather than Pixel class
     
@@ -243,7 +249,11 @@ def get_pixel(h5_path, rc, pnts = 1,
     if signal_pixel.shape[0] == 1:
         
         signal_pixel = np.reshape(signal_pixel, [signal_pixel.shape[1]])
-        
+
+    if any(params):
+        for key, val in params.items():
+            parameters[key] = val
+
     pixel_inst = Pixel(signal_pixel, parameters, pycroscopy=True)
     
     return pixel_inst    

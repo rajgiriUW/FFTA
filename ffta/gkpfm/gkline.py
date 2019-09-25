@@ -29,7 +29,7 @@ def cpd_total(ds, params, verbose=False, ncycles = 4, smooth=3):
     cpd_mat[0, :] = cpd
 
     kernel = np.ones(smooth)/smooth
-    cpd_mat_sm[0, :] = sps.fftconvolve(cpd, kernel)
+    cpd_mat_sm[0, :] = sps.fftconvolve(cpd, kernel, mode='same')
 
     for i in np.arange(1, cpd_mat.shape[0]):
         if verbose:
@@ -47,7 +47,7 @@ def cpd_total(ds, params, verbose=False, ncycles = 4, smooth=3):
     return cpd_mat, cpd_mat_sm
 
 
-def save_cpd(h5_main, cpd_mat, cpd_mat_sm):
+def save_cpd(h5_main, cpd_mat, cpd_sm):
     '''
 
     :param h5_main:
