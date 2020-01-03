@@ -49,7 +49,7 @@ def FF_SVD(h5_main, num_components=128, show_plots=True, override=True):
     if not(isinstance(h5_main, usid.USIDataset)):
         h5_main = usid.USIDataset(h5_main)
     
-    h5_svd = SVD(h5_main, num_components=num_components)
+    h5_svd = SVD(h5_main, num_components=num_components, process_name='SVD')
     
     parm_dict = get_utils.get_params(h5_main)
     num_rows = parm_dict['num_rows']
