@@ -1,10 +1,10 @@
-import hdf_utils
-import pixel_utils
-import analysis
-import gkpfm
+from . import hdf_utils
+from . import pixel_utils
+from . import analysis
+from . import gkpfm
 
-import pixel
-import line
+from . import pixel
+from . import line
 
 __all__ = ['line', 'pixel']
 __all__ += hdf_utils.__all__

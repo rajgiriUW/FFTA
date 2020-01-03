@@ -17,11 +17,10 @@ from ffta.pixel_utils import cwavelet
 from ffta.pixel_utils import parab
 from ffta.pixel_utils import fitting
 from ffta.pixel_utils import dwavelet
-import nitime.timeseries as ts
 
 from matplotlib import pyplot as plt
 
-from pixel_utils.peakdetect import get_peaks
+from ffta.pixel_utils.peakdetect import get_peaks
 
 class Pixel:
     """
@@ -585,24 +584,6 @@ class Pixel:
                      (4 * np.pi * inst_freq[:] / self.sampling_rate))
 
         self.inst_freq = inst_freq - inst_freq[self.tidx]
-
-        return
-
-    def calculate_cwt_freq(self):
-        """Neuroimaging package Morlet analyzer version. Does not yield
-            a spectrogram at the end, though, just analytic signal.
-        """
-
-        # Generate necessary tools for wavelet transform.
-        t1 = ts.TimeSeries(self.signal,sampling_rate=self.sampling_rate)
-        self.wavelet = MorletWaveletAnalyzer(t1, freqs=self.drive_freq,
-                                             sd_rel=(self.filter_bandwidth /
-                                             self.drive_freq))
-              
-        phase = np.unwrap(self.wavelet.phase.data)
-
-        self.inst_freq = sps.savgol_filter(phase, int(self.n_taps),
-                                           1, deriv=1, delta=1e-7)
 
         return
 

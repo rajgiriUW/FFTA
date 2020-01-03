@@ -20,7 +20,7 @@ from igor import binarywave as bw
 
 import pycroscopy as px
 
-from pyUSID.io.translator import Translator, generate_dummy_main_parms
+from pyUSID.io.translator import Translator#, generate_dummy_main_parms
 
 from pycroscopy.io.hdf_writer import HDFwriter
 from pycroscopy.io.virtual_data import VirtualDataset, VirtualGroup
@@ -131,7 +131,8 @@ class GLIBWTranslator(Translator):
         # Prepare the tree structure
         # technically should change the date, etc.
         spm_data = VirtualGroup('')
-        global_parms = generate_dummy_main_parms()
+        #global_parms = generate_dummy_main_parms()
+        global_parms = {}
         global_parms['data_type'] = 'IgorIBW_' + type_suffix
         global_parms['translator'] = 'IgorIBW'
         spm_data.attrs = global_parms
