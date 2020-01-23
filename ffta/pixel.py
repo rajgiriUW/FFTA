@@ -118,8 +118,8 @@ class Pixel:
     >>> signal_file = '../data/SW_0000.ibw'
     >>> params_file = '../data/parameters.cfg'
     >>>
-    >>> signal_array = utils.load.signal(signal_file)
-    >>> n_pixels, params = utils.load.configuration(params_file)
+    >>> signal_array = pixel_utils.load.signal(signal_file)
+    >>> n_pixels, params = pixel_utils.load.configuration(params_file)
     >>>
     >>> p = pixel.Pixel(signal_array, params)
     >>> tfp, shift, inst_freq = p.analyze()
