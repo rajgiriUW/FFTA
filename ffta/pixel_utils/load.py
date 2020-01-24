@@ -96,7 +96,9 @@ def configuration(path):
     parameters = {}
 
     # These are the keys for parameters.
-    paraf_keys = ['trigger', 'total_time', 'drive_freq', 'sampling_rate', 'Q']
+    paraf_keys = ['trigger', 'total_time', 'drive_freq', 
+                  'sampling_rate', 'Q']
+    parai_keys = ['n_pixels', 'pts_per_pixel', 'lines_per_image']
     procs_keys = ['window', 'fit_form']
     procf_keys = ['roi', 'FastScanSize', 'SlowScanSize', 'liftheight']
     proci_keys = ['n_taps', 'filter_bandwidth', 'bandpass_filter', 
@@ -119,6 +121,12 @@ def configuration(path):
         if config.has_option('Parameters', key):
 
             parameters[key] = config.getfloat('Parameters', key)
+
+    for key in parai_keys:
+
+        if config.has_option('Parameters', key):
+
+            parameters[key] = config.getint('Parameters', key)
 
     for key in procf_keys:
 

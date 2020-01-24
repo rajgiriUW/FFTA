@@ -1,12 +1,10 @@
-from setuptools import setup, Extension, find_packages
+from setuptools import setup, find_packages
 
 import numpy
 
-fitting = Extension('ffta.utils.fitting_c', ['ffta/utils/fitting_c.pyx'],
-                    include_dirs=[numpy.get_include()])
 setup(
     name='FFTA',
-    version='1.4',
+    version='1.5',
     description='FF-trEFM Analysis Package',
 
     author='Rajiv Giridharagopal',
@@ -19,8 +17,8 @@ setup(
                       'scipy>=0.15.1',
                       'igor>=0.2',
                       'pywavelets>=0.3.0',
-                      'nitime',
-                      'numexpr'],
+                      'numexpr',
+		      'watchdog'],
 
     entry_points={
         'console_scripts': [

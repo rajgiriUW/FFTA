@@ -11,32 +11,73 @@ Script to constantly poll a folder of data and generate an image from that
 '''
 
 import time
-import sys
+import numpy as np
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from ffta import pixel, line, pixel_utils
+from ffta import line, pixel_utils
 from matplotlib import pyplot as plt
+from matplotlib import gridspec as gs
 import argparse
 
 class MyHandler(FileSystemEventHandler):
+    '''
+    Event Handler for polling the FFtrEFM directory for new files
     
-    def __init__(self):
-        self.count = 0
+    Every time a new file is created, this processes that .ibw as a Line
+    
+    parameters : dict
+        Dictionary of the processing parameters. Found in parameters.cfg
+    
+    lines : int
+        how many lines are expected in this image
+    
+    n_pixels : int
+        how many pixels are in each line
+    
+    wait_per_line : int
+        The number of seconds to wait after a new file event (avoids OS errors)
+    
+    '''
+    def __init__(self, parameters, wait_per_line = 5):
+        '''
+        Increments lines_loaded every time a new file is corrected
+        This method provides a (crude) flag for checking when to stop
+        '''
+        
+        self.lines_loaded = 0
+        self.loaded = False   
+        
+        self.parameters = parameters
+        self.lines = parameters['lines_per_image']
+        self.n_pixels = parameters['n_pixels']
+        
+        self.wait_per_line = int(wait_per_line)
+        
+        
+        # initialize the FFtrEFM line data
+        self.tfp = np.empty(n_pixels)
+        self.shift = np.empty(n_pixels)
         
     def on_created(self, event):
-        
+        '''
+        When it detects a new file is there, processes the line then saves
+        the tfp and shift data. The processes instananeous frequency are not
+        saved as this is a live imaging method
+        '''
         if not event.is_directory:
+
+            self.loaded = True            
+            time.sleep(self.wait_per_line)
+
             path = event.src_path.split('\\')
-            print('Loading '+ path[-1])
             
-            params_file = r'/'.join(path[:-1]) + r'\parameters.cfg'
-            
-            npixels, parameters = pixel_utils.load.configuration(params_file)
             signal = pixel_utils.load.signal(event.src_path)
-            print(parameters)
-            this_line = line.Line(signal, parameters, npixels)
-            
-            self.count += 1
+            this_line = line.Line(signal, self.parameters, self.n_pixels)
+            self.tfp, self.shift, _ = this_line.analyze()
+            print('Analyzed', path[-1], 'tFP avg =',np.mean(self.tfp), 
+                  '; shift =', np.mean(self.shift))
+            self.loaded = False
+            self.lines_loaded += 1
    
      
 if __name__ == '__main__':
@@ -48,24 +89,80 @@ if __name__ == '__main__':
     print('Loading data from ', path_to_watch)
     
     params_file = path_to_watch + r'\parameters.cfg'
+    n_pixels, parameters = pixel_utils.load.configuration(params_file)
+    lines = parameters['lines_per_image']
 
+    print('Pixels = ', n_pixels)
+    print('Lines = ', lines)
+    
+    tfp = np.random.randn(lines, n_pixels)
+    shift = np.random.randn(lines, n_pixels)
+
+    # initialize event handler
     my_observer = Observer()
-    my_event_handler = MyHandler()
+    my_event_handler = MyHandler(parameters)
     my_observer.schedule(my_event_handler, path_to_watch, recursive=False)
     my_observer.start()
-    fig, ax = plt.subplots()
-    ax.plot([0,1,2], [3,4,3], 'k--')
-    a = 1
+    
+    # initialize plotting
+    plt.ion()
+
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 6), tight_layout=True, facecolor='white')
+
+    tfp_ax = ax[0]
+    shift_ax = ax[1]
+
+    plt.setp(tfp_ax.get_xticklabels(), visible=False)
+    plt.setp(tfp_ax.get_yticklabels(), visible=False)
+    plt.setp(shift_ax.get_xticklabels(), visible=False)
+    plt.setp(shift_ax.get_yticklabels(), visible=False)
+
+    tfp_ax.set_title('tFP Image')
+    shift_ax.set_title('Shift Image')
+
+    kwargs = {'origin': 'lower', 'aspect': 'equal'}
+
+    tfp_image = tfp_ax.imshow(tfp * 1e6, cmap='afmhot', **kwargs)
+    shift_image = shift_ax.imshow(shift, cmap='inferno', **kwargs)
+    
+    tfp_sc = tfp[tfp.nonzero()] * 1e6
+    tfp_image.set_clim(vmin=tfp_sc.min(), vmax=tfp_sc.max())
+
+    shift_sc = shift[shift.nonzero()]
+    shift_image.set_clim(vmin=shift_sc.min(), vmax=shift_sc.max())
+    
+    text = plt.figtext(0.4, 0.1, '')
     plt.show()
+
+    # event handling loop
     try:
-        while True:
+        while my_event_handler.lines_loaded < lines:
             time.sleep(1)
-            a += 1
-            ax.plot(a*[0,1,2], a*[3,4,3], 'k--')
-            plt.show()
+            
+            if my_event_handler.loaded:
+                tfp[my_event_handler.lines_loaded, :] = my_event_handler.tfp[:]
+                shift[my_event_handler.lines_loaded, :] = my_event_handler.shift[:]
+                
+                tfp_image = tfp_ax.imshow(tfp * 1e6, cmap='afmhot', **kwargs)
+                shift_image = shift_ax.imshow(shift, cmap='inferno', **kwargs)
+
+                tfp_sc = tfp[tfp.nonzero()] * 1e6
+                tfp_image.set_clim(vmin=tfp_sc.min(), vmax=tfp_sc.max())
+
+                shift_sc = shift[shift.nonzero()]
+                shift_image.set_clim(vmin=shift_sc.min(), vmax=shift_sc.max())
+                
+                plt.draw()
+                plt.pause(0.0001)
+            
+
     except KeyboardInterrupt:
         my_observer.stop()
         my_observer.join()
-        print('Stop')
-    print(my_event_handler.count)
+        
+    print('Lines loaded = ',my_event_handler.lines_loaded)
+    plotname = path_to_watch + r'\tfp_image.png'
+    plt.savefig(plotname)
+    my_observer.stop()
+    my_observer.join()
     

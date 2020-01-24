@@ -5,6 +5,7 @@ from . import gkpfm
 
 from . import pixel
 from . import line
+from . import polling
 
 __all__ = ['line', 'pixel']
 __all__ += hdf_utils.__all__
