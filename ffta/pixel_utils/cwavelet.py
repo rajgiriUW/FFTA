@@ -2,18 +2,15 @@
 
 import numpy as np
 from scipy import fftpack as spf
-from numba import autojit
 
 PI2 = 2 * np.pi
 
 
-@autojit
 def normalization(s, dt):
 
     return np.sqrt(2 * np.pi * s / dt)
 
 
-@autojit
 def morletft(s, w, w0, dt):
     """Fourier tranformed Morlet Function.
 
@@ -43,7 +40,7 @@ def morletft(s, w, w0, dt):
     wavelet = np.zeros((s.shape[0], w.shape[0]))
     pos = (w > 0)
 
-    for i in xrange(s.shape[0]):
+    for i in range(s.shape[0]):
 
         n = normalization(s[i], dt)
         wavelet[i, pos] = n * p * np.exp(-(s[i] * w[pos] - w0) ** 2 / 2.0)
@@ -51,7 +48,6 @@ def morletft(s, w, w0, dt):
     return wavelet
 
 
-@autojit
 def angularfreq(N, dt):
     """Compute angular frequencies.
 
@@ -73,7 +69,7 @@ def angularfreq(N, dt):
     N2 = N / 2.0
     w = np.empty(N)
 
-    for i in xrange(w.shape[0]):
+    for i in range(w.shape[0]):
 
         if i <= N2:
 
@@ -86,7 +82,6 @@ def angularfreq(N, dt):
     return w
 
 
-@autojit
 def cwt(x, dt, scales, p=2):
     """Continuous Wavelet Tranform.
 
@@ -117,7 +112,7 @@ def cwt(x, dt, scales, p=2):
 
     x_ft = spf.fft(x)
 
-    for i in xrange(X.shape[0]):
+    for i in range(X.shape[0]):
 
         X[i] = spf.ifft(x_ft * wft[i])
 
