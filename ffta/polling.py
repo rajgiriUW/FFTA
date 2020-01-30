@@ -8,6 +8,14 @@ Created on Wed Jan 22 12:45:01 2020
 
 '''
 Script to constantly poll a folder of data and generate an image from that
+
+USAGE:
+    
+    Open Anaconda prompt
+    Navigate to folder where this file is located
+    
+    python  polling.py "FOLDER WHERE DATA ARE BEING SAVED"
+    
 '''
 
 import time
@@ -16,8 +24,9 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from ffta import line, pixel_utils
 from matplotlib import pyplot as plt
-from matplotlib import gridspec as gs
 import argparse
+
+import pyUSID as usid
 
 class MyHandler(FileSystemEventHandler):
     '''
@@ -75,7 +84,7 @@ class MyHandler(FileSystemEventHandler):
             this_line = line.Line(signal, self.parameters, self.n_pixels)
             self.tfp, self.shift, _ = this_line.analyze()
             print('Analyzed', path[-1], 'tFP avg =',np.mean(self.tfp), 
-                  '; shift =', np.mean(self.shift))
+                  ' s; shift =', np.mean(self.shift), 'Hz')
             self.loaded = False
             self.lines_loaded += 1
    
@@ -95,8 +104,11 @@ if __name__ == '__main__':
     print('Pixels = ', n_pixels)
     print('Lines = ', lines)
     
-    tfp = np.random.randn(lines, n_pixels)
-    shift = np.random.randn(lines, n_pixels)
+    #tfp = np.random.randn(lines, n_pixels)
+    #shift = np.random.randn(lines, n_pixels)
+    
+    tfp = np.zeros([lines, n_pixels])
+    shift = np.zeros([lines, n_pixels])
 
     # initialize event handler
     my_observer = Observer()
@@ -117,21 +129,30 @@ if __name__ == '__main__':
     plt.setp(shift_ax.get_xticklabels(), visible=False)
     plt.setp(shift_ax.get_yticklabels(), visible=False)
 
-    tfp_ax.set_title('tFP Image')
+    tfp_ax.set_title('tFP Image!')
     shift_ax.set_title('Shift Image')
 
-    kwargs = {'origin': 'lower', 'aspect': 'equal'}
 
-    tfp_image = tfp_ax.imshow(tfp * 1e6, cmap='afmhot', **kwargs)
-    shift_image = shift_ax.imshow(shift, cmap='inferno', **kwargs)
-    
-    tfp_sc = tfp[tfp.nonzero()] * 1e6
-    tfp_image.set_clim(vmin=tfp_sc.min(), vmax=tfp_sc.max())
+    kwargs = {'origin': 'lower', 'x_vec': parameters['FastScanSize'] * 1e6,
+              'y_vec': parameters['SlowScanSize'] * 1e6, 'num_ticks': 5, 'stdevs': 3}
+    tfp_image, cbar_tfp = usid.viz.plot_utils.plot_map(tfp_ax, tfp,
+                                                       cmap='inferno', show_cbar=False, **kwargs)
+    shift_image, cbar_sh = usid.viz.plot_utils.plot_map(shift_ax, shift,
+                                                        cmap='inferno', show_cbar=False, **kwargs)
 
-    shift_sc = shift[shift.nonzero()]
-    shift_image.set_clim(vmin=shift_sc.min(), vmax=shift_sc.max())
+#    kwargs = {'origin': 'lower', 'aspect': 'equal'}
+#
+#    tfp_image = tfp_ax.imshow(tfp * 1e6, cmap='afmhot', **kwargs)
+#    shift_image = shift_ax.imshow(shift, cmap='inferno', **kwargs)
+#    
+#    tfp_sc = tfp[tfp.nonzero()] * 1e6
+#    tfp_image.set_clim(vmin=tfp_sc.min(), vmax=tfp_sc.max())
+#
+#    shift_sc = shift[shift.nonzero()]
+#    shift_image.set_clim(vmin=shift_sc.min(), vmax=shift_sc.max())
     
     text = plt.figtext(0.4, 0.1, '')
+    text = tfp_ax.text(n_pixels / 2, lines + 3, '')
     plt.show()
 
     # event handling loop
@@ -143,16 +164,22 @@ if __name__ == '__main__':
                 tfp[my_event_handler.lines_loaded, :] = my_event_handler.tfp[:]
                 shift[my_event_handler.lines_loaded, :] = my_event_handler.shift[:]
                 
-                tfp_image = tfp_ax.imshow(tfp * 1e6, cmap='afmhot', **kwargs)
-                shift_image = shift_ax.imshow(shift, cmap='inferno', **kwargs)
-
-                tfp_sc = tfp[tfp.nonzero()] * 1e6
-                tfp_image.set_clim(vmin=tfp_sc.min(), vmax=tfp_sc.max())
-
-                shift_sc = shift[shift.nonzero()]
-                shift_image.set_clim(vmin=shift_sc.min(), vmax=shift_sc.max())
+                #tfp_image = tfp_ax.imshow(tfp * 1e6, cmap='afmhot', **kwargs)
+                #shift_image = shift_ax.imshow(shift, cmap='inferno', **kwargs)
                 
-                plt.draw()
+                tfp_image, _ = usid.viz.plot_utils.plot_map(tfp_ax, tfp,
+                                                        cmap='inferno', show_cbar=False, **kwargs)
+                shift_image, _ = usid.viz.plot_utils.plot_map(shift_ax, shift,
+                                                          cmap='inferno', show_cbar=False, **kwargs)
+
+#                tfp_sc = tfp[tfp.nonzero()]
+#                tfp_image.set_clim(vmin=tfp_sc.min(), vmax=tfp_sc.max())
+#
+#                shift_sc = shift[shift.nonzero()]
+#                shift_image.set_clim(vmin=shift_sc.min(), vmax=shift_sc.max())
+                
+                #plt.draw()
+                fig.canvas.draw_idle()
                 plt.pause(0.0001)
             
 
@@ -161,8 +188,10 @@ if __name__ == '__main__':
         my_observer.join()
         
     print('Lines loaded = ',my_event_handler.lines_loaded)
+    
     plotname = path_to_watch + r'\tfp_image.png'
     plt.savefig(plotname)
+    
     my_observer.stop()
     my_observer.join()
     
