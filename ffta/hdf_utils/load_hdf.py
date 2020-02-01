@@ -25,18 +25,12 @@ from ffta import line
 import warnings
 
 """
-To do:
-    Reconstruct as OOP format and create class with relevant variables
-
-"""
-
-"""
 Common HDF Loading functions
 
 loadHDF5_ibw : Loads a specific ibw and FFtrEFM folder into a new H5 file
 loadHDF5_folder : Takes a folder of IBW files and creates an H5 file
 load_raw_FF : Creates FF_Raw which is the raw (r*c*averages, pnts_per_signal) Dataset
-load_pixel_averaged_FF : Creates FF_Avg where each pixel's signal is averaged together
+load_pixel_averaged_FF : Creates FF_Avg where each pixel's signal is averaged together (r*c, pnts_per_signal) Dataset
 load_pixel_averaged_from_raw : Creates FF_Avg where each pixel's signal is averaged together using the Raw data file
 hdf_commands : Creates workspace-compatible commands for common HDF variable standards
 *createHDF5_separate_lines : Creates a folder and saves each line as a separate file
@@ -45,10 +39,18 @@ hdf_commands : Creates workspace-compatible commands for common HDF variable sta
 *For debugging, not in active use
 
 Example usage:
+    If you want to load an IBW (image) + associated data
     >>from ffta.hdf_utils import load_hdf
     >>h5_path, parameters, h5_avg = load_hdf.loadHDF5_ibw(ibw_file_path='E:/Data/FF_image_file.ibw',
                                                   ff_file_path=r'E:\Data\FF_Folder')
     >>loadHDF5.hdf_commands(h5_path) #prints out commands available
+    
+    
+    If you have data and just want to load (no associated image file)
+    >> file_name = 'name_you_want.h5'
+    >> h5_path, data_files, parm_dict = loadHDF5_folder(folder_path=ff_file_path, verbose=verbose,
+                                                     xy_scansize=xy_scansize, file_name=file_name)
+    >> h5_avg = load_pixel_averaged_FF(data_files, parm_dict, h5_path, mirror=True)
 """
 
 def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', 
@@ -714,105 +716,3 @@ def createHDF5_file(signal, parm_dict, h5_path='', ds_name='FF_Raw'):
 
 
 
-def hdf_commands(h5_path, ds='FF_Raw'):
-    """
-    Creates a bunch of typical workspace HDF5 variables for scripting use
-
-    h5_path : str
-        String path to H5PY file
-
-    ds : str, optional
-        The dataset to search for and set as h5_main.
-
-    This prints the valid commands to the workspace. Then just highlight and
-        copy-paste to execute
-
-    h5_path : str
-        Path to hdf5 file on disk
-    """
-
-    commands = ['***Copy-paste all commands below this line, then hit ENTER***',
-                'import h5py']
-
-    try:
-        hdf = h5py.File(h5_path, 'r+')
-        commands.append("hdf = h5py.File(h5_path, 'r+')")
-    except:
-        pass
-
-    try:
-        h5_file = hdf.file
-        commands.append("h5_file = hdf.file")
-    except:
-        pass
-
-    try:
-        h5_main = usid.hdf_utils.find_dataset(hdf.file, ds)[0]
-        commands.append("h5_main = usid.hdf_utils.find_dataset(hdf.file, '"+ds+"')[0]")
-    except:
-        pass
-
-    try:
-        parameters = get_utils.get_params(hdf.file)
-        commands.append("parameters = ffta.hdf_utils.get_utils.get_params(hdf.file)")
-    except:
-        pass
-
-    try:
-        h5_ll = get_utils.get_line(h5_path, line_num=0)
-        commands.append("h5_ll = ffta.hdf_utils.get_utils.get_line(h5_path, line_num=0)")
-    except:
-        pass
-
-    try:
-        h5_px = get_utils.get_pixel(h5_path, rc=[0,0])
-        commands.append("h5_px = ffta.hdf_utils.get_utils.get_pixel(h5_path, rc=[0,0])")
-    except:
-        pass
-
-    try:
-        h5_if = usid.hdf_utils.find_dataset(hdf.file, 'inst_freq')[-1]
-        commands.append("h5_if = usid.hdf_utils.find_dataset(hdf.file, 'inst_freq')[-1]")
-    except:
-        pass
-
-    try:
-        h5_avg = usid.hdf_utils.find_dataset(hdf.file, 'FF_Avg')[-1]
-        commands.append("h5_avg = usid.hdf_utils.find_dataset(hdf.file, 'FF_Avg')[-1]")
-    except:
-        pass
-
-    try:
-        h5_filt = usid.hdf_utils.find_dataset(hdf.file, 'Filtered_Data')[-1]
-        commands.append("h5_filt = usid.hdf_utils.find_dataset(hdf.file, 'Filtered_Data')[-1]")
-    except:
-        pass
-
-    try:
-        h5_rb = usid.hdf_utils.find_dataset(hdf.file, 'Rebuilt_Data')[-1]
-        commands.append("h5_rb = usid.hdf_utils.find_dataset(hdf.file, 'Rebuilt_Data')[-1]")
-    except:
-        pass
-
-    try:
-        h5_svd = usid.hdf_utils.find_dataset(hdf.file, 'U')[-1]
-        commands.append("h5_svd = usid.hdf_utils.find_dataset(hdf.file, 'U')[-1]")
-    except:
-        pass
-
-    try:
-        h5_cpd = usid.hdf_utils.find_dataset(hdf.file, 'cpd')[-1]
-        commands.append("h5_cpd = usid.hdf_utils.find_dataset(hdf.file, 'cpd')[-1]")
-    except:
-        pass
-
-    try:
-        h5_ytime = usid.hdf_utils.find_dataset(hdf.file, 'y_time')[-1]
-        commands.append("h5_ytime = usid.hdf_utils.find_dataset(hdf.file, 'y_time')[-1]")
-    except:
-        pass
-
-    for i in commands:
-        print(i)
-
-    return
