@@ -1,7 +1,7 @@
 """pixel.py: Contains pixel class."""
 # pylint: disable=E1101,R0902,C0103
 __author__ = "Rajiv Giridharagopal"
-__copyright__ = "Copyright 2018, Ginger Lab"
+__copyright__ = "Copyright 2020, Ginger Lab"
 __maintainer__ = "Rajiv Giridharagopal"
 __email__ = "rgiri@uw.edu"
 __status__ = "Development"
