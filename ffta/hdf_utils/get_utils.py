@@ -195,7 +195,7 @@ def get_pixel(h5_path, rc, params=None,
     rc : list [r, c]
         Pixel location in terms of ROW, COLUMN
 
-     params: dict
+    params: dict
         If explicitly changing parameters (to test a feature), you can pass any subset and this will overwrite it
         e.g. parameters  = {'drive_freq': 10} will extract the Pixel, then change Pixel.drive_freq = 10
 
