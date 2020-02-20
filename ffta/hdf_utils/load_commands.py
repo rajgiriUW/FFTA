@@ -68,24 +68,6 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         pass
 
     try:
-        parameters = get_utils.get_params(hdf.file)
-        commands.append("parameters = ffta.hdf_utils.get_utils.get_params(hdf.file)")
-    except:
-        pass
-
-    try:
-        h5_ll = get_utils.get_line(h5_path, line_num=0)
-        commands.append("h5_ll = ffta.hdf_utils.get_utils.get_line(h5_path, line_num=0)")
-    except:
-        pass
-
-    try:
-        h5_px = get_utils.get_pixel(h5_path, rc=[0,0])
-        commands.append("h5_px = ffta.hdf_utils.get_utils.get_pixel(h5_path, rc=[0,0])")
-    except:
-        pass
-
-    try:
         h5_if = usid.hdf_utils.find_dataset(hdf.file, 'inst_freq')[-1]
         commands.append("h5_if = usid.hdf_utils.find_dataset(hdf.file, 'inst_freq')[-1]")
     except:
@@ -110,8 +92,30 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         pass
 
     try:
+        parameters = get_utils.get_params(hdf.file)
+        if not any(parameters):
+            parameters = get_utils.get_params(h5_avg)
+            commands.append("parameters = ffta.hdf_utils.get_utils.get_params(h5_avg)")
+        else:
+            commands.append("parameters = ffta.hdf_utils.get_utils.get_params(hdf.file)")
+    except:
+        pass
+
+    try:
+        h5_ll = get_utils.get_line(h5_path, line_num=0)
+        commands.append("h5_ll = ffta.hdf_utils.get_utils.get_line(h5_path, line_num=0)")
+    except:
+        pass
+
+    try:
+        h5_px = get_utils.get_pixel(h5_path, rc=[0,0])
+        commands.append("h5_px = ffta.hdf_utils.get_utils.get_pixel(h5_path, rc=[0,0])")
+    except:
+        pass
+
+    try:
         h5_svd = usid.hdf_utils.find_dataset(hdf.file, 'U')[-1]
-        commands.append("h5_svd = usid.hdf_utils.find_dataset(hdf.file, 'U')[-1]")
+        commands.append("h5_svd = usid.hdf_utils.find_dataset(hdf.file, 'U')[-1].parent")
     except:
         pass
 
