@@ -159,17 +159,15 @@ class Pixel:
         # Set dimensions correctly
         # Three cases: 1) 2D (has many averages) 2) 1D (but set as 1xN) and 3) True 1D
         
-        if len(signal_array.shape) == 2:
-            if signal_array.shape[1] != 1:
+        if len(signal_array.shape) == 2 and 1 not in signal_array.shape:
+            
                 self.n_points, self.n_signals = self.signal_array.shape
                 self._n_points_orig = self.signal_array.shape[0]
-            else:
-                self.n_signals = 1
-                self.signal_array = self.signal_array[:, 0]
-                self.n_points = self.signal_array.shape[0]
-                self._n_points_orig = self.signal_array.shape[0]
+
         else:
+            
             self.n_signals = 1
+            self.signal_array = self.signal_array.flatten()
             self.n_points = self.signal_array.shape[0]
             self._n_points_orig = self.signal_array.shape[0]
 
