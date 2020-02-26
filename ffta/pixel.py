@@ -721,6 +721,91 @@ class Pixel:
                 
         return
 
+    def generate_inst_freq(self):
+        """
+        Generates the instantaneous frequency
+
+        Returns
+        -------
+        inst_freq : (n_points,) array_like
+            Instantenous frequency of the signal.
+        """
+
+        # Remove DC component, first.
+        #self.remove_dc()
+
+        # Phase-lock signals.
+        #self.phase_lock()
+
+        # Average signals.
+        self.average()
+
+        # Remove DC component again, introduced by phase-locking.
+        #self.remove_dc()
+
+        # Check the drive frequency.
+        self.check_drive_freq()
+
+        # DWT Denoise
+        #self.dwt_denoise()
+
+        if self.EMD_analysis:
+
+            # Calculate signal by Hilbert-Huang transform.
+            self.EMD_signal()
+
+            # Get the analytical signal doing a Hilbert transform.
+            self.hilbert_transform()
+
+            # Calculate the phase from analytic signal.
+            self.calculate_phase()
+
+            # Calculate the instantaneous frequency
+            self.EMD_inst_freq()
+
+        elif self.wavelet_analysis:
+
+            # Calculate instantenous frequency using wavelet transform.
+            self.calculate_cwt_freq()
+            
+        elif self.fft_analysis:
+            
+            # Calculate instantenous frequency using sliding FFT
+            self.sliding_fft()
+
+        else:
+            # Hilbert transform method
+
+            # Apply window.
+            if self.window != 0:
+                
+                self.apply_window()
+
+            # Filter the signal with a filter, if wanted.
+            if self.bandpass_filter == 1:
+
+                self.fir_filter()
+
+            elif self.bandpass_filter == 2:
+
+                self.iir_filter()
+
+            # Get the analytical signal doing a Hilbert transform.
+            self.hilbert_transform()
+
+            # Calculate the phase from analytic signal.
+            self.calculate_phase()
+
+            # Calculate instantenous frequency.
+            self.calculate_inst_freq()
+
+        # If it's a recombination image invert it to find minimum.
+        if self.recombination:
+
+            self.inst_freq = self.inst_freq * -1
+
+        return self.inst_freq
+
     def analyze(self):
         """
         Analyzes the pixel with the given method.
@@ -746,78 +831,8 @@ class Pixel:
         #logging.basicConfig(filename=r'C:\Users\Asylum User\Documents\ffta\ffta\error.log', level=logging.DEBUG)
 
         try:
-            # Remove DC component, first.
-            #self.remove_dc()
 
-            # Phase-lock signals.
-            #self.phase_lock()
-
-            # Average signals.
-            self.average()
-
-            # Remove DC component again, introduced by phase-locking.
-            #self.remove_dc()
-
-            # Check the drive frequency.
-            self.check_drive_freq()
-
-            # DWT Denoise
-            #self.dwt_denoise()
-
-            if self.EMD_analysis:
-
-                # Calculate signal by Hilbert-Huang transform.
-                self.EMD_signal()
-
-                # Get the analytical signal doing a Hilbert transform.
-                self.hilbert_transform()
-
-                # Calculate the phase from analytic signal.
-                self.calculate_phase()
-
-                # Calculate the instantaneous frequency
-                self.EMD_inst_freq()
-
-            elif self.wavelet_analysis:
-
-                # Calculate instantenous frequency using wavelet transform.
-                self.calculate_cwt_freq()
-                
-            elif self.fft_analysis:
-                
-                # Calculate instantenous frequency using sliding FFT
-                self.sliding_fft()
-
-            else:
-                # Hilbert transform method
-
-                # Apply window.
-                if self.window != 0:
-                    
-                    self.apply_window()
-
-                # Filter the signal with a filter, if wanted.
-                if self.bandpass_filter == 1:
-
-                    self.fir_filter()
-
-                elif self.bandpass_filter == 2:
-
-                    self.iir_filter()
-
-                # Get the analytical signal doing a Hilbert transform.
-                self.hilbert_transform()
-
-                # Calculate the phase from analytic signal.
-                self.calculate_phase()
-
-                # Calculate instantenous frequency.
-                self.calculate_inst_freq()
-
-            # If it's a recombination image invert it to find minimum.
-            if self.recombination:
-
-                self.inst_freq = self.inst_freq * -1
+            self.inst_freq = self.generate_inst_freq()
 
             # Find where the minimum is.
             if self.fit:

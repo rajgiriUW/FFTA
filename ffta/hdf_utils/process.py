@@ -13,7 +13,9 @@ from pyUSID.processing.comp_utils import parallel_compute
 from pyUSID.io.write_utils import Dimension
 from pyUSID.io.hdf_utils import create_results_group
 '''
-To do : allow custom parameters dictionary and input to the pixel test function
+To do:
+    
+    Separate the instantaneous frequency and tFP/shift calculations
 
 '''
 
@@ -27,17 +29,34 @@ class FFtrEFM(usid.Process):
         >> data = FFtrEFM(h5_main)
         >> data.test([1,2]) # tests on pixel 1,2 in row, column
         >> data.compute()
+        >> data.reshape() # reshapes the tFP, shift data
     '''
-    def __init__(self, h5_main, **kwargs):
+    def __init__(self, h5_main, if_only=False, **kwargs):
         '''
         Parameters
         ----------
         h5_main : h5py.Dataset object
             Dataset to process
+        
+        if_only : bool, optional
+            If True, only calculates the instantaneous frequency
+            
+        kwargs : dictionary or variable=
+            Keyword pairs to pass to Process constructor
         '''
         
         self.parm_dict = get_utils.get_params(h5_main)
+        self.parm_dict.update({'if_only': if_only})
         super(FFtrEFM, self).__init__(h5_main, 'Fast_Free', parms_dict=self.parm_dict, **kwargs)
+        
+        return
+    
+    def update_parm(self, **kwargs):
+        '''
+        Update the parameters, see ffta.pixel.Pixel for details on what to update
+        e.g. to switch from default Hilbert to Wavelets, for example
+        '''
+        self.parm_dict.update(kwargs)
         
         return
     
@@ -229,6 +248,11 @@ class FFtrEFM(usid.Process):
         
         pix = ffta.pixel.Pixel(defl, parm_dict)
         
-        tfp, shift, inst_freq = pix.analyze()
+        if parm_dict['if_only']:
+            inst_freq = pix.generate_inst_freq()
+            tfp = 0
+            shift = 0
+        else:
+           tfp, shift, inst_freq = pix.analyze()
         
         return [inst_freq, tfp, shift]
