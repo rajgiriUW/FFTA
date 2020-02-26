@@ -7,6 +7,8 @@ Created on Tue Feb 11 18:07:06 2020
 
 import pyUSID as usid
 import ffta
+from ffta.pixel_utils import badpixels
+import os
 import numpy as np
 from ffta.hdf_utils import get_utils
 from pyUSID.processing.comp_utils import parallel_compute
@@ -30,6 +32,7 @@ class FFtrEFM(usid.Process):
         >> data.test([1,2]) # tests on pixel 1,2 in row, column
         >> data.compute()
         >> data.reshape() # reshapes the tFP, shift data
+        >> process.save_CSV_from_file(h5_main, h5_main.parent.name)
     '''
     def __init__(self, h5_main, if_only=False, **kwargs):
         '''
@@ -256,3 +259,40 @@ class FFtrEFM(usid.Process):
            tfp, shift, inst_freq = pix.analyze()
         
         return [inst_freq, tfp, shift]
+    
+def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
+    """
+    Saves the tfp, shift, and fixed_tfp as CSV files
+    
+    h5_file : H5Py file
+        Reminder you can always type: h5_svd.file or h5_avg.file for this
+    
+    h5_path : str, optional
+        specific folder path to search for the tfp data. Usually not needed.
+    
+    append : str, optional
+        text to append to file name
+    """
+
+    tfp = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp')[0][()]
+    # tfp_fixed = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp_fixed')[0][()]
+    shift = usid.hdf_utils.find_dataset(h5_file[h5_path], 'shift')[0][()]
+
+    tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)
+    tfp_fixed = np.array(tfp_fixed)
+
+    print(usid.hdf_utils.find_dataset(h5_file[h5_path], 'shift')[0].parent.name)
+
+    path = h5_file.file.filename.replace('\\', '/')
+    path = '/'.join(path.split('/')[:-1]) + '/'
+    os.chdir(path)
+
+    if mirror:
+        np.savetxt('tfp-' + append + '.csv', np.fliplr(tfp).T, delimiter=',')
+        np.savetxt('shift-' + append + '.csv', np.fliplr(shift).T, delimiter=',')
+        np.savetxt('tfp_fixed-' + append + '.csv', np.fliplr(tfp_fixed).T, delimiter=',')
+    else:
+        np.savetxt('tfp-' + append + '.csv', tfp.T, delimiter=',')
+        np.savetxt('shift-' + append + '.csv', shift.T, delimiter=',')
+        np.savetxt('tfp_fixed-' + append + '.csv', tfp_fixed.T, delimiter=',')
+    return
