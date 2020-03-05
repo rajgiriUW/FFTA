@@ -13,12 +13,12 @@ import numpy as np
 from ffta.hdf_utils import get_utils
 from pyUSID.processing.comp_utils import parallel_compute
 from pyUSID.io.write_utils import Dimension
-from pyUSID.io.hdf_utils import create_results_group
+
+from matplotlib import pyplot as plt
+
 '''
 To do:
-    
     Separate the instantaneous frequency and tFP/shift calculations
-
 '''
 
 class FFtrEFM(usid.Process):
@@ -28,11 +28,13 @@ class FFtrEFM(usid.Process):
     
     Example usage:
     
+        >> from ffta.hdf_utils import process
         >> data = FFtrEFM(h5_main)
         >> data.test([1,2]) # tests on pixel 1,2 in row, column
         >> data.compute()
         >> data.reshape() # reshapes the tFP, shift data
         >> process.save_CSV_from_file(h5_main, h5_main.parent.name)
+        >> process.plot_tfp(data)
     '''
     def __init__(self, h5_main, if_only=False, **kwargs):
         '''
@@ -295,4 +297,53 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
         np.savetxt('tfp-' + append + '.csv', tfp.T, delimiter=',')
         np.savetxt('shift-' + append + '.csv', shift.T, delimiter=',')
         np.savetxt('tfp_fixed-' + append + '.csv', tfp_fixed.T, delimiter=',')
+        
     return
+
+def plot_tfp(ffprocess):
+    '''
+    Quickly plots the tfp and shift data. If there's a height image in the h5_file associated
+     with ffprocess, will plot that as well
+    
+    Parameters
+    ----------
+    ffprocess : FFtrEFM class object (inherits Process)
+    
+    Returns
+    -------
+    fig, a : figure and axes objects
+    '''
+    fig, a = plt.subplots(nrows=2, ncols=2, figsize=(13, 6))
+
+    tfp_ax = a[0][1]
+    shift_ax = a[1][1]
+
+    img_length = ffprocess.parm_dict['FastScanSize']
+    img_height = ffprocess.parm_dict['SlowScanSize']
+    kwargs = {'origin': 'lower', 'x_vec': img_length * 1e6,
+              'y_vec': img_height * 1e6, 'num_ticks': 5, 'stdevs': 3}
+
+    num_cols = ffprocess.parm_dict['num_cols']
+    num_rows = ffprocess.parm_dict['num_rows']
+    try:
+        ht = ffprocess.h5_main.file['/height/Raw_Data'][:, 0]
+        ht = np.reshape(ht, [num_cols, num_rows]).transpose()
+        ht_ax = a[0][0]
+        ht_image, cbar = usid.viz.plot_utils.plot_map(ht_ax, ht * 1e9, cmap='gray', **kwargs)
+        cbar.set_label('Height (nm)', rotation=270, labelpad=16)
+    except:
+        pass
+
+    tfp_ax.set_title('tFP Image')
+    shift_ax.set_title('Shift Image')
+
+    tfp_image, cbar_tfp = usid.viz.plot_utils.plot_map(tfp_ax, ffprocess.h5_tfp[()] * 1e6,
+                                                       cmap='inferno', show_cbar=True, **kwargs)
+    shift_image, cbar_sh = usid.viz.plot_utils.plot_map(shift_ax, ffprocess.h5_shift[()],
+                                                        cmap='inferno', show_cbar=True, **kwargs)
+    
+    cbar_tfp.set_label('Time (us)', rotation=270, labelpad=16)
+    cbar_sh.set_label('Frequency Shift (Hz)', rotation=270, labelpad=16)
+    text = tfp_ax.text(num_cols / 2, num_rows + 3, '')
+    
+    return fig, a
