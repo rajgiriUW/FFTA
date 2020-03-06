@@ -35,6 +35,11 @@ class FFtrEFM(usid.Process):
         >> data.reshape() # reshapes the tFP, shift data
         >> process.save_CSV_from_file(h5_main, h5_main.parent.name)
         >> process.plot_tfp(data)
+        
+    To reload old data:
+        
+        >> data = FFtrEFM()
+        >> data._get_existing_datasets()
     '''
     def __init__(self, h5_main, if_only=False, **kwargs):
         '''
@@ -254,7 +259,7 @@ class FFtrEFM(usid.Process):
         pix = ffta.pixel.Pixel(defl, parm_dict)
         
         if parm_dict['if_only']:
-            inst_freq = pix.generate_inst_freq()
+            inst_freq, _, _ = pix.generate_inst_freq()
             tfp = 0
             shift = 0
         else:

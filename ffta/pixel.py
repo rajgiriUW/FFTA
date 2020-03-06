@@ -320,7 +320,19 @@ class Pixel:
         self.signal = sps.hilbert(self.signal)
 
         return
+    
+    def calculate_amplitude(self):
+        """Calculates the amplitude of the analytic signal. Uses pre-filter
+        signal to do this."""
+#       
+        if self.n_signals != 1:
+            self.signal_orig = self.signal_array.mean(axis=0)
+        
+        self.signal_orig = sps.hilbert(self.signal_orig)
+        self.amp = np.abs(self.signal_orig)
 
+        return
+    
     def calculate_phase(self, correct_slope=True):
         """Gets the phase of the signal and correct the slope by removing
         the drive phase."""
@@ -363,17 +375,7 @@ class Pixel:
 
         return
 
-    def calculate_amplitude(self):
-        """Calculates the amplitude of the analytic signal. Uses pre-filter
-        signal to do this."""
-#       
-        if self.n_signals != 1:
-            self.signal_orig = self.signal_array.mean(axis=0)
-        
-        self.signal_orig = sps.hilbert(self.signal_orig)
-        self.amp = np.abs(self.signal_orig)
 
-        return
 
     def find_minimum(self):
         """Finds when the minimum of instantenous frequency happens."""
@@ -756,7 +758,7 @@ class Pixel:
 
             # Get the analytical signal doing a Hilbert transform.
             self.hilbert_transform()
-
+            
             # Calculate the phase from analytic signal.
             self.calculate_phase()
 
@@ -793,7 +795,8 @@ class Pixel:
             # Get the analytical signal doing a Hilbert transform.
             self.hilbert_transform()
 
-            # Calculate the phase from analytic signal.
+            # Calculate the amplitude and phase from the analytic signal
+            self.calculate_amplitude()
             self.calculate_phase()
 
             # Calculate instantenous frequency.
@@ -804,7 +807,7 @@ class Pixel:
 
             self.inst_freq = self.inst_freq * -1
 
-        return self.inst_freq
+        return self.inst_freq, self.amplitude, self.phase
 
     def analyze(self):
         """
