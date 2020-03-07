@@ -17,7 +17,7 @@ E-mail: rgiri@uw.edu
 ```
 
 ###Overview
-Extracts Time-to-First-Peak (tFP) from digitized Fast-Free Time-Resolved Electrostatic Force Microscopy (FF-trEFM) signals [1-2].
+Extracts Time-to-First-Peak (tFP) from digitized Fast-Free Time-Resolved Electrostatic Force Microscopy (FF-trEFM) signals [1-4].
 
 This includes a few types of frequency analysis:
 * Hilbert Transform (primary use case) 

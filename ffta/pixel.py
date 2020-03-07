@@ -22,6 +22,7 @@ from matplotlib import pyplot as plt
 
 from ffta.pixel_utils.peakdetect import get_peaks
 
+
 class Pixel:
     """
     Signal Processing to Extract Time-to-First-Peak.
@@ -33,7 +34,6 @@ class Pixel:
         b) Wavelet Transform
         c) Hilbert-Huang Transform (EMD)
 
-    Parameters
     ----------
     signal_array : (n_points, n_signals) array_like
         2D real-valued signal array, corresponds to a pixel.
@@ -113,7 +113,7 @@ class Pixel:
 
     Examples
     --------
-    >>> from ffta import pixel, utils
+    >>> from ffta import pixel, pixel_utils
     >>>
     >>> signal_file = '../data/SW_0000.ibw'
     >>> params_file = '../data/parameters.cfg'
@@ -129,7 +129,7 @@ class Pixel:
     def __init__(self, signal_array, params, fit=True, pycroscopy=False):
 
         # Create parameter attributes for optional parameters.
-        # They will be overwritten by following for loop if they exist.
+        # These defaults are overwritten by values in 'params'
         self.n_taps = 1499
         self.Q = 500
         self.filter_bandwidth = 5000
@@ -147,25 +147,24 @@ class Pixel:
 
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
-
             setattr(self, key, value)
 
         # Assign values from inputs.
         self.signal_array = signal_array
-        if pycroscopy: 
+        if pycroscopy:
             self.signal_array = signal_array.T
         self.tidx = int(self.trigger * self.sampling_rate)
-        
+
         # Set dimensions correctly
         # Three cases: 1) 2D (has many averages) 2) 1D (but set as 1xN) and 3) True 1D
-        
+
         if len(signal_array.shape) == 2 and 1 not in signal_array.shape:
-            
-                self.n_points, self.n_signals = self.signal_array.shape
-                self._n_points_orig = self.signal_array.shape[0]
+
+            self.n_points, self.n_signals = self.signal_array.shape
+            self._n_points_orig = self.signal_array.shape[0]
 
         else:
-            
+
             self.n_signals = 1
             self.signal_array = self.signal_array.flatten()
             self.n_points = self.signal_array.shape[0]
@@ -187,19 +186,18 @@ class Pixel:
 
     def clear_filter_flags(self):
         """Removes flags from parameters for setting filters"""
-        
-#        self.window = 0
+
+        #        self.window = 0
         self.bandpass_filter = 0
-        
+
         return
 
     def remove_dc(self):
         """Removes DC components from signals."""
 
         if self.n_signals != 1:
-        
+
             for i in range(self.n_signals):
-            
                 self.signal_array[:, i] -= np.mean(self.signal_array[:, i])
 
         return
@@ -219,12 +217,12 @@ class Pixel:
     def average(self):
         """Averages signals."""
 
-        if self.n_signals != 1: # if not multi-signal, don't average
+        if self.n_signals != 1:  # if not multi-signal, don't average
             self.signal = self.signal_array.mean(axis=1)
-            
+
         else:
             self.signal = self.signal_array
-            
+
         return
 
     def check_drive_freq(self):
@@ -244,7 +242,6 @@ class Pixel:
 
         # If difference is too big, reassign. Otherwise, continue. != 0 for accidental DC errors
         if difference >= dfreq and drive_freq != 0:
-
             self.drive_freq = drive_freq
 
         return
@@ -261,7 +258,7 @@ class Pixel:
 
         rate = self.sampling_rate
         lpf = self.drive_freq * 0.1
-        self.signal, _, _ = dwavelet.dwt_denoise(self.signal,lpf,rate/2,rate)
+        self.signal, _, _ = dwavelet.dwt_denoise(self.signal, lpf, rate / 2, rate)
 
     def fir_filter(self):
 
@@ -279,11 +276,11 @@ class Pixel:
         # Create taps using window method.
         try:
             taps = sps.firwin(int(self.n_taps), band, pass_zero=False,
-                          window='blackman')
+                              window='blackman')
         except:
             print('band=', band)
-            print('nyq=',nyq_rate)
-            print('drive=',self.drive_freq)
+            print('nyq=', nyq_rate)
+            print('drive=', self.drive_freq)
 
         self.signal = sps.fftconvolve(self.signal, taps, mode='same')
 
@@ -320,19 +317,19 @@ class Pixel:
         self.signal = sps.hilbert(self.signal)
 
         return
-    
+
     def calculate_amplitude(self):
         """Calculates the amplitude of the analytic signal. Uses pre-filter
         signal to do this."""
-#       
+        #
         if self.n_signals != 1:
             self.signal_orig = self.signal_array.mean(axis=0)
-        
+
         self.signal_orig = sps.hilbert(self.signal_orig)
         self.amp = np.abs(self.signal_orig)
 
         return
-    
+
     def calculate_phase(self, correct_slope=True):
         """Gets the phase of the signal and correct the slope by removing
         the drive phase."""
@@ -341,9 +338,8 @@ class Pixel:
         self.phase = np.unwrap(np.angle(self.signal))
 
         if correct_slope:
-
             # Remove the drive from phase.
-            #self.phase -= (2 * np.pi * self.drive_freq *
+            # self.phase -= (2 * np.pi * self.drive_freq *
             #               np.arange(self.n_points) / self.sampling_rate)
 
             # A curve fit on the initial part to make sure that it worked.
@@ -375,8 +371,6 @@ class Pixel:
 
         return
 
-
-
     def find_minimum(self):
         """Finds when the minimum of instantenous frequency happens."""
 
@@ -407,7 +401,6 @@ class Pixel:
 
         # Calculate the region of interest and if filtered move the fit index.
         ridx = int(self.roi * self.sampling_rate)
-
         fidx = self.tidx
 
         # Make sure cut starts from 0 and never goes over.
@@ -417,21 +410,20 @@ class Pixel:
         # Fit the cut to the model.
         popt = fitting.fit_bounded_product(self.Q, self.drive_freq, t, cut)
 
-        #A, tau1, tau2 = popt
         A, tau1, tau2 = popt
 
         # Analytical minimum of the fit.
-        #self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
-        #self.shift = -A * np.exp(-self.tfp / tau1) * np.expm1(-self.tfp / tau2)
+        # self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
+        # self.shift = -A * np.exp(-self.tfp / tau1) * np.expm1(-self.tfp / tau2)
 
         # For diagnostic purposes.
         self.cut = cut
         self.popt = popt
-        self.best_fit = -A*(np.exp(-t/tau1)-1)*np.exp(-t/tau2)
+        self.best_fit = -A * (np.exp(-t / tau1) - 1) * np.exp(-t / tau2)
 
-        self.tfp = np.argmin(self.best_fit)/self.sampling_rate
+        self.tfp = np.argmin(self.best_fit) / self.sampling_rate
         self.shift = np.min(self.best_fit)
-        
+
         self.rms = np.sqrt(np.mean(np.square(self.best_fit - cut)))
 
         return
@@ -456,9 +448,9 @@ class Pixel:
         # For diagnostic purposes.
         self.cut = cut
         self.popt = popt
-        self.best_fit = A1*(np.exp(-t/tau1)-1) - A2*np.exp(-t/tau2)
+        self.best_fit = A1 * (np.exp(-t / tau1) - 1) - A2 * np.exp(-t / tau2)
 
-        self.tfp = np.argmin(self.best_fit)/self.sampling_rate
+        self.tfp = np.argmin(self.best_fit) / self.sampling_rate
         self.shift = np.min(self.best_fit)
 
         return
@@ -476,13 +468,13 @@ class Pixel:
         t = np.arange(cut.shape[0]) / self.sampling_rate
 
         # Fit the cut to the model.
-        popt  = fitting.fit_bounded_exp(t, cut)
+        popt = fitting.fit_bounded_exp(t, cut)
 
         # For diagnostics
         A, y0, tau = popt
         self.cut = cut
         self.popt = popt
-        self.best_fit = A*(np.exp(-t/tau)) + y0
+        self.best_fit = A * (np.exp(-t / tau)) + y0
 
         self.shift = A
         self.tfp = tau
@@ -500,7 +492,7 @@ class Pixel:
 
         # Make sure cut starts from 0 and never goes over.
         # -1 on cut is because of sign error in generating phase
-        cut = -1*(self.phase[fidx:(fidx + ridx)] - self.phase[fidx])
+        cut = -1 * (self.phase[fidx:(fidx + ridx)] - self.phase[fidx])
         t = np.arange(cut.shape[0]) / self.sampling_rate
 
         # Fit the cut to the model.
@@ -517,8 +509,8 @@ class Pixel:
 
         self.cut = cut
         self.popt = popt
-        self.best_fit = -A * np.exp(-t / tau1) * np.expm1(-t / tau2 )
-        self.best_phase = A * tau1 * np.exp(-t / tau1)*postfactor + A * tau1 * (1 - tau2/(tau1 + tau2))
+        self.best_fit = -A * np.exp(-t / tau1) * np.expm1(-t / tau2)
+        self.best_phase = A * tau1 * np.exp(-t / tau1) * postfactor + A * tau1 * (1 - tau2 / (tau1 + tau2))
 
         return
 
@@ -575,7 +567,6 @@ class Pixel:
         inst_freq = np.empty(n_points)
 
         for i in range(n_points):
-
             cut = self.cwt_matrix[:, i]
             inst_freq[i], _ = parab.fit(cut, np.argmax(cut))
 
@@ -605,7 +596,6 @@ class Pixel:
 
             # Continuously adjusts signal until offset within 0.1 f.o.m.
             while sd > .1:
-
                 maxpeaks, minpeaks = get_peaks(x1)
 
                 fmax = spi.UnivariateSpline(maxpeaks, x1[maxpeaks], k=3)
@@ -618,7 +608,7 @@ class Pixel:
                 x2 = x1 - smean
 
                 # figure of merit for EMD decomposition
-                sd = np.sum((x1 - x2)**2) / np.sum(x1**2)
+                sd = np.sum((x1 - x2) ** 2) / np.sum(x1 ** 2)
 
                 x1 = x2
 
@@ -635,11 +625,11 @@ class Pixel:
         savgolc = int(self.n_taps)
 
         self.inst_freq = sps.savgol_filter(self.phase, savgolc, 1, deriv=1,
-                                           delta=1/self.sampling_rate)
-        self.inst_freq = self.inst_freq/(2*np.pi) - self.drive_freq
+                                           delta=1 / self.sampling_rate)
+        self.inst_freq = self.inst_freq / (2 * np.pi) - self.drive_freq
 
         # Restores length
-        self.inst_freq = np.pad(self.inst_freq, ((savgolc-1)/2,0),'constant')
+        self.inst_freq = np.pad(self.inst_freq, ((savgolc - 1) / 2, 0), 'constant')
         self.inst_freq = self.inst_freq[:len(self.signal)]
 
         # Bring trigger to zero.
@@ -648,7 +638,7 @@ class Pixel:
 
         return
 
-    def sliding_fft(self, time_res = 20e-6, decimate=True):
+    def sliding_fft(self, time_res=20e-6, decimate=True):
         '''
         Sliding FFT approach
         -Take self.fft_cycles number of cycles of data
@@ -665,62 +655,60 @@ class Pixel:
             Whether to shift window by time_res or by single point
         
         '''
-        
-        pts_per_ncycle = int(time_res * self.sampling_rate) 
+
+        pts_per_ncycle = int(time_res * self.sampling_rate)
         num_ncycles = int(self.n_points / pts_per_ncycle)
         excess_n = self.n_points % pts_per_ncycle
-                
+
         if not decimate:
-        
+
             inst_freq = np.zeros(self.n_points)
-            freq = np.linspace(0, self.sampling_rate, self.n_points)        
-            
+            freq = np.linspace(0, self.sampling_rate, self.n_points)
+
             for c in range(self.n_points):
-            
-                sig = self.signal_array[c:c+pts_per_ncycle]
+                sig = self.signal_array[c:c + pts_per_ncycle]
                 win = sps.windows.get_window('blackman', len(sig))
                 sig = sig * win
-                
+
                 SIG = np.fft.fft(sig, n=self.n_points)
-                pk = np.argmax(np.abs(SIG[:int(len(SIG)*0.5)]))
-                
-                popt = np.polyfit(freq[pk-20:pk+20], np.abs(SIG[pk-20:pk+20]), 2)
+                pk = np.argmax(np.abs(SIG[:int(len(SIG) * 0.5)]))
+
+                popt = np.polyfit(freq[pk - 20:pk + 20], np.abs(SIG[pk - 20:pk + 20]), 2)
                 fq = -0.5 * popt[1] / popt[0]
-                
+
                 inst_freq[c] = fq
-        
-        else: 
+
+        else:
 
             inst_freq = np.zeros(num_ncycles)
-            freq = np.linspace(0, self.sampling_rate, self.n_points)     
-            
+            freq = np.linspace(0, self.sampling_rate, self.n_points)
+
             for c in range(num_ncycles):
-            
-                sig = self.signal_array[c*pts_per_ncycle:(c+1)*pts_per_ncycle]
+                sig = self.signal_array[c * pts_per_ncycle:(c + 1) * pts_per_ncycle]
                 win = sps.windows.get_window('blackman', len(sig))
                 sig = sig * win
-                
+
                 SIG = np.fft.fft(sig, n=self.n_points)
-                pk = np.argmax(np.abs(SIG[:int(len(SIG)*0.5)]))
-                
-                popt = np.polyfit(freq[pk-20:pk+20], np.abs(SIG[pk-20:pk+20]), 2)
+                pk = np.argmax(np.abs(SIG[:int(len(SIG) * 0.5)]))
+
+                popt = np.polyfit(freq[pk - 20:pk + 20], np.abs(SIG[pk - 20:pk + 20]), 2)
                 fq = -0.5 * popt[1] / popt[0]
-                
+
                 inst_freq[c] = fq
-        
+
         self.inst_freq = inst_freq
-        
-        return 
+
+        return
 
     def plot(self, newplot=True, c1='r', c2='g'):
         """ Quick visualization of best_fit and cut."""
-        
+
         if newplot:
             plt.figure()
-        
-        plt.plot(self.cut, c1+'-')
-        plt.plot(self.best_fit, c2+'--')
-                
+
+        plt.plot(self.cut, c1 + '-')
+        plt.plot(self.best_fit, c2 + '--')
+
         return
 
     def generate_inst_freq(self):
@@ -730,26 +718,26 @@ class Pixel:
         Returns
         -------
         inst_freq : (n_points,) array_like
-            Instantenous frequency of the signal.
+            Instantaneous frequency of the signal.
         """
 
         # Remove DC component, first.
-        #self.remove_dc()
+        # self.remove_dc()
 
         # Phase-lock signals.
-        #self.phase_lock()
+        # self.phase_lock()
 
         # Average signals.
         self.average()
 
         # Remove DC component again, introduced by phase-locking.
-        #self.remove_dc()
+        # self.remove_dc()
 
         # Check the drive frequency.
         self.check_drive_freq()
 
         # DWT Denoise
-        #self.dwt_denoise()
+        # self.dwt_denoise()
 
         if self.EMD_analysis:
 
@@ -758,7 +746,7 @@ class Pixel:
 
             # Get the analytical signal doing a Hilbert transform.
             self.hilbert_transform()
-            
+
             # Calculate the phase from analytic signal.
             self.calculate_phase()
 
@@ -769,9 +757,9 @@ class Pixel:
 
             # Calculate instantenous frequency using wavelet transform.
             self.calculate_cwt_freq()
-            
+
         elif self.fft_analysis:
-            
+
             # Calculate instantenous frequency using sliding FFT
             self.sliding_fft()
 
@@ -780,7 +768,6 @@ class Pixel:
 
             # Apply window.
             if self.window != 0:
-                
                 self.apply_window()
 
             # Filter the signal with a filter, if wanted.
@@ -804,7 +791,6 @@ class Pixel:
 
         # If it's a recombination image invert it to find minimum.
         if self.recombination:
-
             self.inst_freq = self.inst_freq * -1
 
         return self.inst_freq, self.amplitude, self.phase
@@ -831,11 +817,11 @@ class Pixel:
 
         """
 
-        #logging.basicConfig(filename=r'C:\Users\Asylum User\Documents\ffta\ffta\error.log', level=logging.DEBUG)
+        # logging.basicConfig(filename=r'C:\Users\Asylum User\Documents\ffta\ffta\error.log', level=logging.DEBUG)
 
         try:
 
-            self.inst_freq = self.generate_inst_freq()
+            self.inst_freq, _, _  = self.generate_inst_freq()
 
             # Find where the minimum is.
             if self.fit:
@@ -845,7 +831,7 @@ class Pixel:
                     self.fit_phase()
 
                 else:
-                   
+
                     if self.fit_form == 'PRODUCT':
 
                         self.fit_freq_product()
@@ -855,7 +841,7 @@ class Pixel:
                         self.fit_freq_sum()
 
                     elif self.fit_form == "EXP":
-                        
+
                         self.fit_freq_exp()
 
             else:
@@ -881,5 +867,5 @@ class Pixel:
 
             if self.tfp == 5e-7:
                 return np.NaN, np.NaN, self.inst_freq
-                
+
             return self.tfp, self.shift, self.inst_freq
