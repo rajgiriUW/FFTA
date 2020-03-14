@@ -240,13 +240,17 @@ class FFtrEFM(usid.Process):
         # Find out the positions to write to:
         pos_in_batch = self._get_pixels_in_current_batch()
 
-        # unflatten the list of results, which are [inst_freq array, tfp, shift]
+        # unflatten the list of results, which are [inst_freq array, amp, phase, tfp, shift]
         _results = np.array([j for i in self._results for j in i[:1]])
-        _tfp = np.array([j for i in self._results for j in i[1:2]])
-        _shift = np.array([j for i in self._results for j in i[2:]])
+        _amp = np.array([j for i in self._results for j in i[1:2]])
+        _phase = np.array([j for i in self._results for j in i[2:3]])
+        _tfp = np.array([j for i in self._results for j in i[3:4]])
+        _shift = np.array([j for i in self._results for j in i[4:]])
 
         # write the results to the file
         self.h5_if[pos_in_batch, :] = _results
+        self.h5_amp[pos_in_batch, :] = _amp
+        self.h5_phase[pos_in_batch, :] = _phase
         self.h5_tfp[pos_in_batch, 0] = _tfp
         self.h5_shift[pos_in_batch, 0] = _shift
 
@@ -295,8 +299,10 @@ class FFtrEFM(usid.Process):
             shift = 0
         else:
             tfp, shift, inst_freq = pix.analyze()
+            amplitude = pix.amplitude
+            phase = pix.phase
 
-        return [inst_freq, tfp, shift]
+        return [inst_freq, amplitude, phase, tfp, shift]
 
 
 def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):

@@ -1,4 +1,4 @@
-"""pixel.py: Contains pixel class."""
+  """pixel.py: Contains pixel class."""
 # pylint: disable=E1101,R0902,C0103
 __author__ = "Rajiv Giridharagopal"
 __copyright__ = "Copyright 2020, Ginger Lab"
@@ -58,6 +58,20 @@ class Pixel:
         Find tFP by just raw minimum (False) or fitting product of 2 exponentials (True)
     pycroscopy : bool, optional
         Pycroscopy requires different orientation, so this corrects for this effect.
+    fit_form : str, optional
+        Functional form used when fitting. 
+        One of 
+            product: product of two exponentials (default)
+            sum: sum of two exponentials
+            exp: single expential decay
+            ringdown: single exponential decay of amplitude, not frequency, scaled to return Q
+    method : str, optional
+        Method for generating instantaneous frequency, amplitude, and phase response
+        One of 
+            hilbert: Hilbert transform method (default)
+            wavelet: Morlet CWT approach
+            emd: Hilbert-Huang decomposition
+            fft: sliding FFT approach
 
     Attributes
     ----------
@@ -126,7 +140,8 @@ class Pixel:
 
     """
 
-    def __init__(self, signal_array, params, fit=True, pycroscopy=False):
+    def __init__(self, signal_array, params, fit=True, pycroscopy=False, 
+                 method='hilbert', fit_form='product'):
 
         # Create parameter attributes for optional parameters.
         # These defaults are overwritten by values in 'params'
@@ -143,7 +158,8 @@ class Pixel:
 
         # Assign the fit parameter.
         self.fit = fit
-        self.fit_form = 'PRODUCT'
+        self.fit_form = fit_form
+        self.method = method
 
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
@@ -326,7 +342,7 @@ class Pixel:
             self.signal_orig = self.signal_array.mean(axis=0)
 
         self.signal_orig = sps.hilbert(self.signal_orig)
-        self.amp = np.abs(self.signal_orig)
+        self.amplitude = np.abs(self.signal_orig)
 
         return
 
@@ -478,6 +494,33 @@ class Pixel:
 
         self.shift = A
         self.tfp = tau
+
+        return
+    
+    def fit_ringdown(self):
+        """Fits the amplitude to determine Q from single exponential fit."""
+
+        ridx = int(self.roi * self.sampling_rate)
+        fidx = self.tidx
+
+        # Make sure cut starts from 0 and never goes over.
+        #cut = self.inst_freq[fidx:(fidx + ridx)] - self.inst_freq[fidx]
+        cut = self.amplitude[fidx:(fidx + ridx)] - self.amplitude[fidx]
+
+        t = np.arange(cut.shape[0]) / self.sampling_rate
+
+        # Fit the cut to the model.
+        popt = fitting.fit_bounded_exp(t, cut)
+
+        # For diagnostics
+        A, y0, tau = popt
+        self.cut = cut
+        self.popt = popt
+        self.best_fit = A * (np.exp(-t / tau)) + y0
+
+        self.shift = A
+        self.tfp = np.pi * self.drive_freq / tau # same as ringdown_Q to help with pycroscopy bugs that call tfp
+        self.ringdown_Q = np.pi * self.drive_freq / tau
 
         return
 
@@ -739,7 +782,7 @@ class Pixel:
         # DWT Denoise
         # self.dwt_denoise()
 
-        if self.EMD_analysis:
+        if self.method == 'emd':
 
             # Calculate signal by Hilbert-Huang transform.
             self.EMD_signal()
@@ -753,17 +796,17 @@ class Pixel:
             # Calculate the instantaneous frequency
             self.EMD_inst_freq()
 
-        elif self.wavelet_analysis:
+        elif self.method == 'wavelet':
 
             # Calculate instantenous frequency using wavelet transform.
             self.calculate_cwt_freq()
 
-        elif self.fft_analysis:
+        elif self.method == 'fft'
 
             # Calculate instantenous frequency using sliding FFT
             self.sliding_fft()
 
-        else:
+        elif self.method == 'hilbert'
             # Hilbert transform method
 
             # Apply window.
@@ -784,10 +827,14 @@ class Pixel:
 
             # Calculate the amplitude and phase from the analytic signal
             self.calculate_amplitude()
+            
             self.calculate_phase()
 
             # Calculate instantenous frequency.
             self.calculate_inst_freq()
+            
+        else:
+            raise ValueError('Invalid analysis method! Valid options: hilbert, wavelet, fft, emd')
 
         # If it's a recombination image invert it to find minimum.
         if self.recombination:
@@ -807,21 +854,11 @@ class Pixel:
             Frequency shift from trigger to first-peak, in Hz.
         inst_freq : (n_points,) array_like
             Instantenous frequency of the signal.
-
-        Notes
-        -----
-        It does not raise an exception if there is one, however it logs
-        the exception if logging is turned on. This is implemented this way to
-        avoid crashing in the case of exception when this method is called
-        from C API.
-
         """
-
-        # logging.basicConfig(filename=r'C:\Users\Asylum User\Documents\ffta\ffta\error.log', level=logging.DEBUG)
-
+        
         try:
 
-            self.inst_freq, _, _  = self.generate_inst_freq()
+            self.inst_freq, self.amplitude, self.phase = self.generate_inst_freq()
 
             # Find where the minimum is.
             if self.fit:
@@ -832,18 +869,21 @@ class Pixel:
 
                 else:
 
-                    if self.fit_form == 'PRODUCT':
+                    if self.fit_form == 'product':
 
                         self.fit_freq_product()
 
-                    elif self.fit_form == 'SUM':
+                    elif self.fit_form == 'sum':
 
                         self.fit_freq_sum()
 
-                    elif self.fit_form == "EXP":
+                    elif self.fit_form == 'exp:
 
                         self.fit_freq_exp()
+                        
+                    elif self.fit_form == 'ringdown':
 
+                        self.fit_ringdown()
             else:
 
                 self.find_minimum()
