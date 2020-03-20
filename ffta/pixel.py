@@ -1,4 +1,4 @@
-  """pixel.py: Contains pixel class."""
+"""pixel.py: Contains pixel class."""
 # pylint: disable=E1101,R0902,C0103
 __author__ = "Rajiv Giridharagopal"
 __copyright__ = "Copyright 2020, Ginger Lab"
@@ -801,12 +801,12 @@ class Pixel:
             # Calculate instantenous frequency using wavelet transform.
             self.calculate_cwt_freq()
 
-        elif self.method == 'fft'
+        elif self.method == 'fft':
 
             # Calculate instantenous frequency using sliding FFT
             self.sliding_fft()
 
-        elif self.method == 'hilbert'
+        elif self.method == 'hilbert':
             # Hilbert transform method
 
             # Apply window.
@@ -877,7 +877,7 @@ class Pixel:
 
                         self.fit_freq_sum()
 
-                    elif self.fit_form == 'exp:
+                    elif self.fit_form == 'exp':
 
                         self.fit_freq_exp()
                         
