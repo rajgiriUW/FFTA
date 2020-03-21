@@ -43,7 +43,8 @@ class FFtrEFM(usid.Process):
         >> data._get_existing_datasets()
     """
 
-    def __init__(self, h5_main, if_only=False, **kwargs):
+    def __init__(self, h5_main, parm_dict = {}, pixel_params ={}, 
+                 if_only=False, **kwargs):
         """
         Parameters
         ----------
@@ -51,14 +52,42 @@ class FFtrEFM(usid.Process):
             Dataset to process
 
         if_only : bool, optional
-            If True, only calculates the instantaneous frequency
+            If True, only calculates the instantaneous frequency and not tfp/shift
 
-        kwargs : dictionary or variable=
+        parm_dict : dict, optional
+            Additional updates to the parameters dictionary. e.g. changing the trigger.
+            You can also explicitly update self.parm_dict.update({'key': value})
+            
+        pixel_params : dict, optional
+            Pixel class accepts the following:
+                fit: bool, (default: True)
+                    Whether to fit the frequency data or use derivative. 
+                pycroscopy: bool (default: False)
+                    Usually does not need to change. This parameter is because of
+                    how Pycroscopy stores a matrix compared to original numpy ffta approach
+                method: str (default: 'hilbert')
+                    Method for generating instantaneous frequency, amplitude, and phase response
+                    One of 
+                        hilbert: Hilbert transform method (default)
+                        wavelet: Morlet CWT approach
+                        emd: Hilbert-Huang decomposition
+                        fft: sliding FFT approach
+                        fit_form: str (default: 'product')
+
+        kwargs : dictionary or variable
             Keyword pairs to pass to Process constructor
         """
 
         self.parm_dict = get_utils.get_params(h5_main)
         self.parm_dict.update({'if_only': if_only})
+        
+        if any(parm_dict):
+            
+            for key, val in parm_dict:
+                self.parm_dict.update({key: val})
+        
+        self.pixel_params = pixel_params    
+        
         super(FFtrEFM, self).__init__(h5_main, 'Fast_Free', parms_dict=self.parm_dict, **kwargs)
 
         return
@@ -72,7 +101,7 @@ class FFtrEFM(usid.Process):
 
         return
 
-    def test(self, pixel_ind):
+    def test(self, pixel_ind=[0,0]):
         """
         Test the Pixel analysis of a single pixel
 
@@ -103,7 +132,7 @@ class FFtrEFM(usid.Process):
         # as an array, not an ffta.Pixel
         defl = get_utils.get_pixel(self.h5_main, pixel_ind, array_form=True)
 
-        pix = ffta.pixel.Pixel(defl, self.parm_dict)
+        pix = ffta.pixel.Pixel(defl, self.parm_dict, **self.pixel_params)
 
         tfp, shift, inst_freq = pix.analyze()
         pix.plot()
@@ -182,8 +211,6 @@ class FFtrEFM(usid.Process):
                                                        h5_spec_vals = self.h5_main.h5_spec_vals,
                                                        dtype=np.float32,  # data type / precision
                                                        main_dset_attrs=self.parm_dict)
-
-
 
         self.h5_if.file.flush()
 
@@ -276,7 +303,7 @@ class FFtrEFM(usid.Process):
         # TODO: Try to use the functools.partials to preconfigure the map function
         # cores = number of processes / rank here
 
-        args = [self.parm_dict]
+        args = [self.parm_dict, self.pixel_params]
 
         if self.verbose and self.mpi_rank == 0:
             print("Rank {} at Process class' default _unit_computation() that "
@@ -290,8 +317,9 @@ class FFtrEFM(usid.Process):
     def _map_function(defl, *args, **kwargs):
 
         parm_dict = args[0]
+        pixel_params = args[1]
 
-        pix = ffta.pixel.Pixel(defl, parm_dict)
+        pix = ffta.pixel.Pixel(defl, parm_dict, **pixel_params)
 
         if parm_dict['if_only']:
             inst_freq, _, _ = pix.generate_inst_freq()

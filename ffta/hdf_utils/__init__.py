@@ -7,4 +7,4 @@ from . import filtering
 from . import load_commands
 from . import process
 
-__all__ = ['hdf_utils', 'get_utils', 'analyze_h5']
+__all__ = ['hdf_utils', 'get_utils', 'analyze_h5', 'process']

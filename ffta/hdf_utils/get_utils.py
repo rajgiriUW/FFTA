@@ -104,7 +104,7 @@ def change_params(h5_path, new_vals = {}, verbose=False):
 
     return parameters
     
-def get_line(h5_path, line_num, params=None,
+def get_line(h5_path, line_num, params={},
              array_form=False, avg=False, transpose=False):    
     """
     Gets a line of data.
@@ -180,7 +180,7 @@ def get_line(h5_path, line_num, params=None,
     return line_inst
     
 
-def get_pixel(h5_path, rc, params=None,
+def get_pixel(h5_path, rc, params={}, pixel_params={},
               array_form=False, avg=False, transpose=False):    
     """
     Gets a pixel of data, returns all the averages within that pixel
@@ -198,6 +198,10 @@ def get_pixel(h5_path, rc, params=None,
     params: dict
         If explicitly changing parameters (to test a feature), you can pass any subset and this will overwrite it
         e.g. parameters  = {'drive_freq': 10} will extract the Pixel, then change Pixel.drive_freq = 10
+
+    pixel_params : dict, optional
+        Parameters 'fit', 'pycroscopy', 'method', 'fit_form'
+        See ffta.pixel for details. 'pycroscopy' is set to True in this function
 
     array_form : bool, optional
         Returns the raw array contents rather than Pixel class
@@ -254,6 +258,9 @@ def get_pixel(h5_path, rc, params=None,
         for key, val in params.items():
             parameters[key] = val
 
-    pixel_inst = Pixel(signal_pixel, parameters, pycroscopy=True)
+    pixel_params.update({'pycroscopy': True}) #must be True in this specific case
+
+    #pixel_inst = Pixel(signal_pixel, parameters, pycroscopy=True)
+    pixel_inst = Pixel(signal_pixel, parameters, **pixel_params)
     
     return pixel_inst    

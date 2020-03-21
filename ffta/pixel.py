@@ -167,6 +167,7 @@ class Pixel:
 
         # Assign values from inputs.
         self.signal_array = signal_array
+        self.signal_orig = None # used in amplitude calc to undo any Windowing beforehand
         if pycroscopy:
             self.signal_array = signal_array.T
         self.tidx = int(self.trigger * self.sampling_rate)
@@ -237,7 +238,7 @@ class Pixel:
             self.signal = self.signal_array.mean(axis=1)
 
         else:
-            self.signal = self.signal_array
+            self.signal = np.copy(self.signal_array)
 
         return
 
@@ -339,10 +340,11 @@ class Pixel:
         signal to do this."""
         #
         if self.n_signals != 1:
-            self.signal_orig = self.signal_array.mean(axis=0)
-
-        self.signal_orig = sps.hilbert(self.signal_orig)
-        self.amplitude = np.abs(self.signal_orig)
+            signal_orig = self.signal_array.mean(axis=0)
+        else:
+            signal_orig = self.signal_array
+            
+        self.amplitude = np.abs(sps.hilbert(signal_orig))
 
         return
 
@@ -388,7 +390,7 @@ class Pixel:
         return
 
     def find_minimum(self):
-        """Finds when the minimum of instantenous frequency happens."""
+        """Finds when the minimum of instantaneous frequency happens."""
 
         # Cut the signal into region of interest.
         ridx = int(self.roi * self.sampling_rate)
