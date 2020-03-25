@@ -8,30 +8,56 @@ Created on Mon Mar 23 16:23:12 2020
 
 import scipy.signal as sps
 import numpy as np
+import argparse
 
-def gen_chirp(f_center, f_width = 100e3, n_pts=1000):
+def GenChirp(f_center, f_width = 100e3):
     '''
     Based on the Agilent manual, the max-frequency is 250 MHz/number_of_points
     The minimum number of points is 8, maximum is 1e6
-    
-    The default case above yields a signal of max-frequency 1.25 MHz
-    
+		
+	This creates 3 chirp signals around the first three mechanical resonances
     '''
-    max_freq = np.floor(250e6 / n_pts)
-    
-    # if max_freq < f_center + f_width:
-    #     raise ValueError('Choose lower number of points')
-    
-    f_hi = f_center + f_width
-    f_lo = f_center - f_width
 
-    tx = np.arange(0, 1e-2, 1/10e7)
-    
+
+    tx = np.arange(0, 1e-2, 1/10e7) # fixed 10 MHz sampling rate
+	
+    f_hi = f_center + f_width
+    f_lo = np.max([f_center - f_width, 100]) # to ensure a positive number
+   
+    print(f_lo, 'to',f_hi)
     chirp = sps.chirp(tx, f_lo, tx[-1], f_hi)
     
-    name = "chirp.dat"
+    name = "chirp_w.dat"  # first electrical resonance
+    np.savetxt(name, chirp, delimiter='\n', fmt ='%.10f')
+
+    f_hi = 2*f_center + f_width
+    f_lo = np.max([2*f_center - f_width, 100]) # to ensure a positive number
+   
+    print(f_lo, 'to',f_hi)
+    chirp = sps.chirp(tx, f_lo, tx[-1], f_hi)
+    
+    name = "chirp_2w.dat" # second electrical resonance
+    np.savetxt(name, chirp, delimiter='\n', fmt ='%.10f')
+	
+    f_hi = 3*f_center + f_width
+    f_lo = np.max([3*f_center - f_width, 100]) # to ensure a positive number
+   
+    print(f_lo, 'to',f_hi)
+    chirp = sps.chirp(tx, f_lo, tx[-1], f_hi)
+    
+    name = "chirp_3w.dat"  # third electrical resonance
     np.savetxt(name, chirp, delimiter='\n', fmt ='%.10f')
     
+    f_hi = 6.25*f_center + f_width
+    f_lo = np.max([6.25*f_center - f_width, 100]) # to ensure a positive number
+   
+    print(f_lo, 'to',f_hi)
+    chirp = sps.chirp(tx, f_lo, tx[-1], f_hi)
+    
+    name = "chirp_w2.dat"  # second mechanical resonance
+    np.savetxt(name, chirp, delimiter='\n', fmt ='%.10f')
+	
+
     return chirp
 
 
@@ -44,8 +70,6 @@ def GeneratePulse(pulse_time,voltage,total_time):
     data = np.zeros(total_samples)
     
     data[:pulse_samples] = voltage
-    
-    
     
     fo = open("Pulse.dat","wb")
     
@@ -68,17 +92,18 @@ def GenerateTaus(tau, beta, sfx =''):
     np.savetxt(name, data, delimiter='\n', fmt ='%.10f')
 
 if __name__ == '__main__':
+    
+    '''
+    From command line, usage:
+        python generate_chirp.py 350000 100000 1000
+        
+        Generates a 350 kHz +/- 100 kHz chirp 1000 points long. This would be ~14 MB on disk
+    '''
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('freq_center', help='Resonance Frequency (Hz)')
+    parser.add_argument('freq_width', help='Frequency width (Hz)')
 
-	print 'Generating! This is slow, so hang on'
-	GenerateTaus(1e-7, 0.4, '0')
-	GenerateTaus(1e-7, 0.6, '1')
-	GenerateTaus(1e-7, 0.8, '2')
-	GenerateTaus(1e-6, 0.4, '3')
-	GenerateTaus(1e-6, 0.6, '4')
-	GenerateTaus(1e-6, 0.8, '5')
-	GenerateTaus(1e-5, 0.4, '6')
-	GenerateTaus(1e-5, 0.6, '7')
-	GenerateTaus(1e-5, 0.8, '8')
-	GenerateTaus(1e-4, 0.4, '9')
-	GenerateTaus(1e-4, 0.6, '10')
-	GenerateTaus(1e-4, 0.8, '11')
+    f_center = float(parser.parse_args().freq_center)
+    f_width = float(parser.parse_args().freq_width)
+    chirp = GenChirp(f_center, f_width)
