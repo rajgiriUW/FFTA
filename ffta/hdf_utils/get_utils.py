@@ -53,6 +53,16 @@ def get_params(h5_path, key='', verbose=False, del_indices=True):
         except:
             raise TypeError('No proper parameters file found.')
     
+    # STILL not there? Find the FF AVg
+    if 'trigger' not in parameters:
+        
+        try:
+            h5_file = px.io.HDFwriter(h5_path).file
+            parameters = usid.hdf_utils.get_attributes(h5_file['FF_Group/FF_Avg'])
+            
+        except:
+            raise TypeError('No proper parameters file found.')
+    
     if any(key):
         return parameters[key]
     

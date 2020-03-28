@@ -30,7 +30,7 @@ class FFtrEFM(usid.Process):
     Example usage:
 
         >> from ffta.hdf_utils import process
-        >> data = FFtrEFM(h5_main)
+        >> data = process.FFtrEFM(h5_main)
         >> data.test([1,2]) # tests on pixel 1,2 in row, column
         >> data.compute()
         >> data.reshape() # reshapes the tFP, shift data
@@ -137,7 +137,7 @@ class FFtrEFM(usid.Process):
         tfp, shift, inst_freq = pix.analyze()
         pix.plot()
 
-        return self._map_function(defl, self.parm_dict)
+        return self._map_function(defl, self.parm_dict, self.pixel_params)
 
     def _create_results_datasets(self):
         '''
@@ -152,6 +152,8 @@ class FFtrEFM(usid.Process):
         shift : 'shift' h5 Dataset
             Contains the frequency shift data as a 1D matrix
         '''
+
+        print ('Creating results datasets')
 
         # Get relevant parameters
         num_rows = self.parm_dict['num_rows']
@@ -325,6 +327,8 @@ class FFtrEFM(usid.Process):
             inst_freq, _, _ = pix.generate_inst_freq()
             tfp = 0
             shift = 0
+            amplitude = 0
+            phase = 0
         else:
             tfp, shift, inst_freq = pix.analyze()
             amplitude = pix.amplitude

@@ -141,7 +141,7 @@ class Pixel:
     """
 
     def __init__(self, signal_array, params, fit=True, pycroscopy=False, 
-                 method='hilbert', fit_form='product'):
+                 method='hilbert', fit_form='product', **kwargs):
 
         # Create parameter attributes for optional parameters.
         # These defaults are overwritten by values in 'params'
@@ -346,6 +346,24 @@ class Pixel:
             
         self.amplitude = np.abs(sps.hilbert(signal_orig))
 
+        return
+    
+    def filter_amplitude(self):
+        '''
+        filters the drive signal out of the amplitude response
+        '''
+        
+        AMP = np.fft.fft(np.fft.fftshift(self.amplitude)) 
+        
+        DRIVE = self.drive_freq/(self.sampling_rate/self.n_points) # drive location in frequency space
+        center = int(len(AMP)/2)
+        
+        # crude boxcar
+        AMP[:center-int(DRIVE/2)] = 0
+        AMP[center+int(DRIVE/2):] = 0
+        
+        self.amplitude = np.fft.ifft(np.fft.ifftshift(AMP))
+        
         return
 
     def calculate_phase(self, correct_slope=True):

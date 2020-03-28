@@ -72,6 +72,24 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         commands.append("h5_if = usid.hdf_utils.find_dataset(hdf.file, 'inst_freq')[-1]")
     except:
         pass
+    
+    try:
+        h5_if = usid.hdf_utils.find_dataset(hdf.file, 'Inst_Freq')[-1]
+        commands.append("h5_if = usid.hdf_utils.find_dataset(hdf.file, 'Inst_Freq')[-1]")
+    except:
+        pass
+
+    try:
+        h5_tfp = usid.hdf_utils.find_dataset(hdf.file, 'tfp')[-1]
+        commands.append("h5_tfp= usid.hdf_utils.find_dataset(hdf.file, 'tfp')[-1]")
+    except:
+        pass
+    
+    try:
+        h5_shift = usid.hdf_utils.find_dataset(hdf.file, 'shift')[-1]
+        commands.append("h5_shift= usid.hdf_utils.find_dataset(hdf.file, 'shift')[-1]")
+    except:
+        pass
 
     try:
         h5_avg = usid.hdf_utils.find_dataset(hdf.file, 'FF_Avg')[-1]
@@ -102,14 +120,14 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         pass
 
     try:
-        h5_ll = get_utils.get_line(h5_path, line_num=0)
-        commands.append("h5_ll = ffta.hdf_utils.get_utils.get_line(h5_path, line_num=0)")
+        h5_ll = get_utils.get_line(h5_if, line_num=0)
+        commands.append("h5_ll = ffta.hdf_utils.get_utils.get_line(h5_if, line_num=0)")
     except:
         pass
 
     try:
-        h5_px = get_utils.get_pixel(h5_path, rc=[0,0])
-        commands.append("h5_px = ffta.hdf_utils.get_utils.get_pixel(h5_path, rc=[0,0])")
+        h5_px = get_utils.get_pixel(h5_if, rc=[0,0])
+        commands.append("h5_px = ffta.hdf_utils.get_utils.get_pixel(h5_if, rc=[0,0])")
     except:
         pass
 

@@ -32,7 +32,6 @@ loadHDF5_folder : Takes a folder of IBW files and creates an H5 file
 load_raw_FF : Creates FF_Raw which is the raw (r*c*averages, pnts_per_signal) Dataset
 load_pixel_averaged_FF : Creates FF_Avg where each pixel's signal is averaged together (r*c, pnts_per_signal) Dataset
 load_pixel_averaged_from_raw : Creates FF_Avg where each pixel's signal is averaged together using the Raw data file
-hdf_commands : Creates workspace-compatible commands for common HDF variable standards
 *createHDF5_separate_lines : Creates a folder and saves each line as a separate file
 *createHDF5_file : Creates a single H5 file for one IBW file.
 
@@ -96,7 +95,7 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF',
         Whether to automatically call the load_pixel_averaged_from_raw function to average data at each pixel
         
     mirror : bool, optional
-        Whether to reverse the data on each line read (since data are usually saved during a retrace)
+        Whether to reverse the data on each line read (since data are usually saved during a RETRACE scan)
 
     Returns
     -------
