@@ -43,8 +43,8 @@ class FFtrEFM(usid.Process):
         >> data._get_existing_datasets()
     """
 
-    def __init__(self, h5_main, parm_dict = {}, pixel_params ={}, 
-                 if_only=False, **kwargs):
+    def __init__(self, h5_main, parm_dict = {}, can_params = {}, 
+                 pixel_params ={}, if_only=False, override=False, **kwargs):
         """
         Parameters
         ----------
@@ -57,7 +57,11 @@ class FFtrEFM(usid.Process):
         parm_dict : dict, optional
             Additional updates to the parameters dictionary. e.g. changing the trigger.
             You can also explicitly update self.parm_dict.update({'key': value})
-            
+        
+        can_params : dict, optional
+            Cantilever parameters describing the behavior
+            Can be loaded from ffta.pixel_utils.load.cantilever_params
+        
         pixel_params : dict, optional
             Pixel class accepts the following:
                 fit: bool, (default: True)
@@ -73,7 +77,12 @@ class FFtrEFM(usid.Process):
                         emd: Hilbert-Huang decomposition
                         fft: sliding FFT approach
                         fit_form: str (default: 'product')
-
+                filter_amp : bool (default: False)
+                    Whether to filter the amplitude signal around DC (to remove drive sine artifact)
+    
+        override : bool, optional
+            If True, forces creation of new results group. Use in _get_existing_datasets
+    
         kwargs : dictionary or variable
             Keyword pairs to pass to Process constructor
         """
@@ -83,13 +92,22 @@ class FFtrEFM(usid.Process):
         
         if any(parm_dict):
             
-            for key, val in parm_dict:
+            for key, val in parm_dict.items():
                 self.parm_dict.update({key: val})
-        
+                
+        if any(can_params):
+            if 'Initial' in can_params: #only care about the initial conditions
+                for key, val in can_params['Initial'].items():
+                    self.parm_dict.update({key: val})
+            else:
+                for key, val in can_params.items():
+                    self.parm_dict.update({key: val})
+                    
         self.pixel_params = pixel_params    
+        self.override = override
         
         super(FFtrEFM, self).__init__(h5_main, 'Fast_Free', parms_dict=self.parm_dict, **kwargs)
-
+        
         return
 
     def update_parm(self, **kwargs):
@@ -289,11 +307,15 @@ class FFtrEFM(usid.Process):
         """
         Extracts references to the existing datasets that hold the results
         """
-        self.h5_results_grp = usid.hdf_utils.find_dataset(self.h5_main.parent, 'Inst_Freq')[0].parent
-        self.h5_new_spec_vals = self.h5_results_grp['Spectroscopic_Values']
-        self.h5_tfp = self.h5_results_grp['tfp']
-        self.h5_shift = self.h5_results_grp['shift']
-        self.h5_if = self.h5_results_grp['Inst_Freq']
+        
+        if not self.override:
+            self.h5_results_grp = usid.hdf_utils.find_dataset(self.h5_main.parent, 'Inst_Freq')[0].parent
+            self.h5_new_spec_vals = self.h5_results_grp['Spectroscopic_Values']
+            self.h5_tfp = self.h5_results_grp['tfp']
+            self.h5_shift = self.h5_results_grp['shift']
+            self.h5_if = self.h5_results_grp['Inst_Freq']
+            self.h5_amp = self.h5_results_grp['Amplitude']
+            self.h5_phase = self.h5_results_grp['Phase']
 
         return
 

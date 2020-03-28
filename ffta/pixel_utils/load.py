@@ -11,6 +11,8 @@ import sys
 from igor.binarywave import load as loadibw
 from numpy.lib.npyio import loadtxt
 from os.path import splitext
+import numpy as np
+import pandas as pd
 
 
 def signal(path, skiprows=0):
@@ -148,6 +150,35 @@ def configuration(path):
 
     return n_pixels, parameters
 
+def cantilever_params(path, asDataFrame=False):
+    '''
+    Reads an experimental Parameters file describing the cantilever.
+    Cantilever parameters should contain an Initial, Final, and Differential\
+        column for describing an excited cantilever
+    
+    path: str
+        Path to the parameters file
+    
+    asDataFrame : bool
+        Returns Pandas dataframe instead of a dictionary
+    
+    returns:
+    ------
+    can_params : dict
+    
+    '''
+    
+    df = pd.read_csv(path, sep='\t', skiprows=1, index_col = 'Unnamed: 0')
+    for c in df.columns:
+    
+        df[c][df[c] != 'NAN'] = pd.to_numeric(df[c][df[c] != 'NAN'])
+        df[c][df[c] == 'NAN'] = np.NaN
+        
+    if asDataFrame:
+        return df
+    
+    return df.to_dict()
+    
 
 def simulation_configuration(path):
     """

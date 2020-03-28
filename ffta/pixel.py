@@ -54,6 +54,9 @@ class Pixel:
         wavelet_parameter = int (default: 5)
         recombination = bool (0: Data are for Charging up, 1: Recombination)
         fit_phase = bool (0: fit to frequency, 1: fit to phase)
+    can_params : dict, optional
+        Contains the cantilever parameters (e.g. AMPINVOLS).
+        see ffta.pixel_utils.load.cantilever_params
     fit : bool, optional
         Find tFP by just raw minimum (False) or fitting product of 2 exponentials (True)
     pycroscopy : bool, optional
@@ -72,6 +75,8 @@ class Pixel:
             wavelet: Morlet CWT approach
             emd: Hilbert-Huang decomposition
             fft: sliding FFT approach
+    filter_amp : bool, optional
+        The Hilbert Transform amplitude can sometimes have drive frequency artifact.
 
     Attributes
     ----------
@@ -140,8 +145,9 @@ class Pixel:
 
     """
 
-    def __init__(self, signal_array, params, fit=True, pycroscopy=False, 
-                 method='hilbert', fit_form='product', **kwargs):
+    def __init__(self, signal_array, params, can_params={},
+                 fit=True, pycroscopy=False, 
+                 method='hilbert', fit_form='product', filter_amp=False):
 
         # Create parameter attributes for optional parameters.
         # These defaults are overwritten by values in 'params'
@@ -160,11 +166,21 @@ class Pixel:
         self.fit = fit
         self.fit_form = fit_form
         self.method = method
-
+        self.filter_amp = filter_amp
+        
+        # Cantilever parameters
+        self.AMPINVOLS = 100e-9 # 100 nm/V
+        self.k = 10
+        
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
             setattr(self, key, value)
-
+        
+        if 'Initial' in can_params:
+            
+            for key, value in can_params.items():
+                setattr(self, key, float(value))
+                
         # Assign values from inputs.
         self.signal_array = signal_array
         self.signal_orig = None # used in amplitude calc to undo any Windowing beforehand
@@ -345,6 +361,8 @@ class Pixel:
             signal_orig = self.signal_array
             
         self.amplitude = np.abs(sps.hilbert(signal_orig))
+        
+        self.amplitude *= self.AMPINVOLS
 
         return
     
@@ -353,7 +371,7 @@ class Pixel:
         filters the drive signal out of the amplitude response
         '''
         
-        AMP = np.fft.fft(np.fft.fftshift(self.amplitude)) 
+        AMP = np.fft.fftshift(np.fft.fft(self.amplitude)) 
         
         DRIVE = self.drive_freq/(self.sampling_rate/self.n_points) # drive location in frequency space
         center = int(len(AMP)/2)
@@ -767,10 +785,24 @@ class Pixel:
         """ Quick visualization of best_fit and cut."""
 
         if newplot:
-            plt.figure()
+            fig, a = plt.subplots(nrows=3, figsize=(6,9), facecolor='white')
 
-        plt.plot(self.cut, c1 + '-')
-        plt.plot(self.best_fit, c2 + '--')
+        dt = 1/self.sampling_rate
+        ridx = int(self.roi * self.sampling_rate)
+        fidx = self.tidx
+        cut = [fidx, (fidx + ridx)]
+        tx = np.arange(cut[0], cut[1])*dt
+        
+        a[0].plot(tx*1e3, self.inst_freq[cut[0]:cut[1]], c1 + '-')
+        a[0].plot(tx*1e3, self.best_fit, c2 + '--')
+        a[1].plot(tx*1e3, np.abs(self.amplitude[cut[0]:cut[1]]), 'b')
+        a[2].plot(tx*1e3, self.phase[cut[0]:cut[1]]*np.pi/180, 'm') 
+        
+        a[0].set_title('Instantaneous Frequency')
+        a[0].set_ylabel('Frequency Shift (Hz)')
+        a[1].set_ylabel('Amplitude')
+        a[2].set_ylabel('Phase (deg)')
+        a[2].set_xlabel('Time (ms)')        
 
         return
 
@@ -847,6 +879,9 @@ class Pixel:
 
             # Calculate the amplitude and phase from the analytic signal
             self.calculate_amplitude()
+            
+            if self.filter_amp:
+                self.filter_amplitude()
             
             self.calculate_phase()
 
