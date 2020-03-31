@@ -323,13 +323,6 @@ def load_raw_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True,
         def_vec = def_vec[:-1]
         #warnings.warn('Time-per-point calculation error')
 
-
-    # This takes a very long time but creates a giant NxM matrix of the data
-    # N = number of points in each spectra, M = number of rows * columns
-    #data_size = [line_file.shape[0], line_file.shape[1]*parm_dict['num_rows'] ]
-    data_size = [parm_dict['pnts_per_line']*parm_dict['num_rows'],
-                  parm_dict['pnts_per_avg']]
-
     # To do: Fix the labels/atrtibutes on the relevant data sets
     hdf = px.io.HDFwriter(h5_path)
     try:
@@ -340,21 +333,19 @@ def load_raw_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True,
     # Set up the position vectors for the data
     pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols*pnts_per_pixel)),
                 Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
-#    pos_desc = [Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows)),
-#                Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols*pnts_per_pixel))]
 
     ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False, verbose=verbose)
 
     spec_desc = [Dimension('Time', 's',np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
-    ds_spec_inds, ds_spec_vals = build_ind_val_dsets(spec_desc, is_spectral=True, verbose=verbose)
+    ds_spec_inds, ds_spec_vals = build_ind_val_dsets(spec_desc, is_spectral=True)
 
     for p in parm_dict:
         ff_group.attrs[p] = parm_dict[p]
     ff_group.attrs['pnts_per_line'] = num_cols # to change number of pnts in a line
-    ff_group.attrs['pnts_per_pixel'] = 1 # to change number of pnts in a pixel
+    # ff_group.attrs['pnts_per_pixel'] = 1 # to change number of pnts in a pixel
 
     h5_raw = usid.hdf_utils.write_main_dataset(ff_group,  # parent HDF5 group
-                                               (data_size[0], data_size[1]),  # shape of Main dataset
+                                               (num_rows * num_cols * pnts_per_pixel, pnts_per_avg),  # shape of Main dataset
                                                'FF_Raw',  # Name of main dataset
                                                'Deflection',  # Physical quantity contained in Main dataset
                                                'V',  # Units for the physical quantity
