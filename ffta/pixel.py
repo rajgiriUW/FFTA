@@ -406,6 +406,8 @@ class Pixel:
             # Remove the fit from phase.
             self.phase -= (xfit[0] * np.arange(self.n_points)) + xfit[1]
 
+        self.phase = -self.phase #need to correct for negative in DDHO solution
+
         return
 
     def calculate_inst_freq(self):
@@ -416,7 +418,9 @@ class Pixel:
 
         # Do a Savitzky-Golay smoothing derivative
         # using 5 point 1st order polynomial.
-        self.inst_freq = sps.savgol_filter(self.phase, 5, 1, deriv=1,
+        
+        #-self.phase to correct for sign in DDHO solution
+        self.inst_freq = sps.savgol_filter(-self.phase, 5, 1, deriv=1,
                                            delta=dtime)
 
         # Bring trigger to zero.
@@ -446,6 +450,9 @@ class Pixel:
         # Do index to time conversion and find shift.
         self.tfp = idx / self.sampling_rate
         self.shift = func(0) - func(idx)
+        
+        self.cut = cut
+        self.best_fit = 0 * cut
 
         return
 
@@ -558,7 +565,7 @@ class Pixel:
 
         self.shift = A
         self.tfp = np.pi * self.drive_freq / tau # same as ringdown_Q to help with pycroscopy bugs that call tfp
-        self.ringdown_Q = np.pi * self.drive_freq / tau
+        self.ringdown_Q = np.pi * self.drive_freq * tau
 
         return
 

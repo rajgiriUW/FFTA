@@ -87,13 +87,13 @@ class FFtrEFM(usid.Process):
             Keyword pairs to pass to Process constructor
         """
 
-        self.parm_dict = get_utils.get_params(h5_main)
-        self.parm_dict.update({'if_only': if_only})
+        self.parm_dict = parm_dict
+        if not any(parm_dict):
+            self.parm_dict = get_utils.get_params(h5_main)
+            self.parm_dict.update({'if_only': if_only})
         
-        if any(parm_dict):
-            
-            for key, val in parm_dict.items():
-                self.parm_dict.update({key: val})
+        for key, val in parm_dict.items():
+            self.parm_dict.update({key: val})
                 
         if any(can_params):
             if 'Initial' in can_params: #only care about the initial conditions
@@ -303,13 +303,16 @@ class FFtrEFM(usid.Process):
 
         return
 
-    def _get_existing_datasets(self):
+    def _get_existing_datasets(self, index=-1):
         """
         Extracts references to the existing datasets that hold the results
+        
+        index = which existing dataset to get
+        
         """
         
         if not self.override:
-            self.h5_results_grp = usid.hdf_utils.find_dataset(self.h5_main.parent, 'Inst_Freq')[0].parent
+            self.h5_results_grp = usid.hdf_utils.find_dataset(self.h5_main.parent, 'Inst_Freq')[index].parent
             self.h5_new_spec_vals = self.h5_results_grp['Spectroscopic_Values']
             self.h5_tfp = self.h5_results_grp['tfp']
             self.h5_shift = self.h5_results_grp['shift']
