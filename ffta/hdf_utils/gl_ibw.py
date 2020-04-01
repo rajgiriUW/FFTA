@@ -99,7 +99,7 @@ class GLIBWTranslator(Translator):
         
         type_suffix = 'Image'
         
-        num_rows = ibw_wave['wave_header']['nDim'][1] #lines
+        num_rows = ibw_wave['wave_header']['nDim'][1] # lines
         num_cols = ibw_wave['wave_header']['nDim'][0] # points
         num_imgs = ibw_wave['wave_header']['nDim'][2] # layers
         unit_scale = self._get_unit_factor(''.join([str(s)[-2] for s in ibw_wave['wave_header']['dimUnits'][0][0:2]]))
@@ -310,8 +310,8 @@ class GLIBWTranslator(Translator):
         
         elif ftype.lower() == 'ringdown':
             
-            del ibw_wave[0:3]
-            ibw_wave =  ['height', 'Q', 'error'] + ibw_wave
+            del ibw_wave[0:4]
+            ibw_wave =  ['height', 'Q', 'shift', 'error'] + ibw_wave
             
         elif ftype.lower() == 'pl':
       

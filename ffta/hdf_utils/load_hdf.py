@@ -108,11 +108,11 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF',
     """
 
     if not any(ibw_file_path):
-        ibw_file_path = px.io_utils.uiGetFile(caption='Select IBW Image ',
+        ibw_file_path = usid.io_utils.file_dialog(caption='Select IBW Image ',
                                                 file_filter='IBW Files (*.ibw)')
 
     if not any(ff_file_path):
-        ff_file_path = px.io_utils.uiGetFile(caption='Select FF config in folder',
+        ff_file_path = usid.io_utils.file_dialog(caption='Select FF config in folder',
                                                 file_filter='Config File (*.cfg)')
         ff_file_path = '/'.join(ff_file_path.split('/')[:-1])
 
@@ -121,11 +121,11 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF',
     h5_path = tran.translate(ibw_file_path, ftype=ftype,
                              verbose=verbose, subfolder=subfolder)
 
-    hdf = px.io.HDFwriter(h5_path)
+    hdf = h5py.File(h5_path)
     xy_scansize = [hdf.file.attrs['FastScanSize'],hdf.file.attrs['SlowScanSize']]
 
     # Set up FF data
-    h5_path, data_files, parm_dict = loadHDF5_folder(folder_path=ff_file_path, verbose=verbose,
+    h5_path, data_files, parm_dict = load_folder(folder_path=ff_file_path, verbose=verbose,
                                                      xy_scansize=xy_scansize, file_name=h5_path)
     
     # Processes the Raw data
@@ -157,7 +157,7 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF',
         return h5_path, parm_dict, h5_avg
 
 
-def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5', 
+def load_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5', 
                     textload = False, verbose=False):
     """
     Sets up loading the HDF5 files. Parses the data file list and creates the .H5 file path
@@ -168,7 +168,7 @@ def loadHDF5_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5',
         Path to folder you want to process
 
     xy_sscansize : 2-float array
-        Width by Height in meters (e.g. [8e-6, 4e-6])
+        Width by Height in meters (e.g. [8e-6, 4e-6]), if not in parameters file
 
     file_name : str
         Desired file name, otherwise is auto-generated
