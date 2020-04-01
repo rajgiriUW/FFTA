@@ -19,7 +19,7 @@ from ffta.hdf_utils import gl_ibw
 from ffta.pixel_utils import badpixels
 
 from igor.binarywave import load as loadibw
-
+from matplotlib import pyplot as plt
 '''
 Loads Ringdown data from raw .ibw and with the associated *.ibw Image file.
 
@@ -36,7 +36,7 @@ By default, this will average the ringdown data together per-pixel and mirror to
 
 
 def wrapper(ibw_file_path='', rd_folder='', verbose=False, subfolder='/', 
-            loadverbose = True, mirror = True, average=True):
+            loadverbose = True, mirror = True, average=True, AMPINVOLS = 100e-9):
     """
     Wrapper function for processing a .ibw file and associated FF data
     
@@ -67,6 +67,10 @@ def wrapper(ibw_file_path='', rd_folder='', verbose=False, subfolder='/',
         
     mirror : bool, optional
         Whether to reverse the data on each line read (since data are usually saved during a RETRACE scan)
+    
+    AMPINVOLS : float
+        inverted optical level sensititivty (scaling factor for amplitude). 
+        if not provided, it will search for one in the attributes of h5_rd or use default
 
     Returns
     -------
@@ -91,6 +95,9 @@ def wrapper(ibw_file_path='', rd_folder='', verbose=False, subfolder='/',
                                                  verbose=verbose,
                                                  file_name=h5_path)
     
+    if 'AMPINVOLS' not in parm_dict:
+        parm_dict.update({'AMPINVOLS': AMPINVOLS})
+        
     h5_rd = load_ringdown(data_files, parm_dict, h5_path, 
                           verbose=verbose, loadverbose=loadverbose, 
                           average=average, mirror=mirror)
@@ -145,6 +152,9 @@ def load_ringdown(data_files, parm_dict, h5_path,
     parm_dict['pnts_per_pixel'] = int(signal.shape[0]/(800 * num_cols))
     parm_dict['pnts_per_avg'] = 800 #hard-coded in our AFM software
     parm_dict['total_time'] = 16e-3 #hard-coded in our AFM software
+    
+    if 'AMPINVOLS' not in parm_dict:
+        parm_dict.update({'AMPINVOLS': 100e-9})
 
     pnts_per_avg = parm_dict['pnts_per_avg']
     orig_pnts_per_pixel = parm_dict['pnts_per_pixel']
@@ -198,6 +208,8 @@ def load_ringdown(data_files, parm_dict, h5_path,
             pixels = np.split(signal, num_cols, axis=0)
             signal = np.vstack([np.mean(p, axis=0) for p in pixels])
         
+        signal *= parm_dict['AMPINVOLS']
+        
         if mirror:
             h5_rd[num_cols*pnts_per_pixel*num : num_cols*pnts_per_pixel*(num+1), :] = np.flipud(signal[:,:])
         else:
@@ -217,6 +229,7 @@ def reprocess_ringdown(h5_rd, fit_time=[1, 5]):
     
     fit_time : list
         The times (in milliseconds) to fit between. This function uses a single exponential fit
+        
     '''
     h5_gp = h5_rd.parent
     drive_freq = h5_rd.attrs['drive_freq']
@@ -225,18 +238,56 @@ def reprocess_ringdown(h5_rd, fit_time=[1, 5]):
     A = np.zeros([h5_rd[()].shape[0]])
     tx = np.arange(0, h5_rd.attrs['total_time'], h5_rd.attrs['total_time']/h5_rd.attrs['pnts_per_avg'])
     [start, stop] = [np.searchsorted(tx, fit_time[0]*1e-3), np.searchsorted(tx, fit_time[1]*1e-3)]
+    
     for pxl, n in zip(h5_rd[()], np.arange(h5_rd[()].shape[0])):
-        popt = fit_exp(tx[start:stop], pxl[start:stop])
+        popt = fit_exp(tx[start:stop], pxl[start:stop]*1e9)
+        popt[1] *= 1e-9
         Q[n] = popt[3] * np.pi * drive_freq
         A[n] = popt[1]
     
     Q = np.reshape(Q, [ h5_rd.attrs['num_rows'], h5_rd.attrs['num_cols']])
     A = np.reshape(A, [ h5_rd.attrs['num_rows'], h5_rd.attrs['num_cols']])
     
-    h5_Q = h5_gp.create_dataset('Q', data=Q, dtype=np.float32)
-    h5_A = h5_gp.create_dataset('Amplitude', data=Q, dtype=np.float32)
+    h5_Q_gp = usid.hdf_utils.create_indexed_group(h5_gp, 'Reprocess') # creates a new group
+    h5_Q = h5_Q_gp.create_dataset('Q', data=Q, dtype=np.float32)
+    h5_A = h5_Q_gp.create_dataset('Amplitude', data=A, dtype=np.float32)
+    h5_Q_gp.attrs['fit_times'] = [a*1e-3 for a in fit_time]
     
     return h5_Q
+
+def test_fitting(h5_rd,  pixel=0, fit_time=[1, 5]):
+    '''
+    Tests curve fitting on a particular pixel, then plots the result
+    
+    h5_rd : USIDataset
+        Ringdown dataset
+    
+    pixel : int
+        Which pixel to fit to. 
+    
+    fit_time : list
+        The times (in milliseconds) to fit between. This function uses a single exponential fit
+    
+    '''
+    drive_freq = h5_rd.attrs['drive_freq']
+    
+    tx = np.arange(0, h5_rd.attrs['total_time'], h5_rd.attrs['total_time']/h5_rd.attrs['pnts_per_avg'])
+    [start, stop] = [np.searchsorted(tx, fit_time[0]*1e-3), np.searchsorted(tx, fit_time[1]*1e-3)]
+    
+    cut = h5_rd[()][pixel]
+    popt = fit_exp(tx[start:stop], cut[start:stop]*1e9) # 1e9 for amplitude for better curve-fitting
+    
+    popt[1] *= 1e-9
+    print ('Fit params:', popt, ' and Q=', popt[3] * drive_freq * np.pi)
+    
+    fig, a = plt.subplots()
+    a.plot(tx, cut, 'k')
+    a.plot(tx[start:stop], exp(tx[start:stop],*popt), 'g--')
+    
+    a.set_xlabel('Time (s)')
+    a.set_ylabel('Amplitude (nm)')
+    
+    return popt
 
 def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     """
@@ -280,15 +331,79 @@ def exp(t, xoff, A1, y0, tau):
 
 def fit_exp(t, cut):
            
-        # Cost function to minimize.
+        # Cost function to minimize. Faster than normal scipy optimize or lmfit
         cost = lambda p: np.sum((exp(t, *p) - cut) ** 2)
         
         pinit = [cut.min(), t[0], cut.min(), 1e-4]
         
         popt, n_eval, rcode = fmin_tnc(cost, pinit, approx_grad=True, disp=0,
                                        bounds=[(t[0], t[0]),
-                                               (1e-5, 1000),
-                                               (-100, 100),
-                                               (1e-5, 0.1)])
+                                               (0, 5*(cut.max() - cut.min())),
+                                               (0, 0),
+                                               (1e-8, 1)])
         
         return popt
+    
+def plot_ringdown(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
+    """
+    Plots the relevant tfp, inst_freq, and shift values as separate image files
+    
+    h5_file : h5Py File
+    
+    h5_path : str, optional
+        Location of the relevant datasets to be saved/plotted. e.g. h5_rb.name
+    
+    append : str, optional
+        A string to include in the saved figure filename
+        
+    savefig : bool, optional
+        Whether or not to save the image
+        
+    stdevs : int, optional
+        Number of standard deviations to display
+    """
+
+    #h5_rd = usid.hdf_utils.find_dataset(h5_file[h5_path], 'Ringdown')[0]
+        
+    if 'Dataset' in str(type(h5_file[h5_path])):
+        h5_path = h5_file[h5_path].parent.name
+
+    Q = usid.hdf_utils.find_dataset(h5_file[h5_path], 'Q')[0][()]
+    A = usid.hdf_utils.find_dataset(h5_file[h5_path], 'Amplitude')[0][()]
+    
+    Q_fixed, _ = badpixels.fix_array(Q, threshold=2)
+    A_fixed, _ = badpixels.fix_array(A, threshold=2)
+
+    parm_dict = usid.hdf_utils.get_attributes(h5_file[h5_path])
+    
+    if 'FastScanSize' not in parm_dict:
+        parm_dict = usid.hdf_utils.get_attributes(h5_file[h5_path].parent)
+
+    xs = parm_dict['FastScanSize']
+    ys = parm_dict['SlowScanSize']
+    asp = ys / xs
+    if asp != 1:
+        asp = asp * 2
+
+    fig, a = plt.subplots(nrows=2, figsize=(8, 9))
+
+    _, cbar_t = usid.viz.plot_utils.plot_map(a[0], Q_fixed, x_vec=xs * 1e6, y_vec=ys * 1e6,
+                                             aspect=asp, cmap='inferno', stdevs=stdevs)
+    _, cbar_s = usid.viz.plot_utils.plot_map(a[1], A_fixed*1e9, x_vec=xs * 1e6, y_vec=ys * 1e6,
+                                             aspect=asp, cmap='inferno', stdevs=stdevs)
+
+    cbar_t.set_label('Q (a.u.)', rotation=270, labelpad=16)
+    a[0].set_title('Q', fontsize=12)
+
+    cbar_s.set_label('Amplitude (nm)', rotation=270, labelpad=16)
+    a[1].set_title('Amplitude', fontsize=12)
+
+    fig.tight_layout()
+
+    if savefig:
+        path = h5_file.file.filename.replace('\\', '/')
+        path = '/'.join(path.split('/')[:-1]) + '/'
+        os.chdir(path)
+        fig.savefig('Q_Amp_' + append + '_.tif', format='tiff')
+
+    return fig, a
