@@ -634,7 +634,7 @@ class Pixel:
         """Generates the CWT using Morlet wavelet. Returns a 2D Matrix."""
 
         w0 = self.wavelet_parameter
-        wavelet_increment = 0.5  # Reducing this has little benefit.
+        wavelet_increment = 0.01  # Reducing this has little benefit.
 
         cwt_scale = ((w0 + np.sqrt(2 + w0 ** 2)) /
                      (4 * np.pi * self.drive_freq / self.sampling_rate))
@@ -647,22 +647,32 @@ class Pixel:
 
         return w0, wavelet_increment, cwt_scale
 
-    def calculate_cwt_freq_old(self):
+    def calculate_cwt_freq(self):
         """Conventional ridge-finding spectrogram approach"""
         w0, wavelet_increment, cwt_scale = self.__get_cwt__()
 
         _, n_points = np.shape(self.cwt_matrix)
         inst_freq = np.empty(n_points)
+        amplitude = np.empty(n_points)
 
         for i in range(n_points):
-            cut = self.cwt_matrix[:, i]
-            inst_freq[i], _ = parab.fit(cut, np.argmax(cut))
 
+            cut = self.cwt_matrix[:, i]
+            peak = np.min([np.argmax(cut), len(cut)-1])
+            
+            try:
+                inst_freq[i],  amplitude[i] = parab.fit(cut, peak)
+            except:
+                inst_freq[i] = np.nan
+                amplitude[i] = np.nan
+
+        # rescale to correct frequency
         inst_freq = (inst_freq * wavelet_increment + 0.9 * cwt_scale)
         inst_freq = ((w0 + np.sqrt(2 + w0 ** 2)) /
                      (4 * np.pi * inst_freq[:] / self.sampling_rate))
 
         self.inst_freq = inst_freq - inst_freq[self.tidx]
+        self.amplitude = amplitude
 
         return
 

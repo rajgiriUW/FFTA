@@ -27,12 +27,11 @@ import warnings
 """
 Common HDF Loading functions
 
-loadHDF5_ibw : Loads a specific ibw and FFtrEFM folder into a new H5 file
-loadHDF5_folder : Takes a folder of IBW files and creates an H5 file
-load_raw_FF : Creates FF_Raw which is the raw (r*c*averages, pnts_per_signal) Dataset
+load_wrapper: Loads a specific ibw and FFtrEFM folder into a new H5 file
+load_folder : Takes a folder of IBW files and creates an H5 file
+load_FF : Creates FF_Raw which is the raw (r*c*averages, pnts_per_signal) Dataset
 load_pixel_averaged_FF : Creates FF_Avg where each pixel's signal is averaged together (r*c, pnts_per_signal) Dataset
 load_pixel_averaged_from_raw : Creates FF_Avg where each pixel's signal is averaged together using the Raw data file
-*createHDF5_separate_lines : Creates a folder and saves each line as a separate file
 *createHDF5_file : Creates a single H5 file for one IBW file.
 
 *For debugging, not in active use
@@ -40,10 +39,8 @@ load_pixel_averaged_from_raw : Creates FF_Avg where each pixel's signal is avera
 Example usage:
     If you want to load an IBW (image) + associated data
     >>from ffta.hdf_utils import load_hdf
-    >>h5_path, parameters, h5_avg = load_hdf.loadHDF5_ibw(ibw_file_path='E:/Data/FF_image_file.ibw',
-                                                  ff_file_path=r'E:\Data\FF_Folder')
-    >>loadHDF5.hdf_commands(h5_path) #prints out commands available
-    
+    >>h5_path, parameters, h5_avg = load_hdf.load_wrapper(ibw_file_path='E:/Data/FF_image_file.ibw',
+                                                          ff_file_path=r'E:\Data\FF_Folder')
     
     If you have data and just want to load (no associated image file)
     >> file_name = 'name_you_want.h5'
@@ -52,10 +49,8 @@ Example usage:
     >> h5_avg = load_pixel_averaged_FF(data_files, parm_dict, h5_path, mirror=True)
 """
 
-def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF', 
-                 verbose=False, subfolder='/', 
-                 loadverbose = True, average=False, 
-                 raw_avg = False, mirror = True):
+def load_wrapper(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False, 
+                 subfolder='/', loadverbose = True, average=False, mirror = True):
     """
     Wrapper function for processing a .ibw file and associated FF data
     
@@ -90,10 +85,7 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF',
 
     average : bool, optional
         Whether to automatically call the load_pixel_averaged_FF function to average data at each pixel
-        
-    raw_avg : bool, optional
-        Whether to automatically call the load_pixel_averaged_from_raw function to average data at each pixel
-        
+               
     mirror : bool, optional
         Whether to reverse the data on each line read (since data are usually saved during a RETRACE scan)
 
@@ -121,40 +113,16 @@ def loadHDF5_ibw(ibw_file_path='', ff_file_path='', ftype='FF',
     h5_path = tran.translate(ibw_file_path, ftype=ftype,
                              verbose=verbose, subfolder=subfolder)
 
-    hdf = h5py.File(h5_path)
-    xy_scansize = [hdf.file.attrs['FastScanSize'],hdf.file.attrs['SlowScanSize']]
-
     # Set up FF data
     h5_path, data_files, parm_dict = load_folder(folder_path=ff_file_path, verbose=verbose,
-                                                     xy_scansize=xy_scansize, file_name=h5_path)
+                                                 file_name=h5_path)
     
-    # Processes the Raw data
-    if not average:
-        if loadverbose:
-            print("### Loading file folder ###")
-                  
-        h5_main = load_raw_FF(data_files, parm_dict, h5_path, 
-                              verbose=verbose,loadverbose=loadverbose, mirror=mirror)
-        
-        # Then optionally the average
-        if raw_avg:
-            
-            h5_avg = load_pixel_averaged_from_raw(h5_file=h5_path, loadverbose=loadverbose,
-                                                  verbose=verbose)
-            return h5_path, parm_dict, h5_avg
-        
-        else:
-            return h5_path, parm_dict, None
+    # Processes the data
+    h5_ff = load_FF(data_files, parm_dict, h5_path, average=average,
+                     verbose=verbose, loadverbose=loadverbose, mirror=mirror)
     
-    # Only processes the average data
-    else:
-        if loadverbose:
-            print('### Creating averaged set ###')
-                  
-        h5_avg = load_pixel_averaged_FF(data_files, parm_dict, h5_path, 
-                                        verbose=verbose, loadverbose=loadverbose, mirror=mirror)
 
-        return h5_path, parm_dict, h5_avg
+    return h5_path, parm_dict, h5_ff
 
 
 def load_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5', 
@@ -279,20 +247,22 @@ def load_folder(folder_path='', xy_scansize=[0,0], file_name='FF_H5',
 
     return h5_path, data_files, parm_dict
 
-
-def load_raw_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True, mirror=False):
+def load_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True, 
+            average=True, mirror=False):
     """
-    Generates the HDF5 file given path to files_list and parameters dictionary
+    Generates the HDF5 file given path to data_files and parameters dictionary
 
     Creates a Datagroup FFtrEFM_Group with a single dataset in chunks
 
     Parameters
     ----------
     data_files : list
-        List of the *.ibw files to be invidually scanned
+        List of the *.ibw files to be invidually scanned. This is generated
+        by load_folder above
 
     parm_dict : dict
-        Scan parameters to be saved as attributes
+        Scan parameters to be saved as attributes. This is generated
+        by load_folder above, or you can pass this explicitly.
 
     h5_path : string
         Path to H5 file on disk
@@ -302,6 +272,14 @@ def load_raw_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True,
 
     loadverbose : Boolean (optional)
         Whether to print any simple "loading Line X" statements for feedback
+
+    average: bool, optional
+        Whether to average each pixel before saving to H5. This saves both time and space
+        
+    mirror : bool, optional
+        Mirrors the data when saving. This parameter is to match the FFtrEFM data
+        with the associate topography as FFtrEFM is acquired during a retrace while
+        topo is saved during a forward trace
 
     Returns
     -------
@@ -314,7 +292,15 @@ def load_raw_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True,
     num_rows = parm_dict['num_rows']
     num_cols = parm_dict['num_cols']
     pnts_per_avg = parm_dict['pnts_per_avg']
+    name = 'FF_Raw'
+
+    if average:
+        parm_dict['pnts_per_pixel'] = 1
+        parm_dict['pnts_per_line'] = num_cols
+        name = 'FF_Avg'
+        
     pnts_per_pixel = parm_dict['pnts_per_pixel']
+    pnts_per_line = parm_dict['pnts_per_line']
 
     dt = 1/parm_dict['sampling_rate']
     def_vec= np.arange(0, parm_dict['total_time'], dt)
@@ -344,9 +330,9 @@ def load_raw_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True,
     ff_group.attrs['pnts_per_line'] = num_cols # to change number of pnts in a line
     # ff_group.attrs['pnts_per_pixel'] = 1 # to change number of pnts in a pixel
 
-    h5_raw = usid.hdf_utils.write_main_dataset(ff_group,  # parent HDF5 group
+    h5_ff = usid.hdf_utils.write_main_dataset(ff_group,  # parent HDF5 group
                                                (num_rows * num_cols * pnts_per_pixel, pnts_per_avg),  # shape of Main dataset
-                                               'FF_Raw',  # Name of main dataset
+                                               name,  # Name of main dataset
                                                'Deflection',  # Physical quantity contained in Main dataset
                                                'V',  # Units for the physical quantity
                                                pos_desc,  # Position dimensions
@@ -365,21 +351,27 @@ def load_raw_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True,
             print('####',fname.split('\\')[-1],'####')
             fname = str(num).rjust(4,'0')
 
-        line_file = load.signal(k).transpose()
+        line_file = load.signal(k)
 
-        f = hdf.file[h5_raw.name]
+        if average:
+            _ll = line.Line(line_file, parm_dict, n_pixels=num_cols, pycroscopy=False)
+            _ll = _ll.pixel_wise_avg().T
+        else:
+            _ll = line_file.transpose()
+
+        f = hdf.file[h5_ff.name]
         
         if mirror:
-            f[pnts_per_line*num:pnts_per_line*(num+1), :] = np.flipud(line_file[:,:])
+            f[pnts_per_line*num:pnts_per_line*(num+1), :] = np.flipud(_ll[:,:])
         else:
-            f[pnts_per_line*num:pnts_per_line*(num+1), :] = line_file[:,:]
+            f[pnts_per_line*num:pnts_per_line*(num+1), :] = _ll[:,:]
             
     if verbose == True:
         usid.hdf_utils.print_tree(hdf.file, rel_paths=True)
 
     hdf.flush()
 
-    return h5_raw
+    return h5_ff
 
 def load_pixel_averaged_from_raw(h5_file, verbose=True, loadverbose = True):
     """
@@ -577,77 +569,6 @@ def load_pixel_averaged_FF(data_files, parm_dict, h5_path,
 
     return h5_avg
     
-def createHDF5_separate_lines(data_files, parm_dict, h5_path):
-    """
-    Generates the HDF5 file given path to files_list and parameters dictionary
-
-    Creates a Datagroup FFtrEFM_Group with each line as a separate Dataset
-
-    Parameters
-    ----------
-    h5_path : string
-        Path to H5 file
-
-    data_files : list
-        List of the *.ibw files to be invidually scanned
-
-    parm_dict : dict
-        Scan parameters to be saved as attributes
-
-    Returns
-    -------
-    h5_path: str
-        The filename path to the H5 file created
-
-    """
-
-    # Uses first data set to determine parameters
-    line_file = load.signal(data_files[0])
-    if 'pnts_per_pixel' not in parm_dict.keys():
-        parm_dict['pnts_per_avg'] = line_file.shape[0]
-        parm_dict['pnts_per_pixel'] = line_file.shape[1] / parm_dict['num_cols']
-        parm_dict['pnts_per_line'] = line_file.shape[1]
-
-    # Prepare data for writing to HDF
-    dt = 1/parm_dict['sampling_rate']
-    def_vec= np.arange(0, parm_dict['total_time'], dt)
-    if def_vec.shape[0] != parm_dict['pnts_per_avg']:
-        raise Exception('Time-per-point calculation error')
-
-    # This takes a very long time but creates a giant NxM matrix of the data
-    #data_size = [line_file.shape[1]*parm_dict['num_rows'], line_file.shape[0]]
-    data_size = [line_file.shape[1]*parm_dict['num_rows'], line_file.shape[0]]
-
-    # To do: Fix the labels/atrtibutes on the relevant data sets
-    hdf = px.ioHDF5(h5_path)
-    ff_group = px.MicroDataGroup('FFtrEFM_Group', parent='/')
-    root_group = px.MicroDataGroup('/')
-
-    ds_raw = px.MicroDataset('0000', data=line_file, dtype=np.float32,parent=ff_group)
-
-    ff_group.addChildren([ds_raw])
-    ff_group.attrs = parm_dict
-
-    # Get reference for writing the data
-    h5_refs = hdf.writeData(ff_group, print_log=True)
-    h5_FFraw = px.io.hdf_utils.getH5DsetRefs(['0000'], h5_refs)[0]
-
-    # Cycles through the remaining files. This takes a while (~few minutes)
-    for k, num in zip(data_files[1:], np.arange(1,len(data_files))):
-
-        fname = k.replace('/','\\')
-        print('####',fname.split('\\')[-1],'####')
-        fname = str(num).rjust(4,'0')
-
-        line_file = load.signal(k)
-        hdf.file[ff_group.name+'/'+fname] = line_file.transpose()
-
-    usid.hdf_utils.print_tree(hdf.file)
-
-    hdf.flush()
-
-    return h5_path
-
 
 def createHDF5_file(signal, parm_dict, h5_path='', ds_name='FF_Raw'):
     """
