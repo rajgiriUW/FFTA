@@ -23,17 +23,20 @@ from matplotlib import pyplot as plt
 '''
 Loads Ringdown data from raw .ibw and with the associated *.ibw Image file.
 
-Usage
-h5_rd = load_ringdown.wrapper() # will prompt for folders
+Usage:
+>> h5_rd = load_ringdown.wrapper() # will prompt for folders
 
 or
 
-h5_rd = load_ringdown.wrapper(ibw_file_path='ringdown.ibw', rd_folder='ringdown_folder_path')
+>> h5_rd = load_ringdown.wrapper(ibw_file_path='ringdown.ibw', rd_folder='ringdown_folder_path')
+
+>> ffta.hdf_utils.load_ringdown.test_fitting(h5_rd, pixel=0, fit_time=[1.1, 5]) # tests fitting
+>> h5_Q = ffta.hdf_utils.load_ringdown.reprocess_ringdown(h5_rd, fit_time=[1.1, 5]) #reprocesses the data
+>> ffta.hdf_utils.load_ringdown.plot_ringdown(h5_rd.file, h5_path=h5_rd.parent.name)  # plots
+>> ffta.hdf_utils.load_ringdown.save_CSV_from_file(h5_rd.file, h5_path=h5_rd.parent.name) # saves CSV
 
 By default, this will average the ringdown data together per-pixel and mirror to match the topography 
 '''
-
-
 
 def wrapper(ibw_file_path='', rd_folder='', verbose=False, subfolder='/', 
             loadverbose = True, mirror = True, average=True, AMPINVOLS = 100e-9):

@@ -13,6 +13,7 @@ import numpy as np
 from ffta.hdf_utils import get_utils
 from pyUSID.processing.comp_utils import parallel_compute
 from pyUSID.io.write_utils import Dimension
+import h5py
 
 from matplotlib import pyplot as plt
 
@@ -34,7 +35,7 @@ class FFtrEFM(usid.Process):
         >> data.test([1,2]) # tests on pixel 1,2 in row, column
         >> data.compute()
         >> data.reshape() # reshapes the tFP, shift data
-        >> process.save_CSV_from_file(h5_main, h5_main.parent.name)
+        >> process.save_CSV_from_file(data.h5_main.file, data.h5_results_grp.name)
         >> process.plot_tfp(data)
 
     To reload old data:
@@ -231,29 +232,26 @@ class FFtrEFM(usid.Process):
                                                        h5_spec_vals = self.h5_main.h5_spec_vals,
                                                        dtype=np.float32,  # data type / precision
                                                        main_dset_attrs=self.parm_dict)
-
-        self.h5_if.file.flush()
-
-        # Create the other datasets, tfp, shift
-        # pos_desc_tfp = [Dimension('X', 'm', np.linspace(0, self.parm_dict['FastScanSize'], num_cols)),
-        #                 Dimension('Y', 'm', np.linspace(0, self.parm_dict['SlowScanSize'], num_rows))]
-        # spec_desc_tfp = [Dimension('Time', 's', 1),Dimension('Frequency', 'Hz', 2)]
-
-        # self.h5_tfp_results_grp = usid.hdf_utils.create_results_group(self.h5_if, 'tfp-calc')
-
-        # self.h5_tfp = usid.hdf_utils.write_main_dataset(self.h5_tfp_results_grp,
-        #                                                 [num_rows * num_cols, 2],
-        #                                                 'processed',  # Name of main dataset
-        #                                                 'Time',  # Physical quantity contained in Main dataset
-        #                                                 's',  # Units for the physical quantity
-        #                                                 pos_desc_tfp,  # Position dimensions
-        #                                                 spec_desc_tfp,  # Spectroscopic dimensions
-        #                                                 dtype=np.float32,  # data type / precision
-        #                                                 main_dset_attrs=self.parm_dict)
+        
+        self.h5_pwrdis = usid.hdf_utils.write_main_dataset(self.h5_results_grp,
+                                                           ds_shape,
+                                                           'PowerDissipation',  # Name of main dataset
+                                                           'Power',  # Physical quantity contained in Main dataset
+                                                           'W',  # Units for the physical quantity
+                                                           None,  # Position dimensions
+                                                           None,  # Spectroscopic dimensions
+                                                           h5_pos_inds = self.h5_main.h5_pos_inds, # Copy Pos Dimensions
+                                                           h5_pos_vals = self.h5_main.h5_pos_vals, 
+                                                           h5_spec_inds = self.h5_main.h5_spec_inds, # Copy Spectroscopy Dimensions
+                                                           h5_spec_vals = self.h5_main.h5_spec_vals,
+                                                           dtype=np.float32,  # data type / precision
+                                                           main_dset_attrs=self.parm_dict)
 
         _arr = np.zeros([num_rows * num_cols, 1])
         self.h5_tfp = self.h5_results_grp.create_dataset('tfp', data=_arr, dtype=np.float32)
         self.h5_shift = self.h5_results_grp.create_dataset('shift', data=_arr, dtype=np.float32)
+
+        self.h5_if.file.flush()
 
         return
 
@@ -292,15 +290,17 @@ class FFtrEFM(usid.Process):
         _amp = np.array([j for i in self._results for j in i[1:2]])
         _phase = np.array([j for i in self._results for j in i[2:3]])
         _tfp = np.array([j for i in self._results for j in i[3:4]])
-        _shift = np.array([j for i in self._results for j in i[4:]])
+        _shift = np.array([j for i in self._results for j in i[4:5]])
+        _pwr = np.array([j for i in self._results for j in i[5:]])
 
         # write the results to the file
         self.h5_if[pos_in_batch, :] = _results
         self.h5_amp[pos_in_batch, :] = _amp
+        self.h5_pwrdis[pos_in_batch, :] = _pwr
         self.h5_phase[pos_in_batch, :] = _phase
         self.h5_tfp[pos_in_batch, 0] = _tfp
         self.h5_shift[pos_in_batch, 0] = _shift
-
+        
         return
 
     def _get_existing_datasets(self, index=-1):
@@ -354,12 +354,15 @@ class FFtrEFM(usid.Process):
             shift = 0
             amplitude = 0
             phase = 0
+            pwr_diss = 0
         else:
             tfp, shift, inst_freq = pix.analyze()
+            pix.calculate_power_dissipation()
             amplitude = pix.amplitude
             phase = pix.phase
+            pwr_diss = pix.power_dissipated
 
-        return [inst_freq, amplitude, phase, tfp, shift]
+        return [inst_freq, amplitude, phase, tfp, shift, pwr_diss]
 
 
 def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
@@ -375,17 +378,28 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     append : str, optional
         text to append to file name
     """
-
-    tfp = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp')[0][()]
+    
+    h5_ff = h5_file
+    
+    if isinstance(h5_file, ffta.hdf_utils.process.FFtrEFM):
+        print('Saving from FFtrEFM Class')
+        h5_ff = h5_file.h5_main.file
+        h5_path = h5_file.h5_results_grp.name
+    
+    elif not isinstance(h5_file, h5py.File):
+        print('Saving from pyUSID object')
+        h5_ff = h5_file.file
+    
+    tfp = usid.hdf_utils.find_dataset(h5_ff[h5_path], 'tfp')[0][()]
     # tfp_fixed = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp_fixed')[0][()]
-    shift = usid.hdf_utils.find_dataset(h5_file[h5_path], 'shift')[0][()]
+    shift = usid.hdf_utils.find_dataset(h5_ff[h5_path], 'shift')[0][()]
 
     tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)
     tfp_fixed = np.array(tfp_fixed)
 
-    print(usid.hdf_utils.find_dataset(h5_file[h5_path], 'shift')[0].parent.name)
+    print(usid.hdf_utils.find_dataset(h5_ff[h5_path], 'shift')[0].parent.name)
 
-    path = h5_file.file.filename.replace('\\', '/')
+    path = h5_ff.file.filename.replace('\\', '/')
     path = '/'.join(path.split('/')[:-1]) + '/'
     os.chdir(path)
 

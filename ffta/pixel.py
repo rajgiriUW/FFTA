@@ -152,7 +152,6 @@ class Pixel:
         # Create parameter attributes for optional parameters.
         # These defaults are overwritten by values in 'params'
         self.n_taps = 1499
-        self.Q = 500
         self.filter_bandwidth = 5000
         self.wavelet_analysis = False
         self.wavelet_parameter = 5
@@ -161,6 +160,7 @@ class Pixel:
         self.recombination = False
         self.phase_fitting = False
         self.EMD_analysis = False
+        self.restore = True
 
         # Assign the fit parameter.
         self.fit = fit
@@ -168,15 +168,20 @@ class Pixel:
         self.method = method
         self.filter_amp = filter_amp
         
-        # Cantilever parameters
-        self.AMPINVOLS = 100e-9 # 100 nm/V
-        self.k = 10
+        # Default Cantilever parameters, plugging in some reasonable defaults
+        self.AMPINVOLS = 122e-9 
+        self.SpringConstant = 23.2
+        self.k = self.SpringConstant 
+        self.DriveAmplitude = 1.7e-9
+        self.Mass = 4.55e-12
+        self.Beta = 3114
+        self.Q = 360
         
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
             setattr(self, key, value)
         
-        if 'Initial' in can_params:
+        for key, value in can_params.items():
             
             for key, value in can_params.items():
                 setattr(self, key, float(value))
@@ -294,10 +299,9 @@ class Pixel:
         self.signal, _, _ = dwavelet.dwt_denoise(self.signal, lpf, rate / 2, rate)
 
     def fir_filter(self):
-
         """Filters signal with a FIR bandpass filter."""
-        # Calculate bandpass region from given parameters.
 
+        # Calculate bandpass region from given parameters.
         nyq_rate = 0.5 * self.sampling_rate
         bw_half = self.filter_bandwidth / 2
 
@@ -325,7 +329,7 @@ class Pixel:
     def iir_filter(self):
         """Filters signal with two Butterworth filters (one lowpass,
         one highpass) using filtfilt. This method has linear phase and no
-        time delay. Do not use for production."""
+        time delay."""
 
         # Calculate bandpass region from given parameters.
         nyq_rate = 0.5 * self.sampling_rate
@@ -356,7 +360,7 @@ class Pixel:
         signal to do this."""
         #
         if self.n_signals != 1:
-            signal_orig = self.signal_array.mean(axis=0)
+            signal_orig = self.signal_array.mean(axis=1)
         else:
             signal_orig = self.signal_array
             
@@ -365,6 +369,22 @@ class Pixel:
         self.amplitude *= self.AMPINVOLS
 
         return
+    
+    def calculate_power_dissipation(self):
+        """Calculates the power dissipation using amplitude, phase, and frequency
+        and the Cleveland eqn (see DOI:10.1063/1.121434)"""
+        
+        phase = self.phase# + np.pi/2 #offsets the phase to be pi/2 at resonance
+        
+        # check for incorrect values (some off by 1e9 in our code)
+       
+        A = self.k/self.Q * self.amplitude**2 * (self.inst_freq + self.drive_freq)
+        B = self.Q * self.DriveAmplitude * np.sin(phase) / self.amplitude
+        C = self.inst_freq /self.drive_freq
+        
+        self.power_dissipated = A * (B - C)
+        
+        return 
     
     def filter_amplitude(self):
         '''
@@ -380,7 +400,7 @@ class Pixel:
         AMP[:center-int(DRIVE/2)] = 0
         AMP[center+int(DRIVE/2):] = 0
         
-        self.amplitude = np.fft.ifft(np.fft.ifftshift(AMP))
+        self.amplitude = np.abs( np.fft.ifft(np.fft.ifftshift(AMP)) )
         
         return
 
@@ -407,6 +427,8 @@ class Pixel:
             self.phase -= (xfit[0] * np.arange(self.n_points)) + xfit[1]
 
         self.phase = -self.phase #need to correct for negative in DDHO solution
+
+        self.phase += np.pi/2 # corrects to be at resonance pre-trigger
 
         return
 
@@ -806,7 +828,7 @@ class Pixel:
 
         dt = 1/self.sampling_rate
         ridx = int(self.roi * self.sampling_rate)
-        fidx = self.tidx
+        fidx = int(self.tidx)
         cut = [fidx, (fidx + ridx)]
         tx = np.arange(cut[0], cut[1])*dt
         
@@ -817,7 +839,7 @@ class Pixel:
         
         a[0].set_title('Instantaneous Frequency')
         a[0].set_ylabel('Frequency Shift (Hz)')
-        a[1].set_ylabel('Amplitude')
+        a[1].set_ylabel('Amplitude (nm)')
         a[2].set_ylabel('Phase (deg)')
         a[2].set_xlabel('Time (ms)')        
 
@@ -961,7 +983,10 @@ class Pixel:
                 self.find_minimum()
 
             # Restore the length.
-            self.restore_signal()
+            
+            if self.restore:
+            
+                    self.restore_signal()
 
         # If caught any exception, set everything to zero and log it.
         except Exception as exception:
