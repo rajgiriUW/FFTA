@@ -6,7 +6,6 @@ Created on Tue Sep  3 11:55:14 2019
 """
 
 import numpy as np
-from scipy import optimize as spo
 from scipy.optimize import fmin_tnc
 
 import warnings

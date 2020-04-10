@@ -155,7 +155,10 @@ class GLIBWTranslator(Translator):
             
         # Write head of tree to file:
         hdf = HDFwriter(h5_path)
-        hdf.write(spm_data, print_log=verbose)
+        try:
+            hdf.write(spm_data, print_log=verbose)
+        except:
+            pass
 
         if verbose:
             print('Finished writing tree trunk')
@@ -165,7 +168,8 @@ class GLIBWTranslator(Translator):
 
         # Create Channels, populate and then link:
         for chan_index, raw_dset in enumerate(chan_raw_dsets):
-            
+            if verbose:
+                print('Channel number: ',chan_index)
             if channel_label_name == True:
                 chan_grp = VirtualGroup(chan_labels[chan_index], '/'+subfolder+'/')
             else:

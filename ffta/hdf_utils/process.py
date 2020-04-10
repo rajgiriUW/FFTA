@@ -319,7 +319,10 @@ class FFtrEFM(usid.Process):
             self.h5_if = self.h5_results_grp['Inst_Freq']
             self.h5_amp = self.h5_results_grp['Amplitude']
             self.h5_phase = self.h5_results_grp['Phase']
-
+            try:
+                self.h5_pwrdis = self.h5_results_grp['PowerDissipation']
+            except:
+                pass
         return
 
     def _unit_computation(self, *args, **kwargs):
@@ -415,7 +418,7 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     return
 
 
-def plot_tfp(ffprocess):
+def plot_tfp(ffprocess, scale_tfp = 1e6, scale_shift=1, threshold = 2, **kwargs):
     '''
     Quickly plots the tfp and shift data. If there's a height image in the h5_file associated
      with ffprocess, will plot that as well
@@ -435,8 +438,12 @@ def plot_tfp(ffprocess):
 
     img_length = ffprocess.parm_dict['FastScanSize']
     img_height = ffprocess.parm_dict['SlowScanSize']
-    kwargs = {'origin': 'lower', 'x_vec': img_length * 1e6,
-              'y_vec': img_height * 1e6, 'num_ticks': 5, 'stdevs': 3}
+    kwarg = {'origin': 'lower', 'x_vec': img_length * 1e6,
+              'y_vec': img_height * 1e6, 'num_ticks': 5, 'stdevs': 3, 'show_cbar':True}
+    
+    for k, v in kwarg.items():
+        if k not in kwargs:
+            kwargs.update({k: v})
 
     num_cols = ffprocess.parm_dict['num_cols']
     num_rows = ffprocess.parm_dict['num_rows']
@@ -444,19 +451,22 @@ def plot_tfp(ffprocess):
         ht = ffprocess.h5_main.file['/height/Raw_Data'][:, 0]
         ht = np.reshape(ht, [num_cols, num_rows]).transpose()
         ht_ax = a[0][0]
-        ht_image, cbar = usid.viz.plot_utils.plot_map(ht_ax, ht * 1e9, cmap='gray', **kwargs)
+        ht_image, cbar = usid.viz.plot_utils.plot_map(ht_ax, ht * 1e9, cmap='gray', **kwarg)
         cbar.set_label('Height (nm)', rotation=270, labelpad=16)
     except:
         pass
 
     tfp_ax.set_title('tFP Image')
     shift_ax.set_title('Shift Image')
+    
+    tfp_fixed, _ = badpixels.fix_array(ffprocess.h5_tfp[()], threshold=threshold)
 
-    tfp_image, cbar_tfp = usid.viz.plot_utils.plot_map(tfp_ax, ffprocess.h5_tfp[()] * 1e6,
-                                                       cmap='inferno', show_cbar=True, **kwargs)
-    shift_image, cbar_sh = usid.viz.plot_utils.plot_map(shift_ax, ffprocess.h5_shift[()],
-                                                        cmap='inferno', show_cbar=True, **kwargs)
+    tfp_image, cbar_tfp = usid.viz.plot_utils.plot_map(tfp_ax, tfp_fixed * scale_tfp,
+                                                       cmap='inferno', **kwargs)
+    shift_image, cbar_sh = usid.viz.plot_utils.plot_map(shift_ax, ffprocess.h5_shift[()] * scale_shift,
+                                                        cmap='inferno', **kwargs)
 
+    
     cbar_tfp.set_label('Time (us)', rotation=270, labelpad=16)
     cbar_sh.set_label('Frequency Shift (Hz)', rotation=270, labelpad=16)
     text = tfp_ax.text(num_cols / 2, num_rows + 3, '')

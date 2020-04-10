@@ -568,16 +568,16 @@ class Pixel:
         """Fits the amplitude to determine Q from single exponential fit."""
 
         ridx = int(self.roi * self.sampling_rate)
-        fidx = self.tidx
+        fidx = int(self.tidx)
 
-        # Make sure cut starts from 0 and never goes over.
-        #cut = self.inst_freq[fidx:(fidx + ridx)] - self.inst_freq[fidx]
-        cut = self.amplitude[fidx:(fidx + ridx)] - self.amplitude[fidx]
+        cut = self.amplitude[fidx:(fidx + ridx)]
 
         t = np.arange(cut.shape[0]) / self.sampling_rate
 
         # Fit the cut to the model.
-        popt = fitting.fit_bounded_exp(t, cut)
+        popt = fitting.fit_ringdown_exp(t, cut*1e9)
+        popt[0] *= 1e-9
+        popt[1] *= 1e-9
 
         # For diagnostics
         A, y0, tau = popt
@@ -586,7 +586,7 @@ class Pixel:
         self.best_fit = A * (np.exp(-t / tau)) + y0
 
         self.shift = A
-        self.tfp = np.pi * self.drive_freq / tau # same as ringdown_Q to help with pycroscopy bugs that call tfp
+        self.tfp = np.pi * self.drive_freq * tau # same as ringdown_Q to help with pycroscopy bugs that call tfp
         self.ringdown_Q = np.pi * self.drive_freq * tau
 
         return
@@ -639,11 +639,21 @@ class Pixel:
             self.inst_freq = np.pad(self.inst_freq, (d_trig, 0), 'edge')
             self.inst_freq = self.inst_freq[:self._n_points_orig]
 
+            self.phase = np.pad(self.phase, (d_trig, 0), 'edge')
+            self.phase = self.phase[:self._n_points_orig]
+            
+            self.amplitude = np.pad(self.amplitude, (d_trig, 0), 'edge')
+            self.amplitude = self.amplitude[:self._n_points_orig]
+
         else:
 
             # Calculate how many points is needed for padding from right.
             pad_right = d_points - d_trig
             self.inst_freq = np.pad(self.inst_freq, (d_trig, pad_right),
+                                    'edge')
+            self.phase = np.pad(self.phase, (d_trig, pad_right),
+                                'edge')
+            self.amplitude = np.pad(self.amplitude, (d_trig, pad_right),
                                     'edge')
 
         # Set the public variables back to original values.
@@ -820,7 +830,7 @@ class Pixel:
 
         return
 
-    def plot(self, newplot=True, c1='r', c2='g'):
+    def plot(self, newplot=True):
         """ Quick visualization of best_fit and cut."""
 
         if newplot:
@@ -829,19 +839,28 @@ class Pixel:
         dt = 1/self.sampling_rate
         ridx = int(self.roi * self.sampling_rate)
         fidx = int(self.tidx)
+
+        cut = self.amplitude[fidx:(fidx + ridx)]
+        
         cut = [fidx, (fidx + ridx)]
         tx = np.arange(cut[0], cut[1])*dt
         
-        a[0].plot(tx*1e3, self.inst_freq[cut[0]:cut[1]], c1 + '-')
-        a[0].plot(tx*1e3, self.best_fit, c2 + '--')
-        a[1].plot(tx*1e3, np.abs(self.amplitude[cut[0]:cut[1]]), 'b')
-        a[2].plot(tx*1e3, self.phase[cut[0]:cut[1]]*np.pi/180, 'm') 
+        a[0].plot(tx*1e3, self.inst_freq[cut[0]:cut[1]], 'r-')
+        
+        if self.fit_form == 'ringdown':
+            a[1].plot(tx*1e3, self.best_fit, 'g--')
+        else:
+            a[0].plot(tx*1e3, self.best_fit, 'g--')
+        a[1].plot(tx*1e3, self.amplitude[cut[0]:cut[1]], 'b')
+        a[2].plot(tx*1e3, self.phase[cut[0]:cut[1]]*180/np.pi, 'm') 
         
         a[0].set_title('Instantaneous Frequency')
         a[0].set_ylabel('Frequency Shift (Hz)')
         a[1].set_ylabel('Amplitude (nm)')
         a[2].set_ylabel('Phase (deg)')
         a[2].set_xlabel('Time (ms)')        
+
+        plt.tight_layout()
 
         return
 
