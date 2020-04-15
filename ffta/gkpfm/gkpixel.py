@@ -10,6 +10,21 @@ from scipy.optimize import fmin_tnc
 
 import warnings
 
+def poly2(t, a, b, c):
+    return a * t ** 2 + b * t + c
+
+def cost_func(resp_wfm, signal):
+
+    cost = lambda p: np.sum((poly2(resp_wfm, *p) - signal) ** 2)
+
+    pinit = [-1 * np.abs(np.max(signal) - np.min(signal)), 0, 0]
+
+    popt, _, _ = fmin_tnc(cost, pinit, approx_grad=True, disp=0,
+                          bounds=[(-10, 10),
+                                  (-10, 10),
+                                  (-10, 10)])
+
+    return popt
 
 class GKPixel:
     '''
@@ -67,19 +82,6 @@ class GKPixel:
 
         return
 
-    def cost_func(self, resp_wfm, signal):
-
-        cost = lambda p: np.sum((poly2(resp_wfm, *p) - signal) ** 2)
-
-        pinit = [-1 * np.abs(np.max(signal) - np.min(signal)), 0, 0]
-
-        popt, _, _ = fmin_tnc(cost, pinit, approx_grad=True, disp=0,
-                              bounds=[(-10, 10),
-                                      (-10, 10),
-                                      (-10, 10)])
-
-        return popt
-
     def analyze(self, verbose=False, fft=False, fast=False):
 
         #        tx = np.arange(0,self.total_time, self.total_time/len(self.signal_array))
@@ -130,6 +132,7 @@ class GKPixel:
     def min_phase(self, signal):
 
         fits = []
+        errors = []
         xpts = np.arange(-2 * np.pi, 2 * np.pi, 0.1)
 
         for i in xpts:
@@ -139,8 +142,8 @@ class GKPixel:
             mid = int(self.pts_per_cycle / 2)
 
             # find fits for first half-cycle and second half-cycle
-            p1 = self.cost_func(resp_wfm[:mid], signal[:mid])
-            p2 = self.cost_func(resp_wfm[-mid:], signal[-mid:])
+            p1 = cost_func(resp_wfm[:mid], signal[:mid])
+            p2 = cost_func(resp_wfm[-mid:], signal[-mid:])
 
             fit1 = -0.5 * p1[1] / p1[0]
             fit2 = -0.5 * p2[1] / p2[0]
@@ -195,5 +198,4 @@ class GKPixel:
 
         return ph
 
-def poly2(t, a, b, c):
-    return a * t ** 2 + b * t + c
+
