@@ -32,9 +32,7 @@ load_folder : Takes a folder of IBW files and creates an H5 file
 load_FF : Creates FF_Raw which is the raw (r*c*averages, pnts_per_signal) Dataset
 load_pixel_averaged_FF : Creates FF_Avg where each pixel's signal is averaged together (r*c, pnts_per_signal) Dataset
 load_pixel_averaged_from_raw : Creates FF_Avg where each pixel's signal is averaged together using the Raw data file
-*createHDF5_file : Creates a single H5 file for one IBW file.
-
-*For debugging, not in active use
+createHDF5_file : Creates a single H5 file for one IBW file.
 
 Example usage:
     If you want to load an IBW (image) + associated data
@@ -44,13 +42,12 @@ Example usage:
     
     If you have data and just want to load (no associated image file)
     >> file_name = 'name_you_want.h5'
-    >> h5_path, data_files, parm_dict = loadHDF5_folder(folder_path=ff_file_path, verbose=verbose,
-                                                     xy_scansize=xy_scansize, file_name=file_name)
+    >> h5_path, data_files, parm_dict = loadHDF5_folder(folder_path=ff_file_path, verbose=True, file_name=file_name)
     >> h5_avg = load_pixel_averaged_FF(data_files, parm_dict, h5_path, mirror=True)
 """
 
 def load_wrapper(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False, 
-                 subfolder='/', loadverbose = True, average=False, mirror = True):
+                 subfolder='/', loadverbose = True, average=True, mirror = True):
     """
     Wrapper function for processing a .ibw file and associated FF data
     

@@ -165,8 +165,8 @@ def Y_calc(h5_main, tf=None, resampled=True, verbose=True):
     parm_dict = usid.hdf_utils.get_attributes(h5_main)
     ds = h5_main[()]
     
-    rows = parm_dict['num_rows']
-    cols = parm_dict['num_cols']
+    #rows = parm_dict['num_rows']
+    #cols = parm_dict['num_cols']
     
     # Create frequency axis for the pixel
     samp = parm_dict['sampling_rate']
@@ -201,12 +201,16 @@ def Y_calc(h5_main, tf=None, resampled=True, verbose=True):
                 print('Pixel:', c)
         
         Ypxl = np.fft.fft(ds[c,:])
+        Yout_divided = np.zeros(len(ds), dtype=bool)
         
-        for f, x in zip(fq_y, np.arange(int(len(fq_y)/2))):
+        for x, f in zip(tf, fq_tf):
         
             xx = np.searchsorted(fq_tf, f)
-            Yout[c,x] = Ypxl[x] / tf[xx] 
-            Yout[c,-x] = Ypxl[x] / tf[xx] 
+           
+            if not Yout_divided[xx]: 
+                Yout[c,x] = Ypxl[x] / tf[xx] 
+                Yout[c,-x] = Ypxl[x] / tf[xx] 
+                Yout_divided[xx] = True
         
         yout[c,:] = np.fft.ifft(Yout[c,:])
     
