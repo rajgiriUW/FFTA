@@ -2,6 +2,8 @@ from . import hdf_utils
 from . import pixel_utils
 from . import analysis
 from . import gkpfm
+from . import simulation
+
 
 from . import pixel
 from . import line
