@@ -282,7 +282,7 @@ class Cantilever(object):
         Z_cut = Z[(t0_idx - tidx):(t0_idx + self.n_points - tidx), 0]
 
         step = int(1e8 / self.sampling_rate)
-        n_points = self.total_time * self.sampling_rate
+        n_points = int(self.total_time * self.sampling_rate)
 
         self.Z = Z_cut[0::step].reshape(n_points, 1) / self.def_invols
         self.infodict = infodict
