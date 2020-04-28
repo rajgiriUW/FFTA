@@ -14,6 +14,8 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from scipy import signal as sg
 
+import ffta
+import time
 
 def transfer_function(h5_file, tf_file = '', params_file = '', 
                       psd_freq=1e6, offset = 0.0016, sample_freq = 10e6,
@@ -140,7 +142,7 @@ def params_list(path = '', psd_freq=1e6, lift=50):
     
     return parm_dict
 
-def Y_calc(h5_main, tf=None, resampled=True, verbose=True):
+def test_Ycalc(h5_main, pixel_ind=[0,0], tf=None, resampled=True, verbose=True, noise_floor=1e-3):
     '''
     Divides the response by the transfer function
     
@@ -160,17 +162,20 @@ def Y_calc(h5_main, tf=None, resampled=True, verbose=True):
         Gives user feedback during processing
     
     '''
-    Yout = np.zeros(h5_main.shape)  # frequency domain
-    yout = np.zeros(h5_main.shape)          # time domain
+    t0 = time.time()
+
     parm_dict = usid.hdf_utils.get_attributes(h5_main)
-    ds = h5_main[()]
     
+    ds = ffta.hdf_utils.get_utils.get_pixel(h5_main, pixel_ind, array_form=True, transpose=False).flatten()
+    Yout = np.zeros(ds.shape, dtype=np.cdouble)  # frequency domain
+    Yout = np.fft.fft(ds)
+    yout = np.zeros(ds.shape)          # time domain    
     #rows = parm_dict['num_rows']
     #cols = parm_dict['num_cols']
     
     # Create frequency axis for the pixel
     samp = parm_dict['sampling_rate']
-    fq_y = np.linspace(0, samp,  Yout.shape[1]) 
+    fq_y = np.linspace(0, samp,  len(Yout)) 
     
     # Get the transfer function and transfer function frequency values
     fq_tf = h5_main.file['Transfer_Function/Freq']
@@ -191,28 +196,113 @@ def Y_calc(h5_main, tf=None, resampled=True, verbose=True):
     #   c) move to next frequency
     # FFT division is Yout
     # iFFT of the results, that is yout
+
+    t1 = time.time()
+    print('Time for pixels:', t1 - t0)
+    Yout_divided = np.zeros(len(yout), dtype=bool)
+
+    TFratios = np.ones(len(tf))
+
+    for x, f in zip(tf, fq_tf):
+        
+        if np.abs(x) > noise_floor:
+            
+            xx = np.searchsorted(fq_y, f)
+            if not Yout_divided[xx]: 
+                TFratios[xx] = x
+                Yout[xx] /= x
+                Yout[-xx] /= x
+                Yout_divided[xx] = True
+    
+    yout= np.real(np.fft.ifft(Yout))
+    
+    t2 = time.time()
+    
+    print('Time for pixels:', t2 - t1)
+    return  TFratios, Yout, yout
+
+def Y_calc(h5_main, tf=None, resampled=True, ratios=None, verbose=True, noise_floor=1e-3):
+    '''
+    Divides the response by the transfer function
+    
+    This processes every pixel, so it takes awhile
+    
+    h5_main : h5py dataset of USIDataset
+    
+    tf : transfer function, optional
+        This can be the resampled or normal transfer function
+        For best results, use the "normalized" transfer function
+        "None" will default to /Transfer_Function folder
+        
+    resampled : bool, optional
+        Whether to use the upsampled Transfer Function or the original
+        
+    verbose: bool, optional
+        Gives user feedback during processing
+    
+    ratios : array, optional
+        Array of the size of h5_main (1-D) with the transfer function data
+        If not given, it's found via the test_Y_calc function
+    
+    '''
+    Yout = np.zeros(h5_main.shape, dtype=np.cdouble)  # frequency domain
+    yout = np.zeros(h5_main.shape)          # time domain
+    parm_dict = usid.hdf_utils.get_attributes(h5_main)
+    ds = h5_main[()]
+    
+    #rows = parm_dict['num_rows']
+    #cols = parm_dict['num_cols']
+    
+    # Create frequency axis for the pixel
+    samp = parm_dict['sampling_rate']
+    fq_y = np.linspace(0, samp,  Yout.shape[1]) 
+    
+    # Get the transfer function and transfer function frequency values
+    fq_tf = h5_main.file['Transfer_Function/Freq']
+    if not tf:
+        if resampled:
+    
+            tf = h5_main.file['Transfer_Function/TFnorm_resampled'][()]
+            fq_tf = h5_main.file['Transfer_Function/Freq_resampled'][()]
+            ratios, _, _ = test_Ycalc(h5_main, resampled=True)
+        else:
+            
+            tf = h5_main.file['Transfer_Function/TFnorm'][()]
+            ratios, _, _ = test_Ycalc(h5_main, resampled=False)
+    # FFT of that pixel
+    # For each frequency in the FFT
+    #   a) Find frequency in the transfer function
+    #   b) Divide the results at that frequency
+    #   c) move to next frequency
+    # FFT division is Yout
+    # iFFT of the results, that is yout
     import time
     t0 = time.time()
 
     for c in np.arange(h5_main.shape[0]):
-        
+    
         if verbose:
             if c%100 == 0:
                 print('Pixel:', c)
+                
+        Yout[c, :] = np.fft.fft(ds[c,:])
+        Yout[c, :] /= ratios[c]
+
+        # Yout[c,:] = np.fft.fft(ds[c,:])
+        # Yout_divided = np.zeros(len(ds), dtype=bool)
         
-        Ypxl = np.fft.fft(ds[c,:])
-        Yout_divided = np.zeros(len(ds), dtype=bool)
-        
-        for x, f in zip(tf, fq_tf):
-        
-            xx = np.searchsorted(fq_tf, f)
+        # for x, f in zip(tf, fq_tf):
+            
+        #     if np.abs(x) > noise_floor:
+                
+        #         xx = np.searchsorted(fq_y, f)
            
-            if not Yout_divided[xx]: 
-                Yout[c,x] = Ypxl[x] / tf[xx] 
-                Yout[c,-x] = Ypxl[x] / tf[xx] 
-                Yout_divided[xx] = True
+        #         if not Yout_divided[xx]: 
+        #             Yout[c,xx] /= x
+        #             Yout[c,-xx] /= x
+        #             Yout_divided[xx] = True
         
-        yout[c,:] = np.fft.ifft(Yout[c,:])
+        yout[c,:] = np.real(np.fft.ifft(Yout[c,:]))
     
     t1 = time.time()
     
@@ -282,7 +372,7 @@ def save_Yout(h5_main, Yout, yout):
                                              'V',  # Units for the physical quantity
                                              pos_desc,  # Position dimensions
                                              spec_desc,  # Spectroscopic dimensions
-                                             dtype=np.float32,  # data type / precision
+                                             dtype=np.cdouble,  # data type / precision
                                              main_dset_attrs=parm_dict)
 
     usid.hdf_utils.copy_attributes(h5_y, h5_gp)
