@@ -161,7 +161,7 @@ def test_Ycalc(h5_main, pixel_ind=[0,0], tf=None, resampled=True, verbose=True, 
     verbose: bool, optional
         Gives user feedback during processing
     
-    '''
+        '''
     t0 = time.time()
 
     parm_dict = usid.hdf_utils.get_attributes(h5_main)
@@ -197,11 +197,14 @@ def test_Ycalc(h5_main, pixel_ind=[0,0], tf=None, resampled=True, verbose=True, 
     # FFT division is Yout
     # iFFT of the results, that is yout
 
-    t1 = time.time()
-    print('Time for pixels:', t1 - t0)
+    if verbose:
+        
+        t1 = time.time()
+        print('Time for pixels:', t1 - t0)
+    
     Yout_divided = np.zeros(len(yout), dtype=bool)
 
-    TFratios = np.ones(len(tf))
+    TFratios = np.ones(len(yout))
 
     for x, f in zip(tf, fq_tf):
         
@@ -210,15 +213,18 @@ def test_Ycalc(h5_main, pixel_ind=[0,0], tf=None, resampled=True, verbose=True, 
             xx = np.searchsorted(fq_y, f)
             if not Yout_divided[xx]: 
                 TFratios[xx] = x
+                TFratios[-xx] = x
                 Yout[xx] /= x
                 Yout[-xx] /= x
                 Yout_divided[xx] = True
     
     yout= np.real(np.fft.ifft(Yout))
     
-    t2 = time.time()
-    
-    print('Time for pixels:', t2 - t1)
+    if verbose:
+
+        t2 = time.time()
+        print('Time for pixels:', t2 - t1)
+
     return  TFratios, Yout, yout
 
 def Y_calc(h5_main, tf=None, resampled=True, ratios=None, verbose=True, noise_floor=1e-3):
@@ -264,11 +270,11 @@ def Y_calc(h5_main, tf=None, resampled=True, ratios=None, verbose=True, noise_fl
     
             tf = h5_main.file['Transfer_Function/TFnorm_resampled'][()]
             fq_tf = h5_main.file['Transfer_Function/Freq_resampled'][()]
-            ratios, _, _ = test_Ycalc(h5_main, resampled=True)
+            ratios, _, _ = test_Ycalc(h5_main, resampled=True, verbose = verbose, noise_floor=noise_floor)
         else:
             
             tf = h5_main.file['Transfer_Function/TFnorm'][()]
-            ratios, _, _ = test_Ycalc(h5_main, resampled=False)
+            ratios, _, _ = test_Ycalc(h5_main, resampled=False, verbose = verbose, noise_floor=noise_floor)
     # FFT of that pixel
     # For each frequency in the FFT
     #   a) Find frequency in the transfer function
@@ -286,7 +292,7 @@ def Y_calc(h5_main, tf=None, resampled=True, ratios=None, verbose=True, noise_fl
                 print('Pixel:', c)
                 
         Yout[c, :] = np.fft.fft(ds[c,:])
-        Yout[c, :] /= ratios[c]
+        Yout[c, :] /= ratios
 
         # Yout[c,:] = np.fft.fft(ds[c,:])
         # Yout_divided = np.zeros(len(ds), dtype=bool)

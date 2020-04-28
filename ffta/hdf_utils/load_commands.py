@@ -148,6 +148,13 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         commands.append("h5_ytime = usid.hdf_utils.find_dataset(hdf.file, 'y_time')[-1]")
     except:
         pass
+    
+    try:
+        h5_Y = usid.hdf_utils.find_dataset(hdf.file, 'Y')[-1]
+        commands.append("h5_Y = usid.hdf_utils.find_dataset(hdf.file, 'Y')[-1]")
+    except:
+        pass
+
 
     for i in commands:
         print(i)
