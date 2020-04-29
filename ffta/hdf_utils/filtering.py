@@ -18,6 +18,23 @@ from matplotlib import pyplot as plt
 
 import warnings
 
+'''
+For filtering data using the pycroscopy filter command
+
+To set up a filter, you can choose any of the following:
+    Harmonic Filter: pick a frequency and bandpass filters that + 2w + 3e etc
+    Bandpass Filter: pick a specific frequency and pass that
+    Lowpass Filter: pick a frequency and pass all below that
+    Noise Filter: pick frequencies to selectively remove (like electrical noise, etc)
+
+# a harmonic filter center of 2000 points long at 100kHz and 2*100 kHz, with a 5000 Hz wide window, at 1 MHz sampling
+>>> hbf = px.processing.fft.HarmonicPassFilter(2000, 10e6, 100e3, 5000, 2)
+>>> ffta.hdf_utils.filtering.test_filter(h5_main, hbf) #will display the result before applying to the whole dataset
+>>> ffta.hdf_utils.filtering.fft_filter(h5_main, hbf)
+
+
+'''
+
 def test_filter(hdf_file, freq_filts, parameters={}, pixelnum=[0, 0], noise_tolerance=5e-7,
                 show_plots=True, check_filter=True):
     """
