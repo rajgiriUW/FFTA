@@ -11,6 +11,7 @@ import numpy as np
 from scipy import signal as sps
 from scipy import optimize as spo
 from scipy import interpolate as spi
+from scipy import integrate as spg
 
 from ffta.pixel_utils import noise
 from ffta.pixel_utils import cwavelet
@@ -161,6 +162,9 @@ class Pixel:
         self.phase_fitting = False
         self.EMD_analysis = False
         self.restore = True
+        self.check_drive = True
+        
+        self.fft_params = {} # for sliding FFT
 
         # Assign the fit parameter.
         self.fit = fit
@@ -768,7 +772,7 @@ class Pixel:
 
         return
 
-    def sliding_fft(self, time_res=20e-6, decimate=True):
+    def sliding_fft(self, time_res=20e-6, decimate=True, fit=True):
         '''
         Sliding FFT approach
         -Take self.fft_cycles number of cycles of data
@@ -783,50 +787,86 @@ class Pixel:
             
         decimate : bool, optional
             Whether to shift window by time_res or by single point
+            no decimate is quite slow but better visually
         
+        fit : bool, optional
+            Fits a parabola to the frequency peak to get the actual frequency
+            Fitting is significantly better
         '''
 
         pts_per_ncycle = int(time_res * self.sampling_rate)
         num_ncycles = int(self.n_points / pts_per_ncycle)
         excess_n = self.n_points % pts_per_ncycle
+        win = sps.windows.get_window('blackman', pts_per_ncycle)
 
         if not decimate:
 
             inst_freq = np.zeros(self.n_points)
+            amplitude = np.zeros(self.n_points)
+            
             freq = np.linspace(0, self.sampling_rate, self.n_points)
 
-            for c in range(self.n_points):
+            for c in range(self.n_points-win.shape[0]):
                 sig = self.signal_array[c:c + pts_per_ncycle]
-                win = sps.windows.get_window('blackman', len(sig))
                 sig = sig * win
 
-                SIG = np.fft.fft(sig, n=self.n_points)
-                pk = np.argmax(np.abs(SIG[:int(len(SIG) * 0.5)]))
-
-                popt = np.polyfit(freq[pk - 20:pk + 20], np.abs(SIG[pk - 20:pk + 20]), 2)
-                fq = -0.5 * popt[1] / popt[0]
-
+                SIG = np.fft.fft(sig, n=self.n_points)[:int(self.n_points * 0.5)]
+                pk = np.argmax(np.abs(SIG))
+                
+                if fit:
+                    popt = np.polyfit(freq[pk - 10:pk + 10], np.abs(SIG[pk - 10:pk + 10]), 2)
+                    fq = -0.5 * popt[1] / popt[0]
+                else:
+                    fq = freq[pk]
+                
+                amplitude[c] = np.abs(SIG)[pk]
                 inst_freq[c] = fq
+            
+            inst_freq[self.n_points-win.shape[0]:] = np.nan
+            amplitude[self.n_points-win.shape[0]:] = np.nan
+            
+            phase = spg.cumtrapz(inst_freq)
+            phase = np.append(phase, phase[-1])
+            tidx = self.tidx
 
+        
         else:
 
             inst_freq = np.zeros(num_ncycles)
+            amplitude = np.zeros(num_ncycles)
+            
             freq = np.linspace(0, self.sampling_rate, self.n_points)
 
             for c in range(num_ncycles):
                 sig = self.signal_array[c * pts_per_ncycle:(c + 1) * pts_per_ncycle]
-                win = sps.windows.get_window('blackman', len(sig))
                 sig = sig * win
 
                 SIG = np.fft.fft(sig, n=self.n_points)
                 pk = np.argmax(np.abs(SIG[:int(len(SIG) * 0.5)]))
 
-                popt = np.polyfit(freq[pk - 20:pk + 20], np.abs(SIG[pk - 20:pk + 20]), 2)
-                fq = -0.5 * popt[1] / popt[0]
-
+                if fit:
+                    popt = np.polyfit(freq[pk - 20:pk + 20], np.abs(SIG[pk - 20:pk + 20]), 2)
+                    fq = -0.5 * popt[1] / popt[0]
+                else:
+                    fq = freq[pk]
+                
+                amplitude[c] = np.abs(SIG)[pk]
                 inst_freq[c] = fq
+            
+            phase = spg.cumtrapz(inst_freq)
+            phase = np.append(phase, phase[-1])
+            tidx = int(self.tidx * num_ncycles/self.n_points)
 
+        self.amplitude = amplitude
         self.inst_freq = inst_freq
+
+        start = int(0.3 * tidx)
+        end = int(0.7 * tidx)
+
+        xfit = np.polyfit(np.arange(start, end), phase[start:end], 1)
+        phase -= (xfit[0] * np.arange(len(inst_freq))) + xfit[1]
+
+        self.phase = phase
 
         return
 
@@ -864,9 +904,12 @@ class Pixel:
 
         return
 
-    def generate_inst_freq(self):
+    def generate_inst_freq(self, timing = False):
         """
         Generates the instantaneous frequency
+        
+        timing : bool, optional
+            prints the time to execute (for debugging)
 
         Returns
         -------
@@ -887,10 +930,16 @@ class Pixel:
         # self.remove_dc()
 
         # Check the drive frequency.
-        self.check_drive_freq()
+        if self.check_drive:
+            
+            self.check_drive_freq()
 
         # DWT Denoise
         # self.dwt_denoise()
+
+        if timing:
+            import time 
+            t1 = time.time()
 
         if self.method == 'emd':
 
@@ -914,7 +963,7 @@ class Pixel:
         elif self.method == 'fft':
 
             # Calculate instantenous frequency using sliding FFT
-            self.sliding_fft()
+            self.sliding_fft(**self.fft_params)
 
         elif self.method == 'hilbert':
             # Hilbert transform method
@@ -948,7 +997,10 @@ class Pixel:
             
         else:
             raise ValueError('Invalid analysis method! Valid options: hilbert, wavelet, fft, emd')
-
+        
+        if timing:
+            print('Time:', time.time() - t1, 's')
+        
         # If it's a recombination image invert it to find minimum.
         if self.recombination:
             self.inst_freq = self.inst_freq * -1
