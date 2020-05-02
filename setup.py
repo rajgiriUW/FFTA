@@ -18,7 +18,9 @@ setup(
                       'igor>=0.2',
                       'pywavelets>=0.3.0',
                       'numexpr',
-		      'watchdog'],
+                      'watchdog',
+                      'pyUSID>=0.0.8',
+                      'pycroscopy>=0.60'],
 
     entry_points={
         'console_scripts': [

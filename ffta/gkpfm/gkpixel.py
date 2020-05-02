@@ -119,14 +119,7 @@ class GKPixel:
             
             V_per_osc = self.resp_wfm[pnts*p:pnts*(p+1)]
             #V_per_osc = excitation[:decimation] # testing single fit
-            
-            # if adaptive_phase:
-                
-            #     min_phase, residuals, phase_range = find_phase(resp_x, exc_params, CPD_params)
-            #     V_per_osc = (exc_params['ac']*np.sin(tx * 2 * np.pi * exc_params['frequency'] + min_phase) +exc_params['dc'])[:pnts]
-                
-            #     pass
-            
+                    
             popt, _ = npPoly.polyfit(V_per_osc, resp_x, deg, full=True)
             test_wH[p] = popt
        

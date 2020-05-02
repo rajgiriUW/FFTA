@@ -963,7 +963,7 @@ class Pixel:
         elif self.method == 'fft':
 
             # Calculate instantenous frequency using sliding FFT
-            self.sliding_fft(**self.fft_params)
+            self.sliding_fft(**self.refft_params)
 
         elif self.method == 'hilbert':
             # Hilbert transform method
