@@ -113,6 +113,13 @@ class Cantilever(object):
 
             setattr(self, key, value)
 
+        # Calculate time axis for simulated tip motion without extra cycles
+        num_pts = int(self.total_time*self.sampling_rate)
+        self.t_Z = np.linspace(0, self.total_time, num=num_pts)
+
+        # Calculate frequency axis for simulated tip_motion without extra cycles.
+        self.freq_Z = np.linspace(0, int(self.sampling_rate/2), num=int(num_pts/2 + 1))
+
         return
 
     def set_conditions(self, trigger_phase=180):
@@ -127,7 +134,7 @@ class Cantilever(object):
         """
 
         self.trigger_phase = np.mod(np.pi * trigger_phase / 180, PI2)
-        self.n_points = self.total_time * 1e8
+        self.n_points = int(self.total_time * 1e8)
 
         # Add extra cycles to the simulation to find correct phase at trigger.
         cycle_points = int(2 * 1e8 / self.res_freq)
@@ -221,10 +228,19 @@ class Cantilever(object):
             Force on the cantilever at a given time, in N/kg.
 
         """
-        driving_force = self.f0 * np.sin(self.wd * t)
-        electro_force = self.fe * self.__gamma__(t, t0, tau)
-
-        return driving_force - electro_force
+        try:
+            
+            driving_force = 0.5 * self.dCdz/self.mass * ((self.v_dc - self.v_cpd) \
+                                               + self.v_ac * np.sin(self.wd * t))**2
+            
+            return driving_force
+        
+        except AttributeError:
+            
+            driving_force = self.f0 * np.sin(self.wd * t)
+            electro_force = self.fe * self.__gamma__(t, t0, tau)
+            
+            return driving_force - electro_force
 
     def dZ_dt(self, Z, t=0):
         """
@@ -256,7 +272,7 @@ class Cantilever(object):
 
         return np.array([v, vdot])
 
-    def simulate(self, trigger_phase=180):
+    def simulate(self, trigger_phase=180, Z0=None):
         """
         Simulates the cantilever motion.
 
@@ -264,7 +280,9 @@ class Cantilever(object):
         ----------
         trigger_phase: float, optional
            Trigger phase is in degrees and wrt cosine. Default value is 180.
-
+        Z0 : list, optional
+            Z0 = [z0, v0], the initial position and velocity
+            If not specified, is calculated from the analytical solution to DDHO
         Returns
         -------
         Z : (n_points, 1) array_like
@@ -273,16 +291,26 @@ class Cantilever(object):
             Information about the ODE solver.
 
         """
-        self.set_conditions(trigger_phase)
+        
+        self.set_conditions(trigger_phase) # sets up other parameters (t, t0)
+        
+        if Z0:
+            
+            if not isinstance(Z0, (np.ndarray, list)):
+                raise TypeError('Must be 2-size array or list')
+            if len(Z0) != 2:
+                raise ValueError('Must specify exactly [z0, v0]')
+            
+            self.Z0 = Z0
+            
         Z, infodict = odeint(self.dZ_dt, self.Z0, self.t, full_output=True)
 
         t0_idx = int(self.t0 * 1e8)
         tidx = int(self.trigger * 1e8)
-
+        n_points = int(self.total_time * self.sampling_rate)
         Z_cut = Z[(t0_idx - tidx):(t0_idx + self.n_points - tidx), 0]
 
         step = int(1e8 / self.sampling_rate)
-        n_points = self.total_time * self.sampling_rate
 
         self.Z = Z_cut[0::step].reshape(n_points, 1) / self.def_invols
         self.infodict = infodict

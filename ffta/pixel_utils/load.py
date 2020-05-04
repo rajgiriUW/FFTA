@@ -226,12 +226,12 @@ def simulation_configuration(path):
     can_params = {}
     force_params = {}
 
-    # Assign parameters from file. These are the keys for parameters.
     can_keys = ['amp_invols', 'def_invols', 'soft_amp', 'drive_freq',
                 'res_freq', 'k', 'q_factor']
-    force_keys = ['es_force', 'delta_freq', 'tau']
+    force_keys = ['es_force', 'ac_force', 'dc_force', 'delta_freq', 'tau',
+                  'v_dc', 'v_ac', 'v_cpd', 'dCdz']
     sim_keys = ['trigger', 'total_time', 'sampling_rate']
-
+    
     for key in can_keys:
 
         if config.has_option('Cantilever Parameters', key):
