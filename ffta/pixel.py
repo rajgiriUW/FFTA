@@ -841,11 +841,11 @@ class Pixel:
                 sig = self.signal_array[c * pts_per_ncycle:(c + 1) * pts_per_ncycle]
                 sig = sig * win
 
-                SIG = np.fft.fft(sig, n=self.n_points)
-                pk = np.argmax(np.abs(SIG[:int(len(SIG) * 0.5)]))
+                SIG = np.fft.fft(sig, n=self.n_points)[:int(self.n_points * 0.5)]
+                pk = np.argmax(np.abs(SIG))
 
                 if fit:
-                    popt = np.polyfit(freq[pk - 20:pk + 20], np.abs(SIG[pk - 20:pk + 20]), 2)
+                    popt = np.polyfit(freq[pk - 10:pk + 10], np.abs(SIG[pk - 10:pk + 10]), 2)
                     fq = -0.5 * popt[1] / popt[0]
                 else:
                     fq = freq[pk]
@@ -963,7 +963,7 @@ class Pixel:
         elif self.method == 'fft':
 
             # Calculate instantenous frequency using sliding FFT
-            self.sliding_fft(**self.refft_params)
+            self.sliding_fft(**self.fft_params)
 
         elif self.method == 'hilbert':
             # Hilbert transform method

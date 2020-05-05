@@ -7,7 +7,7 @@ ibw_file = r'E:/Data/20190107 - BAPI trEFM/FF2_128_7V.ibw'
 ff_folder = r'E:\Data\20190107 - BAPI trEFM\FF02_128x64_455nm_7V_400mA'
 
 # loads the data
-h5_path, parm_dict, h5_avg = ffta.hdf_utils.load_hdf.loadHDF5_ibw(ibw_file_path=ibw_file, ff_file_path=ff_folder, verbose=False, average=True)
+h5_path, parm_dict, h5_avg = ffta.hdf_utils.load_hdf.load_wrapper(ibw_file_path=ibw_file, ff_file_path=ff_folder, verbose=False, average=True)
 
 # SVD
 h5_svd = ffta.analysis.svd.FF_SVD(h5_avg)
