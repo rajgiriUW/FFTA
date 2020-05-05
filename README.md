@@ -1,7 +1,7 @@
 # Fast-Free Time-Resolved Electrostatic Force Microscopy (FF-trEFM)
 A package for processing time-dependent frequency response information in electostatic force microscopy.
 
-This package is currently focused on the Pycroscopy branch. Using this branch requires installation of Pycroscopy and pyUSID, available at https://pycroscopy.github.io/pycroscopy/about.html and https://pycroscopy.github.io/USID/index.html, respectively. Updates will likely continue operating on data in this pycroscopy model, but this is backwards compatible with existing data.
+This package is currently focused on the Pycroscopy branch. Using this branch requires installation of Pycroscopy(https://pycroscopy.github.io/pycroscopy/about.html) and pyUSID(https://pycroscopy.github.io/USID/index.html). Updates will likely continue operating on data in this pycroscopy model, but this is backwards compatible with existing data.
 
 ### For further information and discussion, primary point-of-contact:
 ```
