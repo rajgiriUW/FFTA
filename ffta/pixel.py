@@ -446,12 +446,12 @@ class Pixel:
         # using 5 point 1st order polynomial.
         
         #-self.phase to correct for sign in DDHO solution
-        self.inst_freq = sps.savgol_filter(-self.phase, 5, 1, deriv=1,
+        self.inst_freq_raw = sps.savgol_filter(-self.phase, 5, 1, deriv=1,
                                            delta=dtime)
 
         # Bring trigger to zero.
         self.tidx = int(self.tidx)
-        self.inst_freq -= self.inst_freq[self.tidx]
+        self.inst_freq = self.inst_freq_raw - self.inst_freq_raw[self.tidx]
 
         return
 
@@ -706,7 +706,7 @@ class Pixel:
         inst_freq = (inst_freq * wavelet_increment + 0.9 * cwt_scale)
         inst_freq = ((w0 + np.sqrt(2 + w0 ** 2)) /
                      (4 * np.pi * inst_freq[:] / self.sampling_rate))
-
+        self.inst_freq_raw = inst_freq
         self.inst_freq = inst_freq - inst_freq[self.tidx]
         self.amplitude = amplitude
 
@@ -772,7 +772,7 @@ class Pixel:
 
         return
 
-    def sliding_fft(self, time_res=20e-6, decimate=True, fit=True):
+    def sliding_fft(self, time_res=20e-6, decimate=False, fit=False):
         '''
         Sliding FFT approach
         -Take self.fft_cycles number of cycles of data
@@ -791,78 +791,63 @@ class Pixel:
         
         fit : bool, optional
             Fits a parabola to the frequency peak to get the actual frequency
-            Fitting is significantly better
+            Otherwise defaults to parabolic interpolation (see parab.fit)
         '''
 
         pts_per_ncycle = int(time_res * self.sampling_rate)
-        num_ncycles = int(self.n_points / pts_per_ncycle)
-        excess_n = self.n_points % pts_per_ncycle
         win = sps.windows.get_window('blackman', pts_per_ncycle)
 
         if not decimate:
-
-            inst_freq = np.zeros(self.n_points)
-            amplitude = np.zeros(self.n_points)
             
-            freq = np.linspace(0, self.sampling_rate, self.n_points)
-
-            for c in range(self.n_points-win.shape[0]):
-                sig = self.signal_array[c:c + pts_per_ncycle]
-                sig = sig * win
-
-                SIG = np.fft.fft(sig, n=self.n_points)[:int(self.n_points * 0.5)]
-                pk = np.argmax(np.abs(SIG))
-                
-                if fit:
-                    popt = np.polyfit(freq[pk - 10:pk + 10], np.abs(SIG[pk - 10:pk + 10]), 2)
-                    fq = -0.5 * popt[1] / popt[0]
-                else:
-                    fq = freq[pk]
-                
-                amplitude[c] = np.abs(SIG)[pk]
-                inst_freq[c] = fq
+            num_ncycles = self.n_points
+            excess = win.shape[0]
+            increment = 1
             
-            inst_freq[self.n_points-win.shape[0]:] = np.nan
-            amplitude[self.n_points-win.shape[0]:] = np.nan
-            
-            phase = spg.cumtrapz(inst_freq)
-            phase = np.append(phase, phase[-1])
-            tidx = self.tidx
-
-        
         else:
+            # fast but low resolution
+            num_ncycles = int(self.n_points / pts_per_ncycle)
+            excess = 0
+            increment = pts_per_ncycle
 
-            inst_freq = np.zeros(num_ncycles)
-            amplitude = np.zeros(num_ncycles)
+        inst_freq = np.zeros(num_ncycles)
+        amplitude = np.zeros(num_ncycles)
+        spectrogram = np.empty((int(self.n_points * 0.5), self.n_points), dtype=complex)
             
-            freq = np.linspace(0, self.sampling_rate, self.n_points)
+        freq = np.linspace(0, self.sampling_rate, self.n_points)
 
-            for c in range(num_ncycles):
-                sig = self.signal_array[c * pts_per_ncycle:(c + 1) * pts_per_ncycle]
-                sig = sig * win
+        for c in range(num_ncycles-excess):
+            sig = self.signal_array[c*increment:c*increment + pts_per_ncycle]
+            sig = sig * win
 
-                SIG = np.fft.fft(sig, n=self.n_points)[:int(self.n_points * 0.5)]
-                pk = np.argmax(np.abs(SIG))
-
-                if fit:
-                    popt = np.polyfit(freq[pk - 10:pk + 10], np.abs(SIG[pk - 10:pk + 10]), 2)
-                    fq = -0.5 * popt[1] / popt[0]
-                else:
-                    fq = freq[pk]
-                
+            SIG = np.fft.fft(sig, n=self.n_points)[:int(self.n_points * 0.5)]
+            spectrogram[:,c] = SIG
+            pk = np.argmax(np.abs(SIG))
+            
+            if fit:
+                popt = np.polyfit(freq[pk - 10:pk + 10], np.abs(SIG[pk - 10:pk + 10]), 2)
+                fq = -0.5 * popt[1] / popt[0]
                 amplitude[c] = np.abs(SIG)[pk]
-                inst_freq[c] = fq
+            else:
+                fq, amplitude[c] = parab.fit_new(SIG, freq)
+
+            inst_freq[c] = fq
+ 
+        inst_freq[num_ncycles-excess:] = np.nan
+        amplitude[num_ncycles-excess:] = np.nan
             
-            phase = spg.cumtrapz(inst_freq)
-            phase = np.append(phase, phase[-1])
-            tidx = int(self.tidx * num_ncycles/self.n_points)
+        phase = spg.cumtrapz(inst_freq)
+        phase = np.append(phase, phase[-1])
+        tidx = int(self.tidx * len(inst_freq)/self.n_points)
 
         self.amplitude = amplitude
-        self.inst_freq = inst_freq
+        self.inst_freq_raw = inst_freq
+        self.inst_freq = inst_freq - inst_freq[tidx]
+        self.spectrogram = spectrogram
 
         start = int(0.3 * tidx)
         end = int(0.7 * tidx)
 
+        # subtract the w*t line (drive frequency line) from phase
         xfit = np.polyfit(np.arange(start, end), phase[start:end], 1)
         phase -= (xfit[0] * np.arange(len(inst_freq))) + xfit[1]
 
@@ -870,8 +855,17 @@ class Pixel:
 
         return
 
-    def plot(self, newplot=True):
-        """ Quick visualization of best_fit and cut."""
+    def plot(self, newplot=True, raw=False):
+        """ 
+        Quick visualization of best_fit and cut.
+        
+        newplot : bool, optional
+            generates a new plot (True) or plots on existing plot figure (False)
+        
+        raw : bool, optional
+            
+        
+        """
 
         if newplot:
             fig, a = plt.subplots(nrows=3, figsize=(6,9), facecolor='white')
