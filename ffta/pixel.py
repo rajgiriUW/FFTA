@@ -23,6 +23,8 @@ from matplotlib import pyplot as plt
 
 from ffta.pixel_utils.peakdetect import get_peaks
 
+import time
+
 
 class Pixel:
     """
@@ -772,7 +774,7 @@ class Pixel:
 
         return
 
-    def sliding_fft(self, time_res=20e-6, decimate=False, fit=False):
+    def sliding_fft(self, time_res=5e-6, decimate=False, fit=False):
         '''
         Sliding FFT approach
         -Take self.fft_cycles number of cycles of data
@@ -821,16 +823,20 @@ class Pixel:
 
             SIG = np.fft.fft(sig, n=self.n_points)[:int(self.n_points * 0.5)]
             spectrogram[:,c] = SIG
-            pk = np.argmax(np.abs(SIG))
+            
             
             if fit:
+                if c == 0:
+                    print('a')
+                pk = np.argmax(np.abs(SIG))
                 popt = np.polyfit(freq[pk - 10:pk + 10], np.abs(SIG[pk - 10:pk + 10]), 2)
-                fq = -0.5 * popt[1] / popt[0]
+                inst_freq[c] = -0.5 * popt[1] / popt[0]
                 amplitude[c] = np.abs(SIG)[pk]
-            else:
-                fq, amplitude[c] = parab.fit_new(SIG, freq)
 
-            inst_freq[c] = fq
+            else:
+                if c == 0:
+                    print('b')
+                inst_freq[c], amplitude[c] = parab.fit_new(np.abs(SIG), freq)
  
         inst_freq[num_ncycles-excess:] = np.nan
         amplitude[num_ncycles-excess:] = np.nan
