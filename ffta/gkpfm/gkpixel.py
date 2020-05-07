@@ -81,7 +81,7 @@ class GKPixel:
         self.pnts_per_CPD_total = int(self.n_points / self.pnts_per_CPD_sample)
         self.remainder = int(self.n_points % self.pnts_per_CPD_sample)
 
-        self.txl = np.linspace(0, self.total_time, self.n_points)
+        self.t_ax = np.linspace(0, self.total_time, self.n_points)
         
         self.excitation()
         
@@ -90,10 +90,13 @@ class GKPixel:
     def excitation(self, exc_params={}, phase=-np.pi):
         """
         Generates excitation waveform (AC probing bias)
-        :param dict, optional exc_params: Specifies parameters for excitation waveform. The default is None,
-        implying an excitation waveform of magnitude 1V, with period 1/drive_freq, and 0 DC offset.
-        :param float phase: offset of the excitation waveform in radians. Default is pi.
-        :return:
+        Parameters:
+            exc_params: dict, optional
+                Specifies parameters for excitation waveform. Relevant keys are ac (in V), dc (in V),
+                phase (in radians), and frequency (in Hz). The default is None, implying an excitation waveform of
+                magnitude 1V, with period 1/drive_freq, and 0 DC offset.
+            phase: float, optional
+                Offset of the excitation waveform in radians. Default is pi.
         """
         self.exc_params = {'ac':1, 'dc':0, 'phase':phase, 'frequency':self.drive_freq}
         
@@ -105,18 +108,19 @@ class GKPixel:
         ph = self.exc_params['phase']
         fr = self.exc_params['frequency']
 
-        self.exc_wfm = (ac*np.sin(self.txl * 2 * np.pi * fr + ph) + dc)
+        self.exc_wfm = (ac*np.sin(self.t_ax * 2 * np.pi * fr + ph) + dc)
         
         return
 
     def analyze(self, verbose=False, fft=False, fast=False, deg = 2):
         """
         Extracts CPD and capacitance gradient from data.
-        :param verbose:
-        :param fft:
-        :param fast:
-        :param int deg: degree of polynomial fit. Default is 2, which is a quadratic fit.
-        :return:
+        Parameters:
+            verbose: bool
+            fft: bool
+            fast: bool
+            deg: int
+                Degree of polynomial fit. Default is 2, which is a quadratic fit.
         """
 
         #        tx = np.arange(0,self.total_time, self.total_time/len(self.signal_array))
