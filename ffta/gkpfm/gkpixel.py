@@ -76,12 +76,11 @@ class GKPixel:
         self.pnts_per_period = self.sampling_rate * self.time_per_osc  # points in a cycle 
         self.num_periods = int(self.pxl_time/self.time_per_osc)  # number of periods in each pixel
         
-        self.num_periods_per_CPD = int(np.floor(self.num_periods / self.periods))  # number of CPD samples, since each CPD takes some number of periods
-        self.pnts_per_CPD_sample = int(np.floor(self.pnts_per_period * self.periods))  # points per CPD sample
-        self.pnts_per_CPD_total = int(self.n_points / self.pnts_per_CPD_sample)
-        self.remainder = int(self.n_points % self.pnts_per_CPD_sample)
+        self.num_CPD = int(np.floor(self.num_periods / self.periods))  # number of CPD samples, since each CPD takes some number of periods
+        self.pnts_per_CPD = int(np.floor(self.pnts_per_period * self.periods))  # points used to calculate CPD
+        self.remainder = int(self.n_points % self.pnts_per_CPD)
 
-        self.t_ax = np.linspace(0, self.total_time, self.n_points)
+        self.t_ax = np.linspace(0, self.total_time, self.n_points) #time axis
         
         self.excitation()
         
@@ -126,8 +125,8 @@ class GKPixel:
         #        tx = np.arange(0,self.total_time, self.total_time/len(self.signal_array))
         #        tx_cycle = np.arange(0, self.total_time, self.ncycles * self.total_time/len(self.signal_array))
 
-        pnts_per_CPD = self.pnts_per_CPD_total
-        pnts = self.pnts_per_CPD_sample
+        pnts_per_CPD = self.num_CPD
+        pnts = self.pnts_per_CPD
         remainder = self.remainder
         
         tx = np.linspace(0, pnts_per_CPD / self.sampling_rate, pnts_per_CPD)
