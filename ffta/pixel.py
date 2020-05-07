@@ -14,7 +14,7 @@ from scipy import interpolate as spi
 from scipy import integrate as spg
 
 from ffta.pixel_utils import noise
-from ffta.pixel_utils import cwavelet
+# from ffta.pixel_utils import cwavelet
 from ffta.pixel_utils import parab
 from ffta.pixel_utils import fitting
 from ffta.pixel_utils import dwavelet
@@ -668,14 +668,21 @@ class Pixel:
 
         return
 
-    def __get_cwt__(self):
-        """Generates the CWT using Morlet wavelet. Returns a 2D Matrix."""
+    def __get_cwt__(self, f_center = None, wavelet_increment = 0.01):
+        """
+        Generates the CWT using Morlet wavelet. Returns a 2D Matrix.
+        
+        For computational simplicity, centered around f_center
+        
+        """
 
         w0 = self.wavelet_parameter
-        wavelet_increment = 0.01  # Reducing this has little benefit.
+        
+        if not f_center:
+            f_center = self.drive_freq
 
         cwt_scale = ((w0 + np.sqrt(2 + w0 ** 2)) /
-                     (4 * np.pi * self.drive_freq / self.sampling_rate))
+                     (4 * np.pi * f_center / self.sampling_rate))
 
         widths = np.arange(cwt_scale * 0.5, cwt_scale * 1.5,
                            wavelet_increment)
@@ -693,21 +700,24 @@ class Pixel:
         inst_freq = np.empty(n_points)
         amplitude = np.empty(n_points)
 
-        for i in range(n_points):
+        inst_freq, amplitude = parab.ridge_finder(self.cwt_matrix, 1)
 
-            cut = self.cwt_matrix[:, i]
-            peak = np.min([np.argmax(cut), len(cut)-1])
+        # for i in range(n_points):
+
+        #     cut = self.cwt_matrix[:, i]
+        #     peak = np.min([np.argmax(cut), len(cut)-1])
             
-            try:
-                inst_freq[i],  amplitude[i] = parab.fit(cut, peak)
-            except:
-                inst_freq[i] = np.nan
-                amplitude[i] = np.nan
+        #     try:
+        #         inst_freq[i],  amplitude[i] = parab.fit(cut, peak)
+        #     except:
+        #         inst_freq[i] = np.nan
+        #         amplitude[i] = np.nan
 
         # rescale to correct frequency
         inst_freq = (inst_freq * wavelet_increment + 0.9 * cwt_scale)
         inst_freq = ((w0 + np.sqrt(2 + w0 ** 2)) /
                      (4 * np.pi * inst_freq[:] / self.sampling_rate))
+        
         self.inst_freq_raw = inst_freq
         self.inst_freq = inst_freq - inst_freq[self.tidx]
         self.amplitude = amplitude
@@ -774,7 +784,7 @@ class Pixel:
 
         return
 
-    def sliding_fft(self, time_res=5e-6, decimate=False, fit=False):
+    def calculate_stft(self, time_res=20e-6, fit=False, nfft=200):
         '''
         Sliding FFT approach
         -Take self.fft_cycles number of cycles of data
@@ -794,53 +804,40 @@ class Pixel:
         fit : bool, optional
             Fits a parabola to the frequency peak to get the actual frequency
             Otherwise defaults to parabolic interpolation (see parab.fit)
+        
+        nfft : int
+            Length of FFT calculated in the spectrogram. More points gets much slower
+            but the longer the FFT the finer the frequency bin spacing            
         '''
 
         pts_per_ncycle = int(time_res * self.sampling_rate)
-        win = sps.windows.get_window('blackman', pts_per_ncycle)
-
-        if not decimate:
+        inst_freq = np.zeros(self.n_points)
+        amplitude = np.zeros(self.n_points)
             
-            num_ncycles = self.n_points
-            excess = win.shape[0]
-            increment = 1
+        #drivebin = int(self.drive_freq / (self.sampling_rate / nfft ))
+        freq, times, spectrogram = sps.spectrogram(self.signal,
+                                                   self.sampling_rate,
+                                                   nperseg = pts_per_ncycle,
+                                                   noverlap = pts_per_ncycle-1,
+                                                   nfft = nfft,
+                                                   window=self.window,
+                                                   mode='magnitude')
             
+        # Parabolic ridge finder
+        if not fit:
+            inst_freq, amplitude = parab.ridge_finder(spectrogram, freq[1]-freq[0])
+        
+        # slow serial curve fitting
         else:
-            # fast but low resolution
-            num_ncycles = int(self.n_points / pts_per_ncycle)
-            excess = 0
-            increment = pts_per_ncycle
-
-        inst_freq = np.zeros(num_ncycles)
-        amplitude = np.zeros(num_ncycles)
-        spectrogram = np.empty((int(self.n_points * 0.5), self.n_points), dtype=complex)
             
-        freq = np.linspace(0, self.sampling_rate, self.n_points)
-
-        for c in range(num_ncycles-excess):
-            sig = self.signal_array[c*increment:c*increment + pts_per_ncycle]
-            sig = sig * win
-
-            SIG = np.fft.fft(sig, n=self.n_points)[:int(self.n_points * 0.5)]
-            spectrogram[:,c] = SIG
-            
-            
-            if fit:
-                if c == 0:
-                    print('a')
-                pk = np.argmax(np.abs(SIG))
-                popt = np.polyfit(freq[pk - 10:pk + 10], np.abs(SIG[pk - 10:pk + 10]), 2)
-                inst_freq[c] = -0.5 * popt[1] / popt[0]
-                amplitude[c] = np.abs(SIG)[pk]
-
-            else:
-                if c == 0:
-                    print('b')
-                inst_freq[c], amplitude[c] = parab.fit_new(np.abs(SIG), freq)
- 
-        inst_freq[num_ncycles-excess:] = np.nan
-        amplitude[num_ncycles-excess:] = np.nan
-            
+            for c in range(spectrogram.shape[1]):
+                SIG = spectrogram[:,c]
+                if fit:
+                    pk = np.argmax(np.abs(SIG))
+                    popt = np.polyfit(freq[pk - 2:pk + 2], np.abs(SIG[pk - 2:pk + 2]), 2)
+                    inst_freq[c] = -0.5 * popt[1] / popt[0]
+                    amplitude[c] = np.abs(SIG)[pk]
+    
         phase = spg.cumtrapz(inst_freq)
         phase = np.append(phase, phase[-1])
         tidx = int(self.tidx * len(inst_freq)/self.n_points)
@@ -850,10 +847,9 @@ class Pixel:
         self.inst_freq = inst_freq - inst_freq[tidx]
         self.spectrogram = spectrogram
 
+        # subtract the w*t line (drive frequency line) from phase
         start = int(0.3 * tidx)
         end = int(0.7 * tidx)
-
-        # subtract the w*t line (drive frequency line) from phase
         xfit = np.polyfit(np.arange(start, end), phase[start:end], 1)
         phase -= (xfit[0] * np.arange(len(inst_freq))) + xfit[1]
 
@@ -938,7 +934,6 @@ class Pixel:
         # self.dwt_denoise()
 
         if timing:
-            import time 
             t1 = time.time()
 
         if self.method == 'emd':
@@ -963,7 +958,7 @@ class Pixel:
         elif self.method == 'fft':
 
             # Calculate instantenous frequency using sliding FFT
-            self.sliding_fft(**self.fft_params)
+            self.calculate_stft(**self.fft_params)
 
         elif self.method == 'hilbert':
             # Hilbert transform method
