@@ -164,6 +164,7 @@ class Pixel:
         self.wavelet_analysis = False
         self.wavelet = 'cmor1-1' # default complex Morlet wavelet
         self.scales = np.arange(100, 2, -1)
+        self.wavelet_params = {} # currently just optimize flag is supported
         
         # Short Time Fourier Transform
         self.fft_analysis = False
@@ -701,9 +702,13 @@ class Pixel:
         if f_center < np.min(sc) or f_center > np.max(sc):
             raise ValueError('Choose a scale that captures frequency of interest')
 
-        inst_freq = np.zeros(self.n_points)
-        amplitude = np.zeros(self.n_points)
-        
+        if optimize:
+            print('!')
+            drive_bin = self.scales[np.searchsorted(sc, f_center)]
+            hi = int(1.2 * drive_bin)
+            lo = int(0.8 * drive_bin)
+            self.scales = np.arange(hi, lo, -0.1)
+
         spectrogram, freq = pywt.cwt(self.signal, self.scales,self.wavelet, sampling_period=dt)
         inst_freq, amplitude,_ = parab.ridge_finder(np.abs(spectrogram), np.arange(len(freq)))
 
@@ -718,6 +723,7 @@ class Pixel:
         self.inst_freq_raw = inst_freq
         self.inst_freq = inst_freq - inst_freq[tidx]
         self.spectrogram = np.abs(spectrogram)
+        self.wavelet_freq = freq # the wavelet frequencies
 
         # subtract the w*t line (drive frequency line) from phase
         start = int(0.3 * tidx)
@@ -756,8 +762,6 @@ class Pixel:
         '''
 
         pts_per_ncycle = int(time_res * self.sampling_rate)
-        inst_freq = np.zeros(self.n_points)
-        amplitude = np.zeros(self.n_points)
             
         #drivebin = int(self.drive_freq / (self.sampling_rate / nfft ))
         freq, times, spectrogram = sps.spectrogram(self.signal,
@@ -895,7 +899,7 @@ class Pixel:
         elif self.method == 'wavelet':
 
             # Calculate instantenous frequency using wavelet transform.
-            self.calculate_cwt()
+            self.calculate_cwt(**self.wavelet_params)
 
         elif self.method == 'fft':
 
