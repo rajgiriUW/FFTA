@@ -21,7 +21,7 @@ def fit_peak(f, x):
      Peak position is at x = -D[1]/(2D[0])   
     '''
 
-    pk = np.argmax(np.abs(f))
+    pk = np.argmax(f)
     
     y1 = f[pk-1]
     y2 = f[pk]
@@ -31,11 +31,11 @@ def fit_peak(f, x):
     b = -0.5 * y1 + 0.5 * y3
     c = y2
     
-    xindex = pk + -b/(2*a)
-    yindex = a*(xindex-pk)**2 + b*(xindex-pk) + c
-    findex = xindex * (x[1] - x[0]) - 1 
+    xindex = -b/(2*a)
+    findex = xindex * (x[1] - x[0])  + x[1]
+    yindex = a*xindex**2 + b*xindex + c
     
-    return findex, yindex
+    return findex, yindex, xindex
 
 def ridge_finder(spectrogram, freq_bin):
     '''
@@ -48,9 +48,8 @@ def ridge_finder(spectrogram, freq_bin):
         Returned by scipy.signal.spectrogram or stft or cwt
         Arranged in (frequencies, times) shape
         
-    freq_bin : float
-        
-        array spacing in the first argument returned by scipy.signal.spectrogram
+    freq_bin : ndarray
+        arrays corresponding the frequencies in the spectrogram
         
     Returns
     -------
@@ -80,7 +79,7 @@ def fit_2d(f, p, dx):
     
     p : 1-d array with the peak positions for f
 
-    x : float, spacing between frequency bins
+    dx : 1-d array with the frequency (x values) of f
     '''
 
     if f.shape[0] != 3:
@@ -89,13 +88,13 @@ def fit_2d(f, p, dx):
     
     a = 0.5 * f[0,:] - f[1,:] + 0.5 * f[2,:]
     b = -0.5 * f[0,:] + 0.5 * f[2,:]
-    c = f[2,:]
+    c = f[1,:]
     
-    xindex = p + -b / (2*a)
-    yindex = a*(xindex - p)**2 + b*(xindex - p) + c
-    findex = xindex * dx - 1
+    xindex = -b / (2*a)
+    findex = xindex * (dx[1]-dx[0]) + dx[p]
+    yindex = a*(xindex**2) + b*xindex + c 
     
-    return findex, yindex
+    return findex, yindex, xindex
 
 def fit_peak_old(f, x):
     """

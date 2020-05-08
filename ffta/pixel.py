@@ -676,8 +676,15 @@ class Pixel:
 
         return
 
-    def calculate_cwt(self, f_center = None, verbose=False):
-        """Continuous wavelet transform method for extracting inst_freq"""
+    def calculate_cwt(self, f_center = None, verbose=False, optimize = False):
+        '''
+        Calculate instantaneous frequency using continuous wavelet transfer
+        
+        wavelet specified in self.wavelet. See PyWavelets CWT documentation
+        
+        Optimize : bool, optionals
+            Currently placeholder for iteratively determining wavelet scales
+        '''
         
         #wavlist = pywt.wavelist(kind='continuous')
         # w0, wavelet_increment, cwt_scale = self.__get_cwt__()
@@ -698,7 +705,7 @@ class Pixel:
         amplitude = np.zeros(self.n_points)
         
         spectrogram, freq = pywt.cwt(self.signal, self.scales,self.wavelet, sampling_period=dt)
-        #inst_freq, amplitude = parab.ridge_finder(np.abs(spectrogram), 1)
+        inst_freq, amplitude,_ = parab.ridge_finder(np.abs(spectrogram), np.arange(len(freq)))
 
         # rescale to correct frequency 
         inst_freq = pywt.scale2frequency(self.wavelet, inst_freq + self.scales[0]) / dt
@@ -763,7 +770,7 @@ class Pixel:
             
         # Parabolic ridge finder
         if not fit:
-            inst_freq, amplitude = parab.ridge_finder(spectrogram, freq[1]-freq[0])
+            inst_freq, amplitude,_ = parab.ridge_finder(spectrogram, freq)
         
         # slow serial curve fitting
         else:
