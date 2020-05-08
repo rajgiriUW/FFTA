@@ -18,10 +18,11 @@ from ffta.pixel_utils import noise
 from ffta.pixel_utils import parab
 from ffta.pixel_utils import fitting
 from ffta.pixel_utils import dwavelet
+from ffta.pixel_utils.peakdetect import get_peaks
 
 from matplotlib import pyplot as plt
 
-from ffta.pixel_utils.peakdetect import get_peaks
+import pywt
 
 import time
 
@@ -154,20 +155,25 @@ class Pixel:
 
         # Create parameter attributes for optional parameters.
         # These defaults are overwritten by values in 'params'
+        
+        # FIR (Hilbert) filtering parameters
         self.n_taps = 1499
         self.filter_bandwidth = 5000
+        
+        # Wavelet parameters
         self.wavelet_analysis = False
-        self.wavelet_parameter = 5
+        self.wavelet = 'cmor1-1' # default complex Morlet wavelet
+        self.scales = np.arange(100, 2, -1)
+        
+        # Short Time Fourier Transform
         self.fft_analysis = False
         self.fft_cycles = 2
+        self.fft_params = {} # for sliding FFT
+        
         self.recombination = False
         self.phase_fitting = False
-        self.EMD_analysis = False
-        self.restore = True
         self.check_drive = True
         
-        self.fft_params = {} # for sliding FFT
-
         # Assign the fit parameter.
         self.fit = fit
         self.fit_form = fit_form
@@ -225,6 +231,8 @@ class Pixel:
         self.tfp = None
         self.shift = None
         self.cwt_matrix = None
+        
+        self.verbose = False # for console feedback
 
         return
 
@@ -668,120 +676,50 @@ class Pixel:
 
         return
 
-    def __get_cwt__(self, f_center = None, wavelet_increment = 0.01):
-        """
-        Generates the CWT using Morlet wavelet. Returns a 2D Matrix.
+    def calculate_cwt(self, f_center = None, verbose=False):
+        """Continuous wavelet transform method for extracting inst_freq"""
         
-        For computational simplicity, centered around f_center
-        
-        """
+        #wavlist = pywt.wavelist(kind='continuous')
+        # w0, wavelet_increment, cwt_scale = self.__get_cwt__()
 
-        w0 = self.wavelet_parameter
-        
+        # determine if scales will capture the relevant frequency
         if not f_center:
             f_center = self.drive_freq
-
-        cwt_scale = ((w0 + np.sqrt(2 + w0 ** 2)) /
-                     (4 * np.pi * f_center / self.sampling_rate))
-
-        widths = np.arange(cwt_scale * 0.5, cwt_scale * 1.5,
-                           wavelet_increment)
-
-        cwt_matrix = cwavelet.cwt(self.signal, dt=1, scales=widths, p=w0)
-        self.cwt_matrix = np.abs(cwt_matrix)
-
-        return w0, wavelet_increment, cwt_scale
-
-    def calculate_cwt_freq(self):
-        """Conventional ridge-finding spectrogram approach"""
-        w0, wavelet_increment, cwt_scale = self.__get_cwt__()
-
-        _, n_points = np.shape(self.cwt_matrix)
-        inst_freq = np.empty(n_points)
-        amplitude = np.empty(n_points)
-
-        inst_freq, amplitude = parab.ridge_finder(self.cwt_matrix, 1)
-
-        # for i in range(n_points):
-
-        #     cut = self.cwt_matrix[:, i]
-        #     peak = np.min([np.argmax(cut), len(cut)-1])
             
-        #     try:
-        #         inst_freq[i],  amplitude[i] = parab.fit(cut, peak)
-        #     except:
-        #         inst_freq[i] = np.nan
-        #         amplitude[i] = np.nan
+        dt = 1/self.sampling_rate
+        sc = pywt.scale2frequency(self.wavelet, self.scales) / dt
+        if self.verbose:
+            print('Wavelet scale from', np.min(sc),'to', np.max(sc))
+            
+        if f_center < np.min(sc) or f_center > np.max(sc):
+            raise ValueError('Choose a scale that captures frequency of interest')
 
-        # rescale to correct frequency
-        inst_freq = (inst_freq * wavelet_increment + 0.9 * cwt_scale)
-        inst_freq = ((w0 + np.sqrt(2 + w0 ** 2)) /
-                     (4 * np.pi * inst_freq[:] / self.sampling_rate))
+        inst_freq = np.zeros(self.n_points)
+        amplitude = np.zeros(self.n_points)
         
-        self.inst_freq_raw = inst_freq
-        self.inst_freq = inst_freq - inst_freq[self.tidx]
+        spectrogram, freq = pywt.cwt(self.signal, self.scales,self.wavelet, sampling_period=dt)
+        #inst_freq, amplitude = parab.ridge_finder(np.abs(spectrogram), 1)
+
+        # rescale to correct frequency 
+        inst_freq = pywt.scale2frequency(self.wavelet, inst_freq + self.scales[0]) / dt
+        
+        phase = spg.cumtrapz(inst_freq)
+        phase = np.append(phase, phase[-1])
+        tidx = int(self.tidx * len(inst_freq)/self.n_points)
+
         self.amplitude = amplitude
+        self.inst_freq_raw = inst_freq
+        self.inst_freq = inst_freq - inst_freq[tidx]
+        self.spectrogram = np.abs(spectrogram)
 
-        return
+        # subtract the w*t line (drive frequency line) from phase
+        start = int(0.3 * tidx)
+        end = int(0.7 * tidx)
+        xfit = np.polyfit(np.arange(start, end), phase[start:end], 1)
+        phase -= (xfit[0] * np.arange(len(inst_freq))) + xfit[1]
 
-    def EMD_signal(self):
-        """Uses Empirical Mode Decomposition to denoise and analyze the
-        input signal."""
-
-        signal = self.signal
-        imfs = []
-
-        tt = np.arange(0, len(signal), 1)
-
-        x1 = signal
-        sd = 1
-
-        # loop controls how many EMD modes
-        modes = 1
-        for i in range(modes):
-
-            # Continuously adjusts signal until offset within 0.1 f.o.m.
-            while sd > .1:
-                maxpeaks, minpeaks = get_peaks(x1)
-
-                fmax = spi.UnivariateSpline(maxpeaks, x1[maxpeaks], k=3)
-                fmin = spi.UnivariateSpline(minpeaks, x1[minpeaks], k=3)
-                fmax.set_smoothing_factor(0)
-                fmin.set_smoothing_factor(0)
-
-                smean = (fmax(tt) + fmin(tt)) / 2.0
-
-                x2 = x1 - smean
-
-                # figure of merit for EMD decomposition
-                sd = np.sum((x1 - x2) ** 2) / np.sum(x1 ** 2)
-
-                x1 = x2
-
-            imfs.append(x1)
-            signal = signal - x1
-
-        self.signal = imfs[0]
-
-        return
-
-    def EMD_inst_freq(self):
-        """Calculates instantaneous frequency from EMD Mode 0."""
-
-        savgolc = int(self.n_taps)
-
-        self.inst_freq = sps.savgol_filter(self.phase, savgolc, 1, deriv=1,
-                                           delta=1 / self.sampling_rate)
-        self.inst_freq = self.inst_freq / (2 * np.pi) - self.drive_freq
-
-        # Restores length
-        self.inst_freq = np.pad(self.inst_freq, ((savgolc - 1) / 2, 0), 'constant')
-        self.inst_freq = self.inst_freq[:len(self.signal)]
-
-        # Bring trigger to zero.
-        self.tidx = int(self.tidx)
-        self.inst_freq -= self.inst_freq[self.tidx]
-
+        self.phase = phase 
+        
         return
 
     def calculate_stft(self, time_res=20e-6, fit=False, nfft=200):
@@ -938,9 +876,6 @@ class Pixel:
 
         if self.method == 'emd':
 
-            # Calculate signal by Hilbert-Huang transform.
-            self.EMD_signal()
-
             # Get the analytical signal doing a Hilbert transform.
             self.hilbert_transform()
 
@@ -953,7 +888,7 @@ class Pixel:
         elif self.method == 'wavelet':
 
             # Calculate instantenous frequency using wavelet transform.
-            self.calculate_cwt_freq()
+            self.calculate_cwt()
 
         elif self.method == 'fft':
 
@@ -1050,7 +985,7 @@ class Pixel:
 
             # Restore the length.
             
-            if self.restore:
+            if self.method == 'hilbert':
             
                     self.restore_signal()
 
