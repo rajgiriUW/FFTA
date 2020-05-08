@@ -677,7 +677,7 @@ class Pixel:
 
         return
 
-    def calculate_cwt(self, f_center = None, verbose=False, optimize = False):
+    def calculate_cwt(self, f_center = None, verbose=False, optimize = False, fit=False):
         '''
         Calculate instantaneous frequency using continuous wavelet transfer
         
@@ -708,9 +708,26 @@ class Pixel:
             hi = int(1.2 * drive_bin)
             lo = int(0.8 * drive_bin)
             self.scales = np.arange(hi, lo, -0.1)
-
+        
         spectrogram, freq = pywt.cwt(self.signal, self.scales,self.wavelet, sampling_period=dt)
-        inst_freq, amplitude,_ = parab.ridge_finder(np.abs(spectrogram), np.arange(len(freq)))
+        
+        if not fit:
+        
+            inst_freq, amplitude,_ = parab.ridge_finder(np.abs(spectrogram), np.arange(len(freq)))
+        
+        # slow serial curve fitting
+        else:
+            inst_freq = np.zeros(self.n_points)
+            amplitude = np.zeros(self.n_points)
+            for c in range(spectrogram.shape[1]):
+                SIG = spectrogram[:,c]
+                if fit:
+                    pk = np.argmax(np.abs(SIG))
+                    popt = np.polyfit(np.arange(20), 
+                                      np.abs(SIG[pk - 10:pk + 10]), 2)
+                    inst_freq[c] = -0.5 * popt[1] / popt[0]
+                    amplitude[c] = np.abs(SIG)[pk]
+        
 
         # rescale to correct frequency 
         inst_freq = pywt.scale2frequency(self.wavelet, inst_freq + self.scales[0]) / dt
@@ -795,6 +812,7 @@ class Pixel:
         self.inst_freq_raw = inst_freq
         self.inst_freq = inst_freq - inst_freq[tidx]
         self.spectrogram = spectrogram
+        self.stft_freq = freq
 
         # subtract the w*t line (drive frequency line) from phase
         start = int(0.3 * tidx)
