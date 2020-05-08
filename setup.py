@@ -4,7 +4,7 @@ import numpy
 
 setup(
     name='FFTA',
-    version='1.5',
+    version='1.6',
     description='FF-trEFM Analysis Package',
 
     author='Rajiv Giridharagopal',
@@ -20,7 +20,8 @@ setup(
                       'numexpr',
                       'watchdog',
                       'pyUSID>=0.0.8',
-                      'pycroscopy>=0.60'],
+                      'pycroscopy>=0.60',
+		      'pywavelets'],
 
     entry_points={
         'console_scripts': [

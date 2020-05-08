@@ -14,14 +14,17 @@ from scipy import interpolate as spi
 from scipy import integrate as spg
 
 from ffta.pixel_utils import noise
-from ffta.pixel_utils import cwavelet
+# from ffta.pixel_utils import cwavelet
 from ffta.pixel_utils import parab
 from ffta.pixel_utils import fitting
 from ffta.pixel_utils import dwavelet
+from ffta.pixel_utils.peakdetect import get_peaks
 
 from matplotlib import pyplot as plt
 
-from ffta.pixel_utils.peakdetect import get_peaks
+import pywt
+
+import time
 
 
 class Pixel:
@@ -152,20 +155,26 @@ class Pixel:
 
         # Create parameter attributes for optional parameters.
         # These defaults are overwritten by values in 'params'
+        
+        # FIR (Hilbert) filtering parameters
         self.n_taps = 1499
         self.filter_bandwidth = 5000
+        
+        # Wavelet parameters
         self.wavelet_analysis = False
-        self.wavelet_parameter = 5
+        self.wavelet = 'cmor1-1' # default complex Morlet wavelet
+        self.scales = np.arange(100, 2, -1)
+        self.wavelet_params = {} # currently just optimize flag is supported
+        
+        # Short Time Fourier Transform
         self.fft_analysis = False
         self.fft_cycles = 2
+        self.fft_params = {} # for sliding FFT
+        
         self.recombination = False
         self.phase_fitting = False
-        self.EMD_analysis = False
-        self.restore = True
         self.check_drive = True
         
-        self.fft_params = {} # for sliding FFT
-
         # Assign the fit parameter.
         self.fit = fit
         self.fit_form = fit_form
@@ -223,6 +232,8 @@ class Pixel:
         self.tfp = None
         self.shift = None
         self.cwt_matrix = None
+        
+        self.verbose = False # for console feedback
 
         return
 
@@ -666,113 +677,82 @@ class Pixel:
 
         return
 
-    def __get_cwt__(self):
-        """Generates the CWT using Morlet wavelet. Returns a 2D Matrix."""
+    def calculate_cwt(self, f_center = None, verbose=False, optimize = False, fit=False):
+        '''
+        Calculate instantaneous frequency using continuous wavelet transfer
+        
+        wavelet specified in self.wavelet. See PyWavelets CWT documentation
+        
+        Optimize : bool, optionals
+            Currently placeholder for iteratively determining wavelet scales
+        '''
+        
+        #wavlist = pywt.wavelist(kind='continuous')
+        # w0, wavelet_increment, cwt_scale = self.__get_cwt__()
 
-        w0 = self.wavelet_parameter
-        wavelet_increment = 0.01  # Reducing this has little benefit.
-
-        cwt_scale = ((w0 + np.sqrt(2 + w0 ** 2)) /
-                     (4 * np.pi * self.drive_freq / self.sampling_rate))
-
-        widths = np.arange(cwt_scale * 0.5, cwt_scale * 1.5,
-                           wavelet_increment)
-
-        cwt_matrix = cwavelet.cwt(self.signal, dt=1, scales=widths, p=w0)
-        self.cwt_matrix = np.abs(cwt_matrix)
-
-        return w0, wavelet_increment, cwt_scale
-
-    def calculate_cwt_freq(self):
-        """Conventional ridge-finding spectrogram approach"""
-        w0, wavelet_increment, cwt_scale = self.__get_cwt__()
-
-        _, n_points = np.shape(self.cwt_matrix)
-        inst_freq = np.empty(n_points)
-        amplitude = np.empty(n_points)
-
-        for i in range(n_points):
-
-            cut = self.cwt_matrix[:, i]
-            peak = np.min([np.argmax(cut), len(cut)-1])
+        # determine if scales will capture the relevant frequency
+        if not f_center:
+            f_center = self.drive_freq
             
-            try:
-                inst_freq[i],  amplitude[i] = parab.fit(cut, peak)
-            except:
-                inst_freq[i] = np.nan
-                amplitude[i] = np.nan
+        dt = 1/self.sampling_rate
+        sc = pywt.scale2frequency(self.wavelet, self.scales) / dt
+        if self.verbose:
+            print('Wavelet scale from', np.min(sc),'to', np.max(sc))
+            
+        if f_center < np.min(sc) or f_center > np.max(sc):
+            raise ValueError('Choose a scale that captures frequency of interest')
 
-        # rescale to correct frequency
-        inst_freq = (inst_freq * wavelet_increment + 0.9 * cwt_scale)
-        inst_freq = ((w0 + np.sqrt(2 + w0 ** 2)) /
-                     (4 * np.pi * inst_freq[:] / self.sampling_rate))
-        self.inst_freq_raw = inst_freq
-        self.inst_freq = inst_freq - inst_freq[self.tidx]
+        if optimize:
+            print('!')
+            drive_bin = self.scales[np.searchsorted(sc, f_center)]
+            hi = int(1.2 * drive_bin)
+            lo = int(0.8 * drive_bin)
+            self.scales = np.arange(hi, lo, -0.1)
+        
+        spectrogram, freq = pywt.cwt(self.signal, self.scales,self.wavelet, sampling_period=dt)
+        
+        if not fit:
+        
+            inst_freq, amplitude,_ = parab.ridge_finder(np.abs(spectrogram), np.arange(len(freq)))
+        
+        # slow serial curve fitting
+        else:
+            inst_freq = np.zeros(self.n_points)
+            amplitude = np.zeros(self.n_points)
+            for c in range(spectrogram.shape[1]):
+                SIG = spectrogram[:,c]
+                if fit:
+                    pk = np.argmax(np.abs(SIG))
+                    popt = np.polyfit(np.arange(20), 
+                                      np.abs(SIG[pk - 10:pk + 10]), 2)
+                    inst_freq[c] = -0.5 * popt[1] / popt[0]
+                    amplitude[c] = np.abs(SIG)[pk]
+        
+
+        # rescale to correct frequency 
+        inst_freq = pywt.scale2frequency(self.wavelet, inst_freq + self.scales[0]) / dt
+        
+        phase = spg.cumtrapz(inst_freq)
+        phase = np.append(phase, phase[-1])
+        tidx = int(self.tidx * len(inst_freq)/self.n_points)
+
         self.amplitude = amplitude
+        self.inst_freq_raw = inst_freq
+        self.inst_freq = inst_freq - inst_freq[tidx]
+        self.spectrogram = np.abs(spectrogram)
+        self.wavelet_freq = freq # the wavelet frequencies
 
+        # subtract the w*t line (drive frequency line) from phase
+        start = int(0.3 * tidx)
+        end = int(0.7 * tidx)
+        xfit = np.polyfit(np.arange(start, end), phase[start:end], 1)
+        phase -= (xfit[0] * np.arange(len(inst_freq))) + xfit[1]
+
+        self.phase = phase 
+        
         return
 
-    def EMD_signal(self):
-        """Uses Empirical Mode Decomposition to denoise and analyze the
-        input signal."""
-
-        signal = self.signal
-        imfs = []
-
-        tt = np.arange(0, len(signal), 1)
-
-        x1 = signal
-        sd = 1
-
-        # loop controls how many EMD modes
-        modes = 1
-        for i in range(modes):
-
-            # Continuously adjusts signal until offset within 0.1 f.o.m.
-            while sd > .1:
-                maxpeaks, minpeaks = get_peaks(x1)
-
-                fmax = spi.UnivariateSpline(maxpeaks, x1[maxpeaks], k=3)
-                fmin = spi.UnivariateSpline(minpeaks, x1[minpeaks], k=3)
-                fmax.set_smoothing_factor(0)
-                fmin.set_smoothing_factor(0)
-
-                smean = (fmax(tt) + fmin(tt)) / 2.0
-
-                x2 = x1 - smean
-
-                # figure of merit for EMD decomposition
-                sd = np.sum((x1 - x2) ** 2) / np.sum(x1 ** 2)
-
-                x1 = x2
-
-            imfs.append(x1)
-            signal = signal - x1
-
-        self.signal = imfs[0]
-
-        return
-
-    def EMD_inst_freq(self):
-        """Calculates instantaneous frequency from EMD Mode 0."""
-
-        savgolc = int(self.n_taps)
-
-        self.inst_freq = sps.savgol_filter(self.phase, savgolc, 1, deriv=1,
-                                           delta=1 / self.sampling_rate)
-        self.inst_freq = self.inst_freq / (2 * np.pi) - self.drive_freq
-
-        # Restores length
-        self.inst_freq = np.pad(self.inst_freq, ((savgolc - 1) / 2, 0), 'constant')
-        self.inst_freq = self.inst_freq[:len(self.signal)]
-
-        # Bring trigger to zero.
-        self.tidx = int(self.tidx)
-        self.inst_freq -= self.inst_freq[self.tidx]
-
-        return
-
-    def sliding_fft(self, time_res=20e-6, decimate=False, fit=False):
+    def calculate_stft(self, time_res=20e-6, fit=False, nfft=200):
         '''
         Sliding FFT approach
         -Take self.fft_cycles number of cycles of data
@@ -792,49 +772,38 @@ class Pixel:
         fit : bool, optional
             Fits a parabola to the frequency peak to get the actual frequency
             Otherwise defaults to parabolic interpolation (see parab.fit)
+        
+        nfft : int
+            Length of FFT calculated in the spectrogram. More points gets much slower
+            but the longer the FFT the finer the frequency bin spacing            
         '''
 
         pts_per_ncycle = int(time_res * self.sampling_rate)
-        win = sps.windows.get_window('blackman', pts_per_ncycle)
-
-        if not decimate:
             
-            num_ncycles = self.n_points
-            excess = win.shape[0]
-            increment = 1
+        #drivebin = int(self.drive_freq / (self.sampling_rate / nfft ))
+        freq, times, spectrogram = sps.spectrogram(self.signal,
+                                                   self.sampling_rate,
+                                                   nperseg = pts_per_ncycle,
+                                                   noverlap = pts_per_ncycle-1,
+                                                   nfft = nfft,
+                                                   window=self.window,
+                                                   mode='magnitude')
             
+        # Parabolic ridge finder
+        if not fit:
+            inst_freq, amplitude,_ = parab.ridge_finder(spectrogram, freq)
+        
+        # slow serial curve fitting
         else:
-            # fast but low resolution
-            num_ncycles = int(self.n_points / pts_per_ncycle)
-            excess = 0
-            increment = pts_per_ncycle
-
-        inst_freq = np.zeros(num_ncycles)
-        amplitude = np.zeros(num_ncycles)
-        spectrogram = np.empty((int(self.n_points * 0.5), self.n_points), dtype=complex)
             
-        freq = np.linspace(0, self.sampling_rate, self.n_points)
-
-        for c in range(num_ncycles-excess):
-            sig = self.signal_array[c*increment:c*increment + pts_per_ncycle]
-            sig = sig * win
-
-            SIG = np.fft.fft(sig, n=self.n_points)[:int(self.n_points * 0.5)]
-            spectrogram[:,c] = SIG
-            pk = np.argmax(np.abs(SIG))
-            
-            if fit:
-                popt = np.polyfit(freq[pk - 10:pk + 10], np.abs(SIG[pk - 10:pk + 10]), 2)
-                fq = -0.5 * popt[1] / popt[0]
-                amplitude[c] = np.abs(SIG)[pk]
-            else:
-                fq, amplitude[c] = parab.fit_new(SIG, freq)
-
-            inst_freq[c] = fq
- 
-        inst_freq[num_ncycles-excess:] = np.nan
-        amplitude[num_ncycles-excess:] = np.nan
-            
+            for c in range(spectrogram.shape[1]):
+                SIG = spectrogram[:,c]
+                if fit:
+                    pk = np.argmax(np.abs(SIG))
+                    popt = np.polyfit(freq[pk - 2:pk + 2], np.abs(SIG[pk - 2:pk + 2]), 2)
+                    inst_freq[c] = -0.5 * popt[1] / popt[0]
+                    amplitude[c] = np.abs(SIG)[pk]
+    
         phase = spg.cumtrapz(inst_freq)
         phase = np.append(phase, phase[-1])
         tidx = int(self.tidx * len(inst_freq)/self.n_points)
@@ -843,11 +812,11 @@ class Pixel:
         self.inst_freq_raw = inst_freq
         self.inst_freq = inst_freq - inst_freq[tidx]
         self.spectrogram = spectrogram
-
-        start = int(0.3 * tidx)
-        end = int(0.7 * tidx)
+        self.stft_freq = freq
 
         # subtract the w*t line (drive frequency line) from phase
+        start = int(0.3 * tidx)
+        end = int(0.7 * tidx)
         xfit = np.polyfit(np.arange(start, end), phase[start:end], 1)
         phase -= (xfit[0] * np.arange(len(inst_freq))) + xfit[1]
 
@@ -932,13 +901,9 @@ class Pixel:
         # self.dwt_denoise()
 
         if timing:
-            import time 
             t1 = time.time()
 
         if self.method == 'emd':
-
-            # Calculate signal by Hilbert-Huang transform.
-            self.EMD_signal()
 
             # Get the analytical signal doing a Hilbert transform.
             self.hilbert_transform()
@@ -952,12 +917,12 @@ class Pixel:
         elif self.method == 'wavelet':
 
             # Calculate instantenous frequency using wavelet transform.
-            self.calculate_cwt_freq()
+            self.calculate_cwt(**self.wavelet_params)
 
         elif self.method == 'fft':
 
             # Calculate instantenous frequency using sliding FFT
-            self.sliding_fft(**self.fft_params)
+            self.calculate_stft(**self.fft_params)
 
         elif self.method == 'hilbert':
             # Hilbert transform method
@@ -1049,7 +1014,7 @@ class Pixel:
 
             # Restore the length.
             
-            if self.restore:
+            if self.method == 'hilbert':
             
                     self.restore_signal()
 
