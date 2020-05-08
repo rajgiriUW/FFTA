@@ -125,15 +125,15 @@ class GKPixel:
         #        tx = np.arange(0,self.total_time, self.total_time/len(self.signal_array))
         #        tx_cycle = np.arange(0, self.total_time, self.ncycles * self.total_time/len(self.signal_array))
 
-        pnts_per_CPD = self.num_CPD
+        num_CPD = self.num_CPD
         pnts = self.pnts_per_CPD
         remainder = self.remainder
         
-        tx = np.linspace(0, pnts_per_CPD / self.sampling_rate, pnts_per_CPD)
+        tx = np.linspace(0, num_CPD / self.sampling_rate, num_CPD)
         
-        test_wH = np.zeros((pnts_per_CPD, deg+1))
+        test_wH = np.zeros((num_CPD, deg+1))
         
-        for p in range(pnts_per_CPD-min(1,remainder)):
+        for p in range(num_CPD-min(1,remainder)):
 
             resp_x = np.float32(self.signal_array[pnts*p:pnts*(p+1)])
             resp_x -= np.mean(resp_x)
@@ -142,17 +142,17 @@ class GKPixel:
             #V_per_osc = excitation[:decimation] # testing single fit
                     
             popt, _ = npPoly.polyfit(V_per_osc, resp_x, deg, full=True)
-            test_wH[p] = popt
+            test_wH[p] = popt.flatten()
        
         if remainder > 0:
-            resp_x = np.float32(self.signal_array[(pnts_per_CPD-1)*pnts:])
+            resp_x = np.float32(self.signal_array[(num_CPD-1)*pnts:])
             resp_x -= np.mean(resp_x)
             
-            V_per_osc = self.exc_wfm[(pnts_per_CPD-1)*pnts:]
+            V_per_osc = self.exc_wfm[(num_CPD-1)*pnts:]
     
             popt, _ = npPoly.polyfit(V_per_osc, resp_x, deg, full=True)
             
-            test_wH[-1,:] = popt
+            test_wH[-1,:] = popt.flatten()
        
         self.test_wH = test_wH
         self.CPD =  -0.5 * test_wH[:,1]/test_wH[:,2]
