@@ -128,9 +128,8 @@ class GKPixel:
         num_CPD = self.num_CPD
         pnts = self.pnts_per_CPD
         remainder = self.remainder
-        
-        tx = np.linspace(0, num_CPD / self.sampling_rate, num_CPD)
-        
+
+        self.t_ax_wH = np.linspace(0, self.periods*self.time_per_osc*self.num_CPD, num_CPD) #time ax for CPD/capacitance
         test_wH = np.zeros((num_CPD, deg+1))
         
         for p in range(num_CPD-min(1,remainder)):
