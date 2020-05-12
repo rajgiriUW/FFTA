@@ -6,6 +6,7 @@ Created on Tue Sep  3 11:55:14 2019
 """
 
 import numpy as np
+import pandas as pd
 import numpy.polynomial.polynomial as npPoly
 from scipy.optimize import fmin_tnc
 
@@ -127,12 +128,11 @@ class GKPixel:
 
         num_CPD = self.num_CPD
         pnts = self.pnts_per_CPD
-        remainder = self.remainder
 
         self.t_ax_wH = np.linspace(0, self.periods*self.time_per_osc*self.num_CPD, num_CPD) #time ax for CPD/capacitance
         test_wH = np.zeros((num_CPD, deg+1))
         
-        for p in range(num_CPD-min(1,remainder)):
+        for p in range(num_CPD):
 
             resp_x = np.float32(self.signal_array[pnts*p:pnts*(p+1)])
             resp_x -= np.mean(resp_x)
@@ -143,19 +143,9 @@ class GKPixel:
             popt, _ = npPoly.polyfit(V_per_osc, resp_x, deg, full=True)
             test_wH[p] = popt.flatten()
        
-        if remainder > 0:
-            resp_x = np.float32(self.signal_array[(num_CPD-1)*pnts:])
-            resp_x -= np.mean(resp_x)
-            
-            V_per_osc = self.exc_wfm[(num_CPD-1)*pnts:]
-    
-            popt, _ = npPoly.polyfit(V_per_osc, resp_x, deg, full=True)
-            
-            test_wH[-1,:] = popt.flatten()
-       
         self.test_wH = test_wH
         self.CPD =  -0.5 * test_wH[:,1]/test_wH[:,2]
-        self.capacitance = test_wH[:,0]
+        self.capacitance = test_wH[:,2]
 
         return 
 
