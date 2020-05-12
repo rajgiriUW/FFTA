@@ -35,6 +35,10 @@ def simulation_configuration(path):
         es_force = float (in N)
         delta_freq = float (in Hz)
         tau = float (in seconds)
+        v_dc = float (in V)
+        v_ac = float (in V)
+        v_cpd = float (in V)
+        dcdz = float (in F/m)
 
     sim_params : dict
         Parameters for simulation. The dictionary contains:

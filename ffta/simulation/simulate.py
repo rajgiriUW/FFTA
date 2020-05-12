@@ -283,6 +283,7 @@ class Cantilever(object):
         Z0 : list, optional
             Z0 = [z0, v0], the initial position and velocity
             If not specified, is calculated from the analytical solution to DDHO
+            (using "set_conditions")
         Returns
         -------
         Z : (n_points, 1) array_like
