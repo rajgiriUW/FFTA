@@ -53,6 +53,10 @@ class Cantilever:
         If True (default), uses AC voltage drive. Requires that force_params
         contain v_dc, v_ac, v_cpd, and dCdz
 
+    v_array : ndarray, optional
+        If supplied and elec_drive is True, supplies the time-dependent voltage to v_cpd
+        v_array must be the exact length and sampling of the desired signal
+
     Attributes
     ----------
     amp : float
@@ -88,7 +92,7 @@ class Cantilever:
 
     """
 
-    def __init__(self, can_params, force_params, sim_params, elec_drive=False, v_dc_step = 0):
+    def __init__(self, can_params, force_params, sim_params, elec_drive=False, v_array=[]):
 
         # Initialize cantilever parameters and calculate some others.
         for key, value in can_params.items():
@@ -130,8 +134,18 @@ class Cantilever:
 
         self.elec_drive = elec_drive
         
-        self.v_dc_step = v_dc_step
-        
+        # Did user supply a voltage pulse themselves (Electrical drive only)
+        self.use_varray = False
+        if any(v_array):
+            if len(v_array) != num_pts:
+                raise ValueError('v_array must match sampling rate/length of parameters')
+            else:
+                self.use_varray = True
+                self.v_array = v_array
+        else:
+            if not hasattr(self, 'v_step'):
+                raise AttributeError('Missing v_step in parms file')
+                
         return
 
     def set_conditions(self, trigger_phase=180):
@@ -234,7 +248,7 @@ class Cantilever:
         
         if t > t0:
             
-            return self.v_dc_step
+            return self.v_step
         
         else:
             
@@ -262,7 +276,17 @@ class Cantilever:
         """
         if self.elec_drive:
             
-            driving_force = 0.5 * self.dCdz/self.mass * ((self.dc_step(t, t0) - self.v_cpd) \
+            if self.use_varray:
+                
+                p = int(t * self.sampling_rate)
+                try:
+                    driving_force = 0.5 * self.dCdz/self.mass * ((self.v_array[p] - self.v_cpd) \
+                                                             + self.v_ac * np.sin(self.wd * t))**2
+                except:
+                    driving_force = 0.5 * self.dCdz/self.mass * ((self.v_array[-1] - self.v_cpd) \
+                                                             + self.v_ac * np.sin(self.wd * t))**2
+            else:
+                driving_force = 0.5 * self.dCdz/self.mass * ((self.dc_step(t, t0) - self.v_cpd) \
                                                              + self.v_ac * np.sin(self.wd * t))**2
             
             return driving_force
@@ -325,8 +349,6 @@ class Cantilever:
 
         """
         
-        self.set_conditions(trigger_phase) # sets up other parameters (t, t0)
-        
         if Z0:
             
             if not isinstance(Z0, (np.ndarray, list)):
@@ -334,8 +356,14 @@ class Cantilever:
             if len(Z0) != 2:
                 raise ValueError('Must specify exactly [z0, v0]')
             
+            self.n_points = int(self.total_time * 1e8)
+            self.t = np.arange(self.n_points) / 1e8
+            self.t0 = self.trigger 
             self.Z0 = Z0
-            
+        
+        else:
+            self.set_conditions(trigger_phase) 
+        
         Z, infodict = odeint(self.dZ_dt, self.Z0, self.t, full_output=True)
 
         t0_idx = int(self.t0 * 1e8)

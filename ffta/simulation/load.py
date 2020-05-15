@@ -60,7 +60,7 @@ def simulation_configuration(path):
     can_keys = ['amp_invols', 'def_invols', 'soft_amp', 'drive_freq',
                 'res_freq', 'k', 'q_factor']
     force_keys = ['es_force', 'ac_force', 'dc_force', 'delta_freq', 'tau',
-                  'v_dc', 'v_ac', 'v_cpd', 'dCdz']
+                  'v_dc', 'v_ac', 'v_cpd', 'dCdz', 'v_step']
     sim_keys = ['trigger', 'total_time', 'sampling_rate']
     
     for key in can_keys:
