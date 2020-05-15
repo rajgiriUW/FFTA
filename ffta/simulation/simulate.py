@@ -13,7 +13,7 @@ from scipy.integrate import odeint
 PI2 = 2 * np.pi
 
 
-class Cantilever(object):
+class Cantilever:
     """Damped Driven Harmonic Oscillator Simulator for AFM Cantilevers.
 
     Simulates a DDHO under excitation with given parameters.
@@ -37,6 +37,10 @@ class Cantilever(object):
         es_force = float (in N)
         delta_freq = float (in Hz)
         tau = float (in seconds)
+        v_dc = float (in Volts)
+        v_ac = float (in Volts)
+        v_cpd = float (in Volts)
+        dCdz = float (in F/m)
 
     sim_params : dict
         Parameters for simulation. The dictionary contains:
@@ -44,6 +48,10 @@ class Cantilever(object):
         trigger = float (in seconds)
         total_time = float (in seconds)
         sampling_rate = int (in Hz)
+
+    elec_drive : bool, optional 
+        If True (default), uses AC voltage drive. Requires that force_params
+        contain v_dc, v_ac, v_cpd, and dCdz
 
     Attributes
     ----------
@@ -80,7 +88,7 @@ class Cantilever(object):
 
     """
 
-    def __init__(self, can_params, force_params, sim_params):
+    def __init__(self, can_params, force_params, sim_params, elec_drive=False, v_dc_step = 0):
 
         # Initialize cantilever parameters and calculate some others.
         for key, value in can_params.items():
@@ -120,6 +128,10 @@ class Cantilever(object):
         # Calculate frequency axis for simulated tip_motion without extra cycles.
         self.freq_Z = np.linspace(0, int(self.sampling_rate/2), num=int(num_pts/2 + 1))
 
+        self.elec_drive = elec_drive
+        
+        self.v_dc_step = v_dc_step
+        
         return
 
     def set_conditions(self, trigger_phase=180):
@@ -208,6 +220,26 @@ class Cantilever(object):
 
         return self.w0 + self.delta_w * self.__gamma__(t, t0, tau)
 
+    def dc_step(self, t, t0):
+        """
+        Adds a DC step at the trigger point for electrical drive simulation
+        
+        Parameters
+        ----------
+        t : float
+            Time in seconds.
+        t0: float
+            Event time in seconds.
+        """
+        
+        if t > t0:
+            
+            return self.v_dc_step
+        
+        else:
+            
+            return self.v_dc
+
     def force(self, t, t0, tau):
         """
         Force on the cantilever at a given time. It contains driving force and
@@ -228,14 +260,14 @@ class Cantilever(object):
             Force on the cantilever at a given time, in N/kg.
 
         """
-        try:
+        if self.elec_drive:
             
-            driving_force = 0.5 * self.dCdz/self.mass * ((self.v_dc - self.v_cpd) \
-                                               + self.v_ac * np.sin(self.wd * t))**2
+            driving_force = 0.5 * self.dCdz/self.mass * ((self.dc_step(t, t0) - self.v_cpd) \
+                                                             + self.v_ac * np.sin(self.wd * t))**2
             
             return driving_force
         
-        except AttributeError:
+        else:
             
             driving_force = self.f0 * np.sin(self.wd * t)
             electro_force = self.fe * self.__gamma__(t, t0, tau)
