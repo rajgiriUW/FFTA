@@ -31,8 +31,13 @@ import sphinx_rtd_theme
 
 extensions = [
     
-    'sphinx_rtd_theme', 'sphinx.ext.autodoc'
+    'sphinx_rtd_theme', 'sphinx.ext.autodoc', 'sphinx_gallery.gen_gallery',
 ]
+
+sphinx_gallery_conf = {
+     'examples_dirs':'examples',   # path to your example scripts
+     'gallery_dirs': 'auto_examples',  # path to where to save gallery generated output
+}
 
 html_theme = 'sphinx_rtd_theme'
 
