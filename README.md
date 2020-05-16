@@ -1,7 +1,5 @@
 # Fast-Free Time-Resolved Electrostatic Force Microscopy (FF-trEFM)
-A package for processing time-dependent frequency response information in electostatic force microscopy.
-
-This package is currently focused on the Pycroscopy branch. Using this branch requires installation of [Pycroscopy](https://pycroscopy.github.io/pycroscopy/about.html) and [PyUSID](https://pycroscopy.github.io/USID/index.html). Updates will likely continue operating on data in this pycroscopy model, but this is backwards compatible with existing data.
+A package for processing time-dependent frequency response information in atomic force microscopy data. This package is primarily geared towards electrostatic force microscopy, with the resulting output being the amplitude, phase, and instantaneous frequency as a function of time and position.
 
 ### For further information and discussion, primary point-of-contact:
 ```
@@ -17,12 +15,13 @@ E-mail: rgiri@uw.edu
 ```
 
 ### Overview
-Extracts Instantaneous frequency from  Time-Resolved Electrostatic Force Microscopy (FF-trEFM) data[1-4]. This package also returns time-to-first frequency peak (tFP) and phase from atomic force microscopy. The use case is if your experiment records AFM deflection data and you wish to reconstruct the instantaneous frequency vs time.
+FFTA extracts Instantaneous frequency from  Time-Resolved Electrostatic Force Microscopy (FF-trEFM) data[1-4]. This package also returns time-to-first frequency peak (tFP) and phase from atomic force microscopy. The use case is if your experiment records AFM deflection data and you wish to reconstruct the instantaneous frequency vs time.
 
 This includes a few types of frequency analysis:
 * Hilbert Transform (primary use case) 
 * Wavelet Transform (Morlet wavelet)
 * Short-time Fourier Transform
+* General Mode KPFM (G-KPFM)
 
 ### References
 1. Giridharagopal R, Rayermann GE, Shao G, et al. Submicrosecond time resolution atomic force microscopy for probing nanoscale dynamics. *Nano Lett.* **12,** 893-8 (2012). [DOI: 10.1021/nl203956q](http://dx.doi.org/10.1021/nl203956q)
@@ -31,11 +30,9 @@ This includes a few types of frequency analysis:
 4. Ginger DS, Giridharagopal R, Moore DT, Rayermann GE, Reid OG. Sub-microsecond-resolution probe microscopy. US Patent [US8686358B2](https://patents.google.com/patent/US8686358)
 
 ## Getting Started 
-------------------
 The Jupyter notebook in this repository "FFtrEFM Basic Processing" is good at walking through the basic commands.
 
 #### Setup the repository
-
 Currently, there's no automated way to do this because it's not packaged. So download the source, then unzip somewhere. Then, in whichever command prompt you like:
 ```
 python setup.py
