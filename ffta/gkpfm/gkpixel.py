@@ -111,13 +111,12 @@ class GKPixel:
         
         return
 
-    def analyze(self, verbose=False, fft=False, fast=False, deg = 2):
+    def analyze(self, verbose=False, deg = 2):
         """
         Extracts CPD and capacitance gradient from data.
         Parameters:
             verbose: bool
-            fft: bool
-            fast: bool
+
             deg: int
                 Degree of polynomial fit. Default is 2, which is a quadratic fit.
         """

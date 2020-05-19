@@ -1,31 +1,29 @@
 from setuptools import setup, find_packages
 
-import numpy
-
 setup(
     name='FFTA',
-    version='1.6',
-    description='FF-trEFM Analysis Package',
+    version='0.1',
+    description='Fast Free Transient Analysis',
 
     author='Rajiv Giridharagopal',
     author_email='rgiri@uw.edu',
     license='MIT',
 
-    packages=find_packages(exclude=['xop', 'docs', 'data']),
+    packages=find_packages(exclude=['xop', 'docs', 'data', 'notebooks']),
 
-    install_requires=['numpy>=1.9.2',
-                      'scipy>=0.15.1',
-                      'igor>=0.2',
-                      'pywavelets>=0.3.0',
-                      'numexpr',
-                      'watchdog',
+    install_requires=['numpy>=1.18.1',
+                      'scipy>=1.4.1',
+                      'igor>=0.3',
+                      'numexpr>=2.7.1',
+                      'watchdog>=0.10.2',
                       'pyUSID>=0.0.8',
                       'pycroscopy>=0.60',
-		      'pywavelets'],
+                      'pywavelets>=1.1.1'],
 
     entry_points={
         'console_scripts': [
             'ffta-analyze = ffta.analyze:main',
         ],
     },
+
 )
