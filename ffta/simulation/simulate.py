@@ -9,6 +9,8 @@ __status__ = "Production"
 import numpy as np
 from scipy.integrate import odeint
 
+import ffta 
+
 # Set constant 2 * pi.
 PI2 = 2 * np.pi
 
@@ -82,13 +84,15 @@ class Cantilever:
 
     Examples
     --------
-    >>> from ffta import simulate, utils
+    >>> from ffta.simulation import simulate, load
     >>>
     >>> params_file = '../examples/sim_params.cfg'
-    >>> params = utils.load.configuration(params_file)
+    >>> params = load.simulation_configuration(params_file)
     >>>
     >>> c = simulate.Cantilever(*params)
     >>> Z, infodict = c.simulate()
+    >>> c.analyze(Z)
+    >>> c.analyze(roi=0.004) # can change the parameters as desired
 
     """
 
@@ -137,15 +141,27 @@ class Cantilever:
         # Did user supply a voltage pulse themselves (Electrical drive only)
         self.use_varray = False
         if any(v_array):
+
             if len(v_array) != num_pts:
+
                 raise ValueError('v_array must match sampling rate/length of parameters')
+
             else:
+
                 self.use_varray = True
                 self.v_array = v_array
-        else:
-            if not hasattr(self, 'v_step'):
-                raise AttributeError('Missing v_step in parms file')
-                
+        
+        # create a Pixel class-compatible params file
+        
+        self.can_params = {}
+        self.fit_params = {}
+        self.parameters = {}
+        self.parameters.update(**force_params)
+        self.parameters.update(**sim_params)
+        self.can_params.update(**can_params)
+        
+        self.create_parameters(self.parameters, self.can_params)
+        
         return
 
     def set_conditions(self, trigger_phase=180):
@@ -276,6 +292,7 @@ class Cantilever:
         """
         if self.elec_drive:
             
+            # explicitly define voltage at each time step
             if self.use_varray:
                 
                 p = int(t * self.sampling_rate)
@@ -291,7 +308,8 @@ class Cantilever:
             
             return driving_force
         
-        else:
+        #mechanical driving
+        else: 
             
             driving_force = self.f0 * np.sin(self.wd * t)
             electro_force = self.fe * self.__gamma__(t, t0, tau)
@@ -377,3 +395,117 @@ class Cantilever:
         self.infodict = infodict
 
         return self.Z, self.infodict
+
+    def create_parameters(self, params={}, can_params={}, fit_params={}):
+        '''
+        Creates a Pixel class-compatible parameters and cantilever parameters Dict
+        
+        Parameters
+        ----------
+        params : dict, optional
+            Contains analysis parameters for the Pixel cass
+        
+        can_params : dict, optional
+            Contains cantilever parameters for the Pixel class. These data are
+            optional for the analysis.
+        
+        fit_params : dict, optional
+            Contains various parameters for fitting and analysis. See Pixel class.
+        '''
+        
+        # default seeding of parameters
+        _parameters = {'bandpass_filter': 1.0,
+                       'drive_freq': 277261,
+                       'filter_bandwidth': 10000.0,
+                       'n_taps': 799,
+                       'roi': 0.0003,
+                       'sampling_rate': 1e7,
+                       'total_time': 0.002,
+                       'trigger': 0.0005,
+                       'window': 'blackman',
+                       'wavelet_analysis': 0}
+        
+        _can_params = {'amp_invols' : 5.52e-08,
+                       'def_invols' : 5.06e-08, 
+                       'k' : 26.2,
+                       'q_factor' : 432}     
+     
+        _fit_params = {'filter_amplitude': True,
+                       'method': 'hilbert',
+                       'fit': True,
+                       'fit_form': 'product'}
+     
+        for key, val in _parameters.items():
+            if key not in params:
+                if hasattr(self, key):
+                    params[key] = self.__dict__[key]
+                else:
+                    params[key] = val
+        
+        for key, val in _can_params.items():
+            if key not in can_params:
+                if hasattr(self, key):
+                    can_params[key] = self.__dict__[key]
+                else:
+                    can_params[key] = val
+        
+        for key, val in _fit_params.items():
+            if key not in fit_params:
+                if hasattr(self, key):
+                    fit_params[key] = self.__dict__[key]
+                else:
+                    fit_params[key] = val
+        
+        # then write to the Class
+        self.parameters.update(**params)
+        self.can_params.update(**can_params)
+        self.fit_params.update(**fit_params)
+        
+        return 
+    
+    def analyze(self, plot=True, **kwargs):
+        '''
+        Converts output to a Pixel class and analyzes
+        
+        Parameters
+        ----------
+        plot : bool, optional
+            If True, calls Pixel.plot() to display the results
+        
+
+        Returns
+        -------
+        None.
+
+        '''
+        param_keys = ['bandpass_filter', 'drive_freq', 'filter_bandwidth', 'n_taps',
+                       'roi', 'sampling_rate', 'total_time', 'trigger', 'window', 'wavelet_analysis']
+        
+        can_param_keys = ['amp_invols','def_invols', 'k', 'q_factor']
+        
+        fit_param_keys = ['filter_amplitude', 'method', 'fit', 'fit_form']
+        
+        params = {}
+        can_params = {}
+        fit_params = {}
+        
+        for k, v in kwargs.items():
+            if k in param_keys:
+                params[k] = v
+            elif k in can_param_keys:
+                can_params[k] = v
+            elif k in fit_param_keys:
+                fit_params[k] = v
+        
+        self.create_parameters(params, can_params, fit_params)
+        
+        pix = ffta.pixel.Pixel(self.Z, self.parameters, self.can_params, **self.fit_params)
+
+        pix.analyze()        
+        
+        if plot:
+            
+            pix.plot()
+        
+        return
+        

@@ -1,7 +1,7 @@
 """pixel.py: Contains pixel class."""
 # pylint: disable=E1101,R0902,C0103
 __author__ = "Rajiv Giridharagopal"
-__copyright__ = "Copyright 2020, Ginger Lab"
+__copyright__ = "Copyright 2020"
 __maintainer__ = "Rajiv Giridharagopal"
 __email__ = "rgiri@uw.edu"
 __status__ = "Development"
@@ -14,11 +14,9 @@ from scipy import interpolate as spi
 from scipy import integrate as spg
 
 from ffta.pixel_utils import noise
-# from ffta.pixel_utils import cwavelet
 from ffta.pixel_utils import parab
 from ffta.pixel_utils import fitting
 from ffta.pixel_utils import dwavelet
-from ffta.pixel_utils.peakdetect import get_peaks
 
 from matplotlib import pyplot as plt
 
@@ -151,7 +149,7 @@ class Pixel:
 
     def __init__(self, signal_array, params, can_params={},
                  fit=True, pycroscopy=False, 
-                 method='hilbert', fit_form='product', filter_amp=False):
+                 method='hilbert', fit_form='product', filter_amplitude=False):
 
         # Create parameter attributes for optional parameters.
         # These defaults are overwritten by values in 'params'
@@ -179,7 +177,7 @@ class Pixel:
         self.fit = fit
         self.fit_form = fit_form
         self.method = method
-        self.filter_amp = filter_amp
+        self.filter_amp = filter_amplitude
         
         # Default Cantilever parameters, plugging in some reasonable defaults
         self.AMPINVOLS = 122e-9 
@@ -192,12 +190,12 @@ class Pixel:
         
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
+            
             setattr(self, key, value)
         
         for key, value in can_params.items():
             
-            for key, value in can_params.items():
-                setattr(self, key, float(value))
+            setattr(self, key, float(value))
                 
         # Assign values from inputs.
         self.signal_array = signal_array
@@ -240,7 +238,6 @@ class Pixel:
     def clear_filter_flags(self):
         """Removes flags from parameters for setting filters"""
 
-        #        self.window = 0
         self.bandpass_filter = 0
 
         return
