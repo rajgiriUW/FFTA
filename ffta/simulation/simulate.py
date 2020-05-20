@@ -91,7 +91,7 @@ class Cantilever:
     >>>
     >>> c = simulate.Cantilever(*params)
     >>> Z, infodict = c.simulate()
-    >>> c.analyze(Z)
+    >>> c.analyze()
     >>> c.analyze(roi=0.004) # can change the parameters as desired
 
     """
@@ -136,9 +136,9 @@ class Cantilever:
         # Calculate frequency axis for simulated tip_motion without extra cycles.
         self.freq_Z = np.linspace(0, int(self.sampling_rate/2), num=int(num_pts/2 + 1))
 
-        self.elec_drive = elec_drive
         
         # Did user supply a voltage pulse themselves (Electrical drive only)
+        self.elec_drive = elec_drive
         self.use_varray = False
         if any(v_array):
 
@@ -151,16 +151,15 @@ class Cantilever:
                 self.use_varray = True
                 self.v_array = v_array
         
-        # create a Pixel class-compatible params file
-        
-        self.can_params = {}
+        # Create a Pixel class-compatible params file
         self.fit_params = {}
-        self.parameters = {}
-        self.parameters.update(**force_params)
+        self.parameters = force_params
         self.parameters.update(**sim_params)
-        self.can_params.update(**can_params)
-        
+        self.can_params = can_params
         self.create_parameters(self.parameters, self.can_params)
+        
+        # Define simulation sampling rate, default = 100 MHz
+        self.df = 1e8
         
         return
 
@@ -176,14 +175,14 @@ class Cantilever:
         """
 
         self.trigger_phase = np.mod(np.pi * trigger_phase / 180, PI2)
-        self.n_points = int(self.total_time * 1e8)
+        self.n_points = int(self.total_time * self.df)
 
         # Add extra cycles to the simulation to find correct phase at trigger.
-        cycle_points = int(2 * 1e8 / self.res_freq)
+        cycle_points = int(2 * self.df / self.res_freq)
         self.n_points_sim = cycle_points + self.n_points
 
         # Create time vector and find the trigger wrt phase.
-        self.t = np.arange(self.n_points_sim) / 1e8
+        self.t = np.arange(self.n_points_sim) / self.df
 
         # Current phase at trigger.
         current_phase = np.mod(self.wd * self.trigger - self.delta, PI2)
@@ -374,8 +373,8 @@ class Cantilever:
             if len(Z0) != 2:
                 raise ValueError('Must specify exactly [z0, v0]')
             
-            self.n_points = int(self.total_time * 1e8)
-            self.t = np.arange(self.n_points) / 1e8
+            self.n_points = int(self.total_time * self.df)
+            self.t = np.arange(self.n_points) / self.df
             self.t0 = self.trigger 
             self.Z0 = Z0
         
@@ -384,12 +383,12 @@ class Cantilever:
         
         Z, infodict = odeint(self.dZ_dt, self.Z0, self.t, full_output=True)
 
-        t0_idx = int(self.t0 * 1e8)
-        tidx = int(self.trigger * 1e8)
+        t0_idx = int(self.t0 * self.df)
+        tidx = int(self.trigger * self.df)
         n_points = int(self.total_time * self.sampling_rate)
         Z_cut = Z[(t0_idx - tidx):(t0_idx + self.n_points - tidx), 0]
 
-        step = int(1e8 / self.sampling_rate)
+        step = int(self.df / self.sampling_rate)
 
         self.Z = Z_cut[0::step].reshape(n_points, 1) / self.def_invols
         self.infodict = infodict
