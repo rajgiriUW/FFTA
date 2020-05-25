@@ -101,11 +101,11 @@ class ElectricDrive(Cantilever):
 
                 self.use_varray = True
                 self.v_array = v_array
+                self.scale = [np.max(v_array)-np.min(v_array), np.min(v_array)]
               
         return
 
-    @staticmethod
-    def __gamma__(t, t0, tau):
+    def __gamma__(self, t, t0, tau):
         """
         Exponential decay function for force and resonance frequency.
 
@@ -126,8 +126,20 @@ class ElectricDrive(Cantilever):
         """
 
         if t >= t0:
+            
+            if not self.use_varray:
 
-            return -np.expm1(-(t - t0) / tau)
+                return -np.expm1(-(t - t0) / tau)
+
+            else:
+                
+                p = int(t * self.sampling_rate)
+                n_points = int(self.total_time * self.df)
+                _g = self.v_array[p] if p <= n_points else self.v_array[-1]
+                
+                _g = (_g - self.scale[1]) / self.scale[0]
+                
+                return _g
 
         else:
 
