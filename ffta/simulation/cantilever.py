@@ -17,8 +17,13 @@ PI2 = 2 * np.pi
 
 class Cantilever:
     """Damped Driven Harmonic Oscillator Simulator for AFM Cantilevers.
-
-    Simulates a DDHO under excitation with given parameters.
+    Simulates a DDHO with given parameters.
+    
+    This class contains the functions needed to simulate. To create a class that
+    simulates a subset, it needs to overload the following functions:
+        force(self, t)
+        omega(self, t)
+        dZdt(self, t) if the given ODE form will not work
 
     Parameters
     ----------
@@ -51,13 +56,6 @@ class Cantilever:
         total_time = float (in seconds)
         sampling_rate = int (in Hz)
 
-    elec_drive : bool, optional 
-        If True (default), uses AC voltage drive. Requires that force_params
-        contain v_dc, v_ac, v_cpd, and dCdz
-
-    v_array : ndarray, optional
-        If supplied and elec_drive is True, supplies the time-dependent voltage to v_cpd
-        v_array must be the exact length and sampling of the desired signal
 
     Attributes
     ----------
@@ -96,7 +94,7 @@ class Cantilever:
 
     """
 
-    def __init__(self, can_params, force_params, sim_params, elec_drive=False, v_array=[]):
+    def __init__(self, can_params, force_params, sim_params):
 
         # Initialize cantilever parameters and calculate some others.
         for key, value in can_params.items():
@@ -136,20 +134,6 @@ class Cantilever:
         # Calculate frequency axis for simulated tip_motion without extra cycles.
         self.freq_Z = np.linspace(0, int(self.sampling_rate/2), num=int(num_pts/2 + 1))
 
-        # Did user supply a voltage pulse themselves (Electrical drive only)
-        self.elec_drive = elec_drive
-        self.use_varray = False
-        if any(v_array):
-
-            if len(v_array) != num_pts:
-
-                raise ValueError('v_array must match sampling rate/length of parameters')
-
-            else:
-
-                self.use_varray = True
-                self.v_array = v_array
-        
         # Create a Pixel class-compatible params file
         self.fit_params = {}
         self.parameters = force_params
@@ -187,57 +171,44 @@ class Cantilever:
         current_phase = np.mod(self.wd * self.trigger - self.delta, PI2)
         phase_diff = np.mod(self.trigger_phase - current_phase, PI2)
 
-        self.t0 = self.trigger + phase_diff / self.wd
+        self.t0 = self.trigger + phase_diff / self.wd  # modified trigger point
 
         # Set the initial conditions at t=0.
         z0 = self.amp * np.sin(-self.delta)
         v0 = self.amp * self.wd * np.cos(-self.delta)
-
+        
         self.Z0 = np.array([z0, v0])
 
         return
 
-    @staticmethod
-    def __gamma__(t, t0, tau):
+    def force(self, t):
         """
-        Exponential decay function for force and resonance frequency.
+        Force on the cantilever at a given time. 
 
         Parameters
         ----------
         t : float
             Time in seconds.
-        t0: float
-            Event time in seconds.
-        tau : float
-            Decay constant in the exponential function, in seconds.
 
         Returns
         -------
-        value : float
-            Value of the function at the given time.
+        f : float
+            Force on the cantilever at a given time, in N/kg.
 
         """
+            
+        driving_force = self.f0 * np.sin(self.wd * t)
+            
+        return driving_force
 
-        if t >= t0:
-
-            return -np.expm1(-(t - t0) / tau)
-
-        else:
-
-            return 0
-
-    def omega(self, t, t0, tau):
+    def omega(self, t):
         """
-        Exponentially decaying resonance frequency.
+        Resonance frequency behavior
 
         Parameters
         ----------
         t : float
             Time in seconds.
-        t0: float
-            Event time in seconds.
-        tau : float
-            Decay constant in the exponential function, in seconds.
 
         Returns
         -------
@@ -246,73 +217,7 @@ class Cantilever:
 
         """
 
-        return self.w0 + self.delta_w * self.__gamma__(t, t0, tau)
-
-    def dc_step(self, t, t0):
-        """
-        Adds a DC step at the trigger point for electrical drive simulation
-        
-        Parameters
-        ----------
-        t : float
-            Time in seconds.
-        t0: float
-            Event time in seconds.
-        """
-        
-        if t > t0:
-            
-            return self.v_step
-        
-        else:
-            
-            return self.v_dc
-
-    def force(self, t, t0, tau):
-        """
-        Force on the cantilever at a given time. It contains driving force and
-        electrostatic force.
-
-        Parameters
-        ----------
-        t : float
-            Time in seconds.
-        t0: float
-            Event time in seconds.
-        tau : float
-            Decay constant in the exponential function, in seconds.
-
-        Returns
-        -------
-        f : float
-            Force on the cantilever at a given time, in N/kg.
-
-        """
-        if self.elec_drive:
-            
-            # explicitly define voltage at each time step
-            if self.use_varray:
-                
-                p = int(t * self.sampling_rate)
-                try:
-                    driving_force = 0.5 * self.dCdz/self.mass * ((self.v_array[p] - self.v_cpd) \
-                                                             + self.v_ac * np.sin(self.wd * t))**2
-                except:
-                    driving_force = 0.5 * self.dCdz/self.mass * ((self.v_array[-1] - self.v_cpd) \
-                                                             + self.v_ac * np.sin(self.wd * t))**2
-            else:
-                driving_force = 0.5 * self.dCdz/self.mass * ((self.dc_step(t, t0) - self.v_cpd) \
-                                                             + self.v_ac * np.sin(self.wd * t))**2
-            
-            return driving_force
-        
-        #mechanical driving
-        else: 
-            
-            driving_force = self.f0 * np.sin(self.wd * t)
-            electro_force = self.fe * self.__gamma__(t, t0, tau)
-            
-            return driving_force - electro_force
+        return self.w0
 
     def dZ_dt(self, Z, t=0):
         """
@@ -335,12 +240,11 @@ class Cantilever:
         """
 
         t0 = self.t0
-        tau = self.tau
 
         v = Z[1]
-        vdot = (self.force(t, t0, tau) -
-                self.omega(t, t0, tau) * Z[1] / self.q_factor -
-                self.omega(t, t0, tau) ** 2 * Z[0])
+        vdot = (self.force(t) -
+                self.omega(t) * Z[1] / self.q_factor -
+                self.omega(t) ** 2 * Z[0])
 
         return np.array([v, vdot])
 
