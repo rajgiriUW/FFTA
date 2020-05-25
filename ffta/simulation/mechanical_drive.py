@@ -191,33 +191,3 @@ class MechanicalDrive(Cantilever):
         electro_force = self.fe * self.__gamma__(t, t0, tau)
             
         return driving_force - electro_force
-
-    def dZ_dt(self, Z, t=0):
-        """
-        Takes the derivative of the given Z with respect to time.
-
-        Parameters
-        ----------
-        Z : (2, ) array_like
-            Z[0] is the cantilever position, and Z[1] is the cantilever
-            velocity.
-        t : float
-            Time.
-
-        Returns
-        -------
-        Zdot : (2, ) array_like
-            Zdot[0] is the cantilever velocity, and Zdot[1] is the cantilever
-            acceleration.
-
-        """
-
-        t0 = self.t0
-        tau = self.tau
-
-        v = Z[1]
-        vdot = (self.force(t, t0, tau) -
-                self.omega(t, t0, tau) * Z[1] / self.q_factor -
-                self.omega(t, t0, tau) ** 2 * Z[0])
-
-        return np.array([v, vdot])

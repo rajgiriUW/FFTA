@@ -181,7 +181,7 @@ class Cantilever:
 
         return
 
-    def force(self, t):
+    def force(self, t, t0=0, tau=0):
         """
         Force on the cantilever at a given time. 
 
@@ -201,7 +201,7 @@ class Cantilever:
             
         return driving_force
 
-    def omega(self, t):
+    def omega(self, t, t0=0, tau=0):
         """
         Resonance frequency behavior
 
@@ -240,11 +240,12 @@ class Cantilever:
         """
 
         t0 = self.t0
+        tau = 0
 
         v = Z[1]
-        vdot = (self.force(t) -
-                self.omega(t) * Z[1] / self.q_factor -
-                self.omega(t) ** 2 * Z[0])
+        vdot = (self.force(t, t0, tau) -
+                self.omega(t, t0, tau) * Z[1] / self.q_factor -
+                self.omega(t, t0, tau) ** 2 * Z[0])
 
         return np.array([v, vdot])
 

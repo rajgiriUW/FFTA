@@ -43,8 +43,11 @@ class ElectricDrive(Cantilever):
         sampling_rate = int (in Hz)
 
     v_array : ndarray, optional
-        If supplied and elec_drive is True, supplies the time-dependent voltage to v_cpd
+        If provided, supplies the time-dependent voltage to v_cpd
         v_array must be the exact length and sampling of the desired signal
+        
+    v_step : float, optional
+        If v_array not supplied, then a voltage of v_step is applied at the trigger
 
     Attributes
     ----------
@@ -84,13 +87,14 @@ class ElectricDrive(Cantilever):
 
     """
 
-    def __init__(self, can_params, force_params, sim_params, v_array=[]):
+    def __init__(self, can_params, force_params, sim_params, v_array=[], v_step=np.nan):
 
         parms = [can_params, force_params, sim_params]
         super(ElectricDrive, self).__init__(*parms)        
 
         # Did user supply a voltage pulse themselves (Electrical drive only)
         self.use_varray = False
+        self.use_vstep = False
         if any(v_array):
 
             if len(v_array) != int(self.total_time*self.sampling_rate):
@@ -102,7 +106,12 @@ class ElectricDrive(Cantilever):
                 self.use_varray = True
                 self.v_array = v_array
                 self.scale = [np.max(v_array)-np.min(v_array), np.min(v_array)]
-              
+        
+        if not np.isnan(v_step):
+        
+            self.v_step = v_step # if applying a single DC step
+            self.use_vstep = True
+        
         return
 
     def __gamma__(self, t, t0, tau):
@@ -129,7 +138,13 @@ class ElectricDrive(Cantilever):
             
             if not self.use_varray:
 
-                return -np.expm1(-(t - t0) / tau)
+                if self.use_vstep:
+                    
+                    return 1 # multiplies by delta_freq
+                
+                else:
+                    
+                    return -np.expm1(-(t - t0) / tau)
 
             else:
                 
@@ -223,33 +238,3 @@ class ElectricDrive(Cantilever):
                                                          + self.v_ac * np.sin(self.wd * t))**2
         
         return driving_force
-        
-    def dZ_dt(self, Z, t=0):
-        """
-        Takes the derivative of the given Z with respect to time.
-
-        Parameters
-        ----------
-        Z : (2, ) array_like
-            Z[0] is the cantilever position, and Z[1] is the cantilever
-            velocity.
-        t : float
-            Time.
-
-        Returns
-        -------
-        Zdot : (2, ) array_like
-            Zdot[0] is the cantilever velocity, and Zdot[1] is the cantilever
-            acceleration.
-
-        """
-
-        t0 = self.t0
-        tau = self.tau
-
-        v = Z[1]
-        vdot = (self.force(t, t0, tau) -
-                self.omega(t, t0, tau) * Z[1] / self.q_factor -
-                self.omega(t, t0, tau) ** 2 * Z[0])
-
-        return np.array([v, vdot])
