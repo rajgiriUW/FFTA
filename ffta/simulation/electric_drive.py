@@ -1,8 +1,7 @@
 """simulate.py: Contains Cantilever class."""
 # pylint: disable=E1101,R0902,C0103
-__author__ = "Durmus U. Karatay"
+__author__ = "Rajiv Giridharagopal"
 __copyright__ = "Copyright 2020, Ginger Lab"
-__maintainer__ = "Rajiv Giridharaogpal"
 __email__ = "rgiri@uw.edu"
 __status__ = "Production"
 
@@ -15,8 +14,8 @@ import ffta
 PI2 = 2 * np.pi
 
 
-class Cantilever:
-    """Damped Driven Harmonic Oscillator Simulator for AFM Cantilevers.
+class ElectricDrive(Cantilever):
+    """Damped Driven Harmonic Oscillator Simulator for AFM Cantilevers under Electric drive
 
     Simulates a DDHO under excitation with given parameters.
 
@@ -160,41 +159,6 @@ class Cantilever:
         # Define simulation sampling rate, default = 100 MHz
         self.df = 1e8
         
-        return
-
-    def set_conditions(self, trigger_phase=180):
-        """
-        Sets initial conditions and other simulation parameters.
-
-        Parameters
-        ----------
-        trigger_phase: float, optional
-           Trigger phase is in degrees and wrt cosine. Default value is 180.
-
-        """
-
-        self.trigger_phase = np.mod(np.pi * trigger_phase / 180, PI2)
-        self.n_points = int(self.total_time * self.df)
-
-        # Add extra cycles to the simulation to find correct phase at trigger.
-        cycle_points = int(2 * self.df / self.res_freq)
-        self.n_points_sim = cycle_points + self.n_points
-
-        # Create time vector and find the trigger wrt phase.
-        self.t = np.arange(self.n_points_sim) / self.df
-
-        # Current phase at trigger.
-        current_phase = np.mod(self.wd * self.trigger - self.delta, PI2)
-        phase_diff = np.mod(self.trigger_phase - current_phase, PI2)
-
-        self.t0 = self.trigger + phase_diff / self.wd
-
-        # Set the initial conditions at t=0.
-        z0 = self.amp * np.sin(-self.delta)
-        v0 = self.amp * self.wd * np.cos(-self.delta)
-
-        self.Z0 = np.array([z0, v0])
-
         return
 
     @staticmethod
