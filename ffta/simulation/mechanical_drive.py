@@ -70,15 +70,22 @@ class MechanicalDrive(Cantilever):
 
     Examples
     --------
-    >>> from ffta.simulation import simulate, load
+    >>> from ffta.simulation import mechanical_dirve, load
     >>>
     >>> params_file = '../examples/sim_params.cfg'
     >>> params = load.simulation_configuration(params_file)
     >>>
-    >>> c = simulate.Cantilever(*params)
+    >>> c = mechanical_dirve.MechanicalDrive(*params)
     >>> Z, infodict = c.simulate()
     >>> c.analyze()
     >>> c.analyze(roi=0.004) # can change the parameters as desired
+    >>>
+    >>> # To supply an arbitary v_array
+    >>> n_points = int(params[2]['total_time'] * params[2]['sampling_rate'])
+    >>> v_array = np.ones(n_points) # create just a flat excitation
+    >>> c = mechanical_dirve.MechanicalDrive(*params, v_array = v_array)
+    >>> Z, _ = c.simulate()
+    >>> c.analyze() 
 
     """
 
@@ -106,9 +113,14 @@ class MechanicalDrive(Cantilever):
        
         return
 
-    def __gamma__(self, t, t0, tau):
+    def __gamma__(self, t, t0, tau=0):
         """
-        Exponential decay function for force and resonance frequency.
+        Controls how the cantilever behaves after a trigger.
+        Default operation is an exponential decay to omega0 - delta_freq with
+        time constant tau.
+
+        If supplying an explicit v_array, then this function will call the values
+        in that array        
 
         Parameters
         ----------

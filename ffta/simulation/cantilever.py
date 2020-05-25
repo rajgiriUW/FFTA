@@ -82,12 +82,12 @@ class Cantilever:
 
     Examples
     --------
-    >>> from ffta.simulation import simulate, load
+    >>> from ffta.simulation import cantilever, load
     >>>
     >>> params_file = '../examples/sim_params.cfg'
     >>> params = load.simulation_configuration(params_file)
     >>>
-    >>> c = simulate.Cantilever(*params)
+    >>> c = cantilever.Cantilever(*params)
     >>> Z, infodict = c.simulate()
     >>> c.analyze()
     >>> c.analyze(roi=0.004) # can change the parameters as desired

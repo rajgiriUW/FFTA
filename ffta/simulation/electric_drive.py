@@ -75,15 +75,28 @@ class ElectricDrive(Cantilever):
     
     Examples
     --------
-    >>> from ffta.simulation import simulate, load
+    >>> from ffta.simulation import electric_drive, load
     >>>
     >>> params_file = '../examples/sim_params.cfg'
     >>> params = load.simulation_configuration(params_file)
     >>>
-    >>> c = simulate.Cantilever(*params)
+    >>> c = electric_drive.ElectricDrive(*params)
     >>> Z, infodict = c.simulate()
     >>> c.analyze()
     >>> c.analyze(roi=0.004) # can change the parameters as desired
+    >>>
+    >>> # To supply an arbitary v_array
+    >>> n_points = int(params[2]['total_time'] * params[2]['sampling_rate'])
+    >>> v_array = np.ones(n_points) # create just a flat excitation
+    >>> c = mechanical_dirve.MechanicalDrive(*params, v_array = v_array)
+    >>> Z, _ = c.simulate()
+    >>> c.analyze() 
+    >>>
+    >>> # To supply an arbitary voltage step
+    >>> step = -7 #-7 Volt step
+    >>> c = mechanical_dirve.MechanicalDrive(*params, v_step = step)
+    >>> Z, _ = c.simulate()
+    >>> c.analyze() 
 
     """
 
