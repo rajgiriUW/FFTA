@@ -46,16 +46,8 @@ class MechanicalDrive(Cantilever):
 
     Attributes
     ----------
-    amp : float
-        Amplitude of the cantilever in meters.
-    beta : float
-        Damping factor of the cantilever in rad/s.
-    delta : float
-        Initial phase of the cantilever in radians.
-    delta_freq : float
-        Frequency shift of the cantilever under excitation.
-    mass : float
-        Mass of the cantilever in kilograms.
+    Z : ndarray
+        ODE integration of the DDHO response
 
     Method
     ------
@@ -110,7 +102,7 @@ class MechanicalDrive(Cantilever):
 
                 self.use_varray = True
                 self.v_array = v_array
-       
+        
         return
 
     def __gamma__(self, t, t0, tau=0):
@@ -138,17 +130,18 @@ class MechanicalDrive(Cantilever):
 
         """
 
+        p = int(t * self.sampling_rate)
+        n_points = int(self.total_time * self.sampling_rate)
+
         if t >= t0:
             
             if not self.use_varray:
 
-                return -np.expm1(-(t - t0) / tau)
-
-            else:
+                return -np.expm1(-(t - t0) / tau) 
                 
-                p = int(t * self.sampling_rate)
-                n_points = int(self.total_time * self.df)
-                _g = self.v_array[p] if p <= n_points else self.v_array[-1]
+            else:
+
+                _g = self.v_array[p] if p < n_points else self.v_array[-1]
                 
                 return _g
 

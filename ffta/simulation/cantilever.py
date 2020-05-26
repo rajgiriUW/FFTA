@@ -69,6 +69,13 @@ class Cantilever:
         Frequency shift of the cantilever under excitation.
     mass : float
         Mass of the cantilever in kilograms.
+    Z : ndarray
+        ODE integration result, sampled at sampling_rate. Default integration
+        is at 100 MHz.
+    t_Z : ndarray
+        Time axis based on the provided total time and sampling rate
+    f_Z : ndarray
+        Frequency axis based on the provided sampling rate
 
     Method
     ------
@@ -103,6 +110,10 @@ class Cantilever:
 
         self.w0 = PI2 * self.res_freq  # Radial resonance frequency.
         self.wd = PI2 * self.drive_freq  # Radial drive frequency.
+
+        if not np.allclose(self.w0, self.wd):
+            
+            print('Resonance and Drive not equal. Make sure simulation is long enough!')
 
         self.beta = self.w0 / (2 * self.q_factor)  # Damping factor.
         self.mass = self.k / (self.w0 ** 2)  # Mass of the cantilever in kg.
@@ -176,7 +187,7 @@ class Cantilever:
         # Set the initial conditions at t=0.
         z0 = self.amp * np.sin(-self.delta)
         v0 = self.amp * self.wd * np.cos(-self.delta)
-        
+               
         self.Z0 = np.array([z0, v0])
 
         return
@@ -240,7 +251,7 @@ class Cantilever:
         """
 
         t0 = self.t0
-        tau = 0
+        tau = self.tau
 
         v = Z[1]
         vdot = (self.force(t, t0, tau) -
@@ -378,7 +389,7 @@ class Cantilever:
 
         Returns
         -------
-        None.
+        pix : Pixel object
 
         '''
         param_keys = ['bandpass_filter', 'drive_freq', 'filter_bandwidth', 'n_taps',
@@ -410,5 +421,5 @@ class Cantilever:
             
             pix.plot()
         
-        return
+        return pix
         
