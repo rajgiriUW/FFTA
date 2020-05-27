@@ -120,6 +120,7 @@ class Cantilever:
         self.amp = self.soft_amp * self.amp_invols  # Amplitude in meters.
 
         # Calculate reduced driving force and phase in equilibrium.
+        np.seterr(divide='ignore') # suprress divide-by-0 warning in arctan
         self.f0 = self.amp * np.sqrt((self.w0 ** 2 - self.wd ** 2) ** 2 +
                                      4 * self.beta ** 2 * self.wd ** 2)
         self.delta = np.abs(np.arctan(np.divide(2 * self.wd * self.beta,

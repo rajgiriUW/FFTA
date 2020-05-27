@@ -9,6 +9,7 @@ import numpy as np
 from scipy.integrate import odeint
 
 from .cantilever import Cantilever
+from . import excitation
 
 # Set constant 2 * pi.
 PI2 = 2 * np.pi
@@ -18,7 +19,17 @@ class MechanicalDrive(Cantilever):
     """Damped Driven Harmonic Oscillator Simulator for AFM Cantilevers under 
     Mechanial drive (i.e. conventional DDHO)
 
-    Simulates a DDHO under excitation with given parameters.
+    Simulates a DDHO under excitation with given parameters and a change to resonance
+    and electrostatic force
+    
+    Time-dependent change can be specified in two ways:
+        1) explicitly defining v_array, a scale from 0 to 1 of the same length as
+            the desired integration
+        2) using a defined function and parameter, passed to parameter "func"
+            This approach will call self.func(t, *self.func_args)
+            By default, this will call excitation.single_exp, a single exponential
+            decay. 
+            For this approach to work, you must supply or set self.func_args = []
 
     Parameters
     ----------
@@ -43,6 +54,8 @@ class MechanicalDrive(Cantilever):
         If supplied, v_array is the time-dependent excitation to the resonance 
         frequency and the electrostatic force, scaled from 0 to 1.
         v_array must be the exact length and sampling of the desired signal
+
+    func : function, optional
 
     Attributes
     ----------
@@ -78,10 +91,18 @@ class MechanicalDrive(Cantilever):
     >>> c = mechanical_dirve.MechanicalDrive(*params, v_array = v_array)
     >>> Z, _ = c.simulate()
     >>> c.analyze() 
-
+    >>>
+    >>> # To use a function instead of artbitary array, say stretch exponential
+    >>> c = mechanical_dirve.MechanicalDrive(*params, func=excitation.str_exp, func_args=[1e-3, 0.8])
+    >>> Z, _ = c.simulate()
+    >>> c.analyze() 
+    >>> c.func_args = [1e-3, 0.7] # change beta value in stretched exponential
+    >>> Z, _ = c.simulate()
+    >>> c.analyze() 
     """
 
-    def __init__(self, can_params, force_params, sim_params, v_array=[]):
+    def __init__(self, can_params, force_params, sim_params, 
+                 v_array=[], func = excitation.single_exp, func_args=[]):
 
         parms = [can_params, force_params, sim_params]
         super(MechanicalDrive, self).__init__(*parms)
@@ -103,9 +124,21 @@ class MechanicalDrive(Cantilever):
                 self.use_varray = True
                 self.v_array = v_array
         
+        self.func = func
+        self.func_args = func_args
+        
+        # default case set a single tau for a single exponential function
+        if not np.any(func_args):
+            self.func_args = [self.tau]
+        
+        try:
+            _ = self.func(0, *self.func_args)
+        except:
+            print('Be sure to correctly set func_args=[params]')
+        
         return
 
-    def __gamma__(self, t, t0, tau=0):
+    def __gamma__(self, t):
         """
         Controls how the cantilever behaves after a trigger.
         Default operation is an exponential decay to omega0 - delta_freq with
@@ -132,12 +165,13 @@ class MechanicalDrive(Cantilever):
 
         p = int(t * self.sampling_rate)
         n_points = int(self.total_time * self.sampling_rate)
-
+        t0 = self.t0
+        
         if t >= t0:
             
             if not self.use_varray:
 
-                return -np.expm1(-(t - t0) / tau) 
+                return self.func(t- t0, *self.func_args)
                 
             else:
 
@@ -169,7 +203,8 @@ class MechanicalDrive(Cantilever):
 
         """
 
-        return self.w0 + self.delta_w * self.__gamma__(t, t0, tau)
+        #return self.w0 + self.delta_w * self.__gamma__(t, t0, tau)
+        return self.w0 + self.delta_w * self.__gamma__(t)
 
     def force(self, t, t0, tau):
         """
@@ -193,6 +228,7 @@ class MechanicalDrive(Cantilever):
         """
  
         driving_force = self.f0 * np.sin(self.wd * t)
-        electro_force = self.fe * self.__gamma__(t, t0, tau)
+        #electro_force = self.fe * self.__gamma__(t, t0, tau)
+        electro_force = self.fe * self.__gamma__(t)
             
         return driving_force - electro_force
