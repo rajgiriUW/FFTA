@@ -329,23 +329,23 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
 
 
 def exp(t, xoff, A1, y0, tau):
-        '''Uses a single exponential for the case of no drive'''
-        return y0 + A1 * np.exp(-(t-xoff)/tau)
+    '''Uses a single exponential for the case of no drive'''
+    return y0 + A1 * np.exp(-(t-xoff)/tau)
 
 def fit_exp(t, cut):
            
-        # Cost function to minimize. Faster than normal scipy optimize or lmfit
-        cost = lambda p: np.sum((exp(t, *p) - cut) ** 2)
+    # Cost function to minimize. Faster than normal scipy optimize or lmfit
+    cost = lambda p: np.sum((exp(t, *p) - cut) ** 2)
+    
+    pinit = [cut.min(), t[0], cut.min(), 1e-4]
+    
+    popt, n_eval, rcode = fmin_tnc(cost, pinit, approx_grad=True, disp=0,
+                                   bounds=[(t[0], t[0]),
+                                           (0, 5*(cut.max() - cut.min())),
+                                           (0, 0),
+                                           (1e-8, 1)])
         
-        pinit = [cut.min(), t[0], cut.min(), 1e-4]
-        
-        popt, n_eval, rcode = fmin_tnc(cost, pinit, approx_grad=True, disp=0,
-                                       bounds=[(t[0], t[0]),
-                                               (0, 5*(cut.max() - cut.min())),
-                                               (0, 0),
-                                               (1e-8, 1)])
-        
-        return popt
+    return popt
     
 def plot_ringdown(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
     """
