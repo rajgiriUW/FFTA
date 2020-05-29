@@ -151,10 +151,6 @@ class MechanicalDrive(Cantilever):
         ----------
         t : float
             Time in seconds.
-        t0: float
-            Event time in seconds.
-        tau : float
-            Decay constant in the exponential function, in seconds.
 
         Returns
         -------

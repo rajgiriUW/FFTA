@@ -9,7 +9,7 @@ import numpy as np
 from scipy.integrate import odeint
 
 from .cantilever import Cantilever
-
+from . import excitation
 # Set constant 2 * pi.
 PI2 = 2 * np.pi
 
@@ -100,7 +100,8 @@ class ElectricDrive(Cantilever):
 
     """
 
-    def __init__(self, can_params, force_params, sim_params, v_array=[], v_step=np.nan):
+    def __init__(self, can_params, force_params, sim_params, v_array=[], v_step=np.nan,
+                 func = excitation.single_exp, func_args=[]):
 
         parms = [can_params, force_params, sim_params]
         super(ElectricDrive, self).__init__(*parms)        
@@ -124,21 +125,36 @@ class ElectricDrive(Cantilever):
         
             self.v_step = v_step # if applying a single DC step
             self.use_vstep = True
+
+        self.func = func
+        self.func_args = func_args
+        
+        # default case set a single tau for a single exponential function
+        if not np.any(func_args):
+            self.func_args = [self.tau]
+        
+        try:
+            _ = self.func(0, *self.func_args)
+        except:
+            print('Be sure to correctly set func_args=[params]')
+        
+        return
         
         return
 
-    def __gamma__(self, t, t0, tau):
+    def __gamma__(self, t):
         """
-        Exponential decay function for force and resonance frequency.
+        Controls how the cantilever behaves after a trigger.
+        Default operation is an exponential decay to omega0 - delta_freq with
+        time constant tau.
+
+        If supplying an explicit v_array, then this function will call the values
+        in that array     
 
         Parameters
         ----------
         t : float
             Time in seconds.
-        t0: float
-            Event time in seconds.
-        tau : float
-            Decay constant in the exponential function, in seconds.
 
         Returns
         -------
@@ -147,25 +163,19 @@ class ElectricDrive(Cantilever):
 
         """
 
+        p = int(t * self.sampling_rate)
+        n_points = int(self.total_time * self.sampling_rate)
+        t0 = self.t0
+        
         if t >= t0:
             
             if not self.use_varray:
 
-                if self.use_vstep:
-                    
-                    return 1 # multiplies by delta_freq
+                return self.func(t- t0, *self.func_args)
                 
-                else:
-                    
-                    return -np.expm1(-(t - t0) / tau)
-
             else:
-                
-                p = int(t * self.sampling_rate)
-                n_points = int(self.total_time * self.df)
-                _g = self.v_array[p] if p <= n_points else self.v_array[-1]
-                
-                _g = (_g - self.scale[1]) / self.scale[0]
+
+                _g = self.v_array[p] if p < n_points else self.v_array[-1]
                 
                 return _g
 
@@ -193,8 +203,8 @@ class ElectricDrive(Cantilever):
 
         """
 
-        return self.w0 + self.delta_w * self.__gamma__(t, t0, tau)
-
+        return self.w0 + self.delta_w * self.__gamma__(t)
+    
     def dc_step(self, t, t0):
         """
         Adds a DC step at the trigger point for electrical drive simulation
@@ -240,8 +250,9 @@ class ElectricDrive(Cantilever):
         if self.use_varray:
             
             p = int(t * self.sampling_rate)
-            n_points = int(self.total_time * self.df)
-            _g = self.v_array[p] if p <= n_points else self.v_array[-1]
+            n_points = int(self.total_time * self.sampling_rate)
+            
+            _g = self.v_array[p] if p < n_points else self.v_array[-1]
             
             driving_force = 0.5 * self.dCdz/self.mass * ((_g - self.v_cpd) \
                                                          + self.v_ac * np.sin(self.wd * t))**2
