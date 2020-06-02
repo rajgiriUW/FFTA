@@ -177,7 +177,7 @@ class Pixel:
         self.fit = fit
         self.fit_form = fit_form
         self.method = method
-        self.filter_amp = filter_amplitude
+        self.filter_amplitude = filter_amplitude
         
         # Default Cantilever parameters, plugging in some reasonable defaults
         self.AMPINVOLS = 122e-9 
@@ -398,11 +398,10 @@ class Pixel:
         
         return 
     
-    def filter_amplitude(self):
+    def amplitude_filter(self):
         '''
         Filters the drive signal out of the amplitude response
         '''
-        print('filtering')
         AMP = np.fft.fftshift(np.fft.fft(self.amplitude)) 
         
         DRIVE = self.drive_freq/(self.sampling_rate/self.n_points) # drive location in frequency space
@@ -943,9 +942,9 @@ class Pixel:
             # Calculate the amplitude and phase from the analytic signal
             self.calculate_amplitude()
             
-            if self.filter_amp:
+            if self.filter_amplitude:
                 
-                self.filter_amplitude()
+                self.amplitude_filter()
             
             self.calculate_phase()
 
