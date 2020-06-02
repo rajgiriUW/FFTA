@@ -400,17 +400,17 @@ class Pixel:
     
     def filter_amplitude(self):
         '''
-        filters the drive signal out of the amplitude response
+        Filters the drive signal out of the amplitude response
         '''
-        
+        print('filtering')
         AMP = np.fft.fftshift(np.fft.fft(self.amplitude)) 
         
         DRIVE = self.drive_freq/(self.sampling_rate/self.n_points) # drive location in frequency space
         center = int(len(AMP)/2)
         
         # crude boxcar
-        AMP[:center-int(DRIVE/2)] = 0
-        AMP[center+int(DRIVE/2):] = 0
+        AMP[:center-int(DRIVE/2)+1] = 0
+        AMP[center+int(DRIVE/2)-1:] = 0
         
         self.amplitude = np.abs( np.fft.ifft(np.fft.ifftshift(AMP)) )
         
@@ -944,6 +944,7 @@ class Pixel:
             self.calculate_amplitude()
             
             if self.filter_amp:
+                
                 self.filter_amplitude()
             
             self.calculate_phase()
