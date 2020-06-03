@@ -11,17 +11,10 @@ In Igor/MFP code, the locations are actually as column, row when
 here you want row, column (load the row .ibw, find column pixel)
 """
 
-from ffta import pixel
-from ffta.pixel_utils import load
-
 import numpy as np
-import scipy as sp
 from scipy import ndimage
-import matplotlib as mpl
-from matplotlib import pyplot as pp
 
 import sys
-from numpy.lib.npyio import loadtxt
 from os.path import splitext
 
 def load_csv(path):
@@ -40,17 +33,27 @@ def load_csv(path):
       
     return signal_array
     
-def find_bad_pixels(signal_array, threshold):
+def find_bad_pixels(signal_array, threshold=2, iterations=1):
     """ Uses Median filter to find 'hot' pixels """          
     
-    filtered_array = ndimage.median_filter(signal_array, size=3)
-    diff = np.abs(signal_array - filtered_array)
-    limit = threshold * np.std(signal_array)    
-      
-    bad_pixel_list = np.nonzero(diff > limit)
+    fixed_array = np.copy(signal_array)
+   
+    for i in range(iterations):
     
-    return filtered_array, bad_pixel_list
-    
+        filtered_array = ndimage.median_filter(fixed_array, size=3)
+        diff = np.abs(fixed_array - filtered_array)
+        limit = threshold * np.std(fixed_array)    
+
+        bad_pixel_list = np.nonzero(diff > limit)
+        if i == 0:
+            bad_pixels_total = np.vstack((bad_pixel_list[0], bad_pixel_list[1]))
+        else:
+            bad_pixels_total = np.hstack((bad_pixels_total, bad_pixel_list))
+            
+        fixed_array = remove_bad_pixels(fixed_array, filtered_array, bad_pixel_list)
+        
+    return fixed_array, bad_pixels_total
+
 def remove_bad_pixels(signal_array, filtered_array, bad_pixel_list):
     """ Removes bad pixels from the array"""
     

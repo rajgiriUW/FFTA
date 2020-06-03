@@ -372,7 +372,7 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     """
     Saves the tfp, shift, and fixed_tfp as CSV files
     
-    h5_file : H5Py file
+    h5_file : H5Py file of FFtrEFM class
         Reminder you can always type: h5_svd.file or h5_avg.file for this
     
     h5_path : str, optional
