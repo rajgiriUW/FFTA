@@ -473,7 +473,8 @@ class Pixel:
         x = np.arange(ridx)
         y = cut
 
-        func = spi.UnivariateSpline(x, y, k=4, ext=3)
+        _spline_sz = 2 * self.sampling_rate / self.drive_freq
+        func = spi.UnivariateSpline(x, y, k=4, ext=3, s=_spline_sz)
 
         # Find the minimum of the spline using TNC method.
         res = spo.minimize(func, cut.argmin(),
@@ -485,7 +486,7 @@ class Pixel:
         self.shift = func(0) - func(idx)
         
         self.cut = cut
-        self.best_fit = 0 * cut
+        self.best_fit = func(np.arange(ridx))
 
         return
 
