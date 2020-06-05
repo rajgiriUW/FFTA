@@ -49,6 +49,9 @@ def hdf_commands(h5_path, ds='FF_Raw'):
     commands = ['***Copy-paste all commands below this line, then hit ENTER***',
                 'import h5py']
 
+    if not isinstance(h5_path, str):
+        raise TypeError('Pass a file path (string), not an H5 file')
+
     try:
         hdf = h5py.File(h5_path, 'r+')
         commands.append("hdf = h5py.File(h5_path, 'r+')")

@@ -475,18 +475,18 @@ class Pixel:
 
         _spline_sz = 2 * self.sampling_rate / self.drive_freq
         func = spi.UnivariateSpline(x, y, k=4, ext=3, s=_spline_sz)
-
+        
         # Find the minimum of the spline using TNC method.
         res = spo.minimize(func, cut.argmin(),
                            method='TNC', bounds=((0, ridx),))
         idx = res.x[0]
 
+        self.cut = cut
+        self.best_fit = func(np.arange(ridx))
+
         # Do index to time conversion and find shift.
         self.tfp = idx / self.sampling_rate
         self.shift = func(0) - func(idx)
-        
-        self.cut = cut
-        self.best_fit = func(np.arange(ridx))
 
         return
 
