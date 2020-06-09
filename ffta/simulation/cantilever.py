@@ -153,9 +153,6 @@ class Cantilever:
         self.can_params = can_params
         self.create_parameters(self.parameters, self.can_params)
         
-        # Define simulation sampling rate, default = 100 MHz
-        self.df = 1e8
-        
         return
 
     def set_conditions(self, trigger_phase=180):
@@ -170,14 +167,14 @@ class Cantilever:
         """
 
         self.trigger_phase = np.mod(np.pi * trigger_phase / 180, PI2)
-        self.n_points = int(self.total_time * self.df)
+        self.n_points = int(self.total_time * self.sampling_rate)
 
         # Add extra cycles to the simulation to find correct phase at trigger.
-        cycle_points = int(2 * self.df / self.res_freq)
+        cycle_points = int(2 * self.sampling_rate / self.res_freq)
         self.n_points_sim = cycle_points + self.n_points
 
         # Create time vector and find the trigger wrt phase.
-        self.t = np.arange(self.n_points_sim) / self.df
+        self.t = np.arange(self.n_points_sim) / self.sampling_rate
 
         # Current phase at trigger.
         current_phase = np.mod(self.wd * self.trigger - self.delta, PI2)
@@ -289,8 +286,8 @@ class Cantilever:
             if len(Z0) != 2:
                 raise ValueError('Must specify exactly [z0, v0]')
             
-            self.n_points = int(self.total_time * self.df)
-            self.t = np.arange(self.n_points) / self.df
+            self.n_points = int(self.total_time * self.sampling_rate)
+            self.t = np.arange(self.n_points) / self.sampling_rate
             self.t0 = self.trigger 
             self.Z0 = Z0
         
@@ -299,17 +296,33 @@ class Cantilever:
         
         Z, infodict = odeint(self.dZ_dt, self.Z0, self.t, full_output=True)
 
-        t0_idx = int(self.t0 * self.df)
-        tidx = int(self.trigger * self.df)
-        n_points = int(self.total_time * self.sampling_rate)
+        t0_idx = int(self.t0 * self.sampling_rate)
+        tidx = int(self.trigger * self.sampling_rate)
         Z_cut = Z[(t0_idx - tidx):(t0_idx + self.n_points - tidx), 0]
 
-        step = int(self.df / self.sampling_rate)
-
-        self.Z = Z_cut[0::step].reshape(n_points, 1) / self.def_invols
         self.infodict = infodict
-
+        self.Z = Z_cut
         return self.Z, self.infodict
+
+    def downsample(self, target_rate=1e7):
+        '''
+        Downsamples the cantilever output. Used primarily to match experiments
+        or for lower computational load
+        
+        This will overwrite the existing output with the downsampled verison
+        
+        target_rate : int
+            The sampling rate for the signal to be converted to. 1e7 = 10 MHz
+        '''
+        
+        if target_rate > self.sampling_rate:
+            raise ValueError('Target should be less than the initial sampling rate')
+        step = int(self.sampling_rate / target_rate)
+        n_points = int(self.total_time * target_rate)
+
+        self.Z = self.Z[0::step].reshape(n_points, 1) / self.def_invols
+
+        return 
 
     def create_parameters(self, params={}, can_params={}, fit_params={}):
         '''

@@ -45,6 +45,7 @@ class ElectricDrive(Cantilever):
     v_array : ndarray, optional
         If provided, supplies the time-dependent voltage to v_cpd
         v_array must be the exact length and sampling of the desired signal
+        v_array only functionally does anything after the trigger.
         
     v_step : float, optional
         If v_array not supplied, then a voltage of v_step is applied at the trigger
@@ -176,6 +177,7 @@ class ElectricDrive(Cantilever):
             else:
 
                 _g = self.v_array[p] if p < n_points else self.v_array[-1]
+                _g = (_g - self.scale[1])/self.scale[0]
                 
                 return _g
 
@@ -262,3 +264,41 @@ class ElectricDrive(Cantilever):
                                                          + self.v_ac * np.sin(self.wd * t))**2
         
         return driving_force
+    
+    def set_conditions(self, trigger_phase=180):
+        """
+        Sets initial conditions and other simulation parameters. Using 2w given
+        the squared term in electric driving
+
+        Parameters
+        ----------
+        trigger_phase: float, optional
+           Trigger phase is in degrees and wrt cosine. Default value is 180.
+
+        """
+        self.delta = np.abs(np.arctan(np.divide(2 * (2*self.wd) * self.beta,
+                                                self.w0 ** 2 - (2*self.wd) ** 2)))
+        
+        self.trigger_phase = np.mod(np.pi * trigger_phase / 180, PI2)
+        self.n_points = int(self.total_time * self.sampling_rate)
+
+        # Add extra cycles to the simulation to find correct phase at trigger.
+        cycle_points = int(2 * self.sampling_rate / self.res_freq)
+        self.n_points_sim = cycle_points + self.n_points
+
+        # Create time vector and find the trigger wrt phase.
+        self.t = np.arange(self.n_points_sim) / self.sampling_rate
+
+        # Current phase at trigger.
+        current_phase = np.mod(self.wd * self.trigger - self.delta, PI2)
+        phase_diff = np.mod(self.trigger_phase - current_phase, PI2)
+
+        self.t0 = self.trigger + phase_diff / self.wd  # modified trigger point
+
+        # Set the initial conditions at t=0.
+        z0 = self.amp * np.sin(-self.delta)
+        v0 = self.amp * self.wd * np.cos(-self.delta)
+               
+        self.Z0 = np.array([z0, v0])
+
+        return
