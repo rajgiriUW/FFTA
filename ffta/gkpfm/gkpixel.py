@@ -8,7 +8,9 @@ Created on Tue Sep  3 11:55:14 2019
 import numpy as np
 import numpy.polynomial.polynomial as npPoly
 from scipy.optimize import fmin_tnc
-
+from matplotlib import pyplot as plt
+from ffta.simulation.cantilever import Cantilever
+from ffta.pixel_utils.load import cantilever_params
 import warnings
 
 def poly2(t, a, b, c):
@@ -81,6 +83,7 @@ class GKPixel:
         self.remainder = int(self.n_points % self.pnts_per_CPD)
 
         self.t_ax = np.linspace(0, self.total_time, self.n_points) #time axis
+        self.f_ax = np.linspace(-self.sampling_rate/2, self.sampling_rate/2, num=self.n_points)
         
         self.excitation()
         
@@ -109,6 +112,114 @@ class GKPixel:
 
         self.exc_wfm = (ac*np.sin(self.t_ax * 2 * np.pi * fr + ph) + dc)
         
+        return
+
+    def dc_response(self, plot=True):
+        """
+        Extracts the DC response and plots. For noise-free data this will show
+        the expected CPD response
+        """
+        SIG_DC = np.copy(self.signal_array)
+        mid = int(len(self.f_ax) / 2)
+        
+        self.drive_bin = np.searchsorted(self.f_ax[mid:], self.drive_freq) + mid
+        delta_freq = self.sampling_rate / self.n_points
+        dc_width = 10e3 # 10 kHz around the DC peak
+        
+        SIG_DC[:mid-int(dc_width / delta_freq) ] = 0
+        SIG_DC[mid+int(dc_width / delta_freq):] = 0
+        sig_dc = np.real(np.fft.ifft(np.fft.ifftshift(SIG_DC)))
+        
+        if plot:
+            plt.figure()
+            plt.plot(self.t_Z, sig_dc)
+            plt.title('DC Offset')
+        
+        self.sig_dc = sig_dc
+        
+        return
+
+    def generate_tf(self, can_params_dict, plot=False):
+        """
+        Uses the cantilever simulation to generate a tune as the transfer function
+        
+        can_params_dict : Dict
+            use ffta.pixel_utils.load.cantilever_params()
+        
+        plot : bool
+            Plots the time-dependent tune
+
+        Returns
+        -------
+        None.
+
+        """
+        if isinstance(can_params_dict, str):
+            can_params_dict = cantilever_params(can_params_dict)
+            can_params_dict = can_params_dict['Initial']
+        
+        can_params = {'amp_invols': 7.5e-08,
+                      'def_invols': 6.88e-08,
+                      'soft_amp': 0.3,
+                      'drive_freq': 309412.0,
+                      'res_freq': 309412.0,
+                      'k': 43.1,
+                      'q_factor': 340.0}
+        
+        force_params =  {'es_force': 1e-10,
+                         'ac_force': 6e-07,
+                         'dc_force': 3e-09,
+                         'delta_freq': -170.0,
+                         'tau': 0.001,
+                         'v_dc': 3.0,
+                         'v_ac': 2.0,
+                         'v_cpd': 1.0,
+                         'dCdz': 1e-10,
+                         'v_step': 1.0}
+        sim_params =  {'trigger': 0.02, 
+                       'total_time': 0.05, 
+                       'sampling_rate': 100000000.0}
+        
+        for k, v in can_params_dict.items():
+            can_params.update(k= v)
+        
+        sim_params['trigger'] = self.trigger
+        sim_params['total_time'] = self.total_time
+        sim_params['sampling_rate'] = self.sampling_rate
+        
+        force_params['es_force'] = can_params_dict['Force']
+        
+        can_params['amp_invols'] = can_params_dict['AMPINVOLS']
+        can_params['soft_amp'] = 0.3
+        can_params['drive_freq'] = self.drive_freq
+        can_params['res_freq'] = self.drive_freq
+        can_params['q_factor'] = can_params_dict['Q']
+        can_params['k'] = can_params_dict['SpringConstant']
+        if can_params['k'] < 1e-3:
+            can_params['k'] *= 1e9 #old code had this off by 1e9
+        
+        cant = Cantilever(can_params, force_params, sim_params)
+        cant.trigger = cant.total_time # don't want a trigger
+        Z, _ = cant.simulate()
+        Z = Z.flatten()
+        if plot:
+            plt.figure()
+            plt.plot(Z)
+            plt.title('Tip response)')
+
+        TF = np.fft.fftshift(np.fft.fft(Z))
+        
+        Q = can_params['q_factor']
+        mid = int(len(self.f_ax) / 2)
+        drive_bin = np.searchsorted(self.f_ax[mid:], self.drive_freq) + mid
+        TFmax = np.abs(TF[drive_bin])
+        
+        TF_norm = Q * (TF- np.min(np.abs(TF))) / (TFmax - np.min(np.abs(TF)))
+
+        self.tf = Z
+        self.TF = TF
+        self.TF_norm = TF_norm
+
         return
 
     def analyze(self, verbose=False, deg = 2):
