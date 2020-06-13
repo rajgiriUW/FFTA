@@ -17,6 +17,12 @@ import h5py
 
 from matplotlib import pyplot as plt
 
+'''
+To do:
+    Separate the instantaneous frequency and tFP/shift calculations
+'''
+
+
 class FFtrEFM(usid.Process):
     """
     Implements the pixel-by-pixel processing using ffta.pixel routines
@@ -76,7 +82,7 @@ class FFtrEFM(usid.Process):
                     Whether to filter the amplitude signal around DC (to remove drive sine artifact)
     
         override : bool, optional
-            If True, forces creation of new results group. Used in _get_existing_datasets
+            If True, forces creation of new results group. Use in _get_existing_datasets
     
         kwargs : dictionary or variable
             Keyword pairs to pass to Process constructor
@@ -126,15 +132,9 @@ class FFtrEFM(usid.Process):
 
         Returns
         -------
-        [inst_freq, amplitude, phase, tfp, shift, pwr_diss] : List
+        [inst_freq, tfp, shift] : List
             inst_freq : array
                 the instantaneous frequency array for that pixel
-            amplitude : array
-                the envelope (amplitude) of the analytic signal
-            phase : array
-                the phase of the signal relative to the drive
-            pwr_diss :array
-                the power dissipation calculated via Clevelent method (see Pixel.py)
             tfp : float
                 the time to first peak
             shift : float
