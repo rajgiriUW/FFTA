@@ -31,7 +31,7 @@ def cost_func(resp_wfm, signal):
 
 class GKPixel:
 
-    def __init__(self, signal_array, params, periods = 2):
+    def __init__(self, signal_array, params, TF_norm=[], periods = 2):
         '''
         Class for processing G-KPFM data
 
@@ -45,6 +45,8 @@ class GKPixel:
                 This currently only works on data that is one signal per pixel (i.e already averaged/flattened)
             params : dict
                 Specifies parameters for analysis. Should include drive_freq, sampling_rate, total_time.
+            TF_norm : array, optional
+                Transfer function supplied in Shifted Fourier domain, normalized to desired Q
             periods: int
                 Number of periods to average over
 
@@ -87,6 +89,11 @@ class GKPixel:
         
         self.excitation()
         
+        self.SIG = np.fft.fftshift(np.fft.fft(signal_array))
+        self.TF_norm = []
+        if any(TF_norm):
+            self.TF_norm = TF
+        
         return
     
     def excitation(self, exc_params={}, phase=-np.pi):
@@ -119,7 +126,7 @@ class GKPixel:
         Extracts the DC response and plots. For noise-free data this will show
         the expected CPD response
         """
-        SIG_DC = np.copy(self.signal_array)
+        SIG_DC = np.copy(self.SIG)
         mid = int(len(self.f_ax) / 2)
         
         self.drive_bin = np.searchsorted(self.f_ax[mid:], self.drive_freq) + mid
@@ -132,14 +139,14 @@ class GKPixel:
         
         if plot:
             plt.figure()
-            plt.plot(self.t_Z, sig_dc)
+            plt.plot(self.t_ax, sig_dc)
             plt.title('DC Offset')
         
         self.sig_dc = sig_dc
         
         return
 
-    def generate_tf(self, can_params_dict, plot=False):
+    def generate_tf(self, can_params_dict={}, plot=False):
         """
         Uses the cantilever simulation to generate a tune as the transfer function
         
@@ -177,24 +184,36 @@ class GKPixel:
                          'dCdz': 1e-10,
                          'v_step': 1.0}
         sim_params =  {'trigger': 0.02, 
-                       'total_time': 0.05, 
-                       'sampling_rate': 100000000.0}
+                       'total_time': 0.05 
+                       }
         
         for k, v in can_params_dict.items():
             can_params.update(k= v)
         
+        # Update from GKPixel class
         sim_params['trigger'] = self.trigger
+        sim_params['sampling_rate'] = self.sampling_rate
         sim_params['total_time'] = self.total_time
         sim_params['sampling_rate'] = self.sampling_rate
-        
-        force_params['es_force'] = can_params_dict['Force']
-        
-        can_params['amp_invols'] = can_params_dict['AMPINVOLS']
-        can_params['soft_amp'] = 0.3
         can_params['drive_freq'] = self.drive_freq
         can_params['res_freq'] = self.drive_freq
-        can_params['q_factor'] = can_params_dict['Q']
-        can_params['k'] = can_params_dict['SpringConstant']
+ 
+        force_keys = ['es_force']
+        can_keys = {'amp_invols': ['amp_invols', 'AMPINVOLS'], 
+                    'q': ['q_factor', 'Q'],
+                    'k': ['SpringConstant', 'k']}
+        
+        for f in force_keys:
+            if 'Force' in can_params_dict:
+                force_params.update(es_force=can_params_dict['Force'])
+            elif 'es_force' in can_params_dict:
+                force_params.update(es_force=can_params_dict['es_force'])
+        
+        for c in ['amp_invols', 'q', 'k']:
+            for l in can_keys[c]:
+                if l in can_params_dict:
+                    can_params.update(l = can_params_dict[l])
+                        
         if can_params['k'] < 1e-3:
             can_params['k'] *= 1e9 #old code had this off by 1e9
         
@@ -219,6 +238,49 @@ class GKPixel:
         self.tf = Z
         self.TF = TF
         self.TF_norm = TF_norm
+
+        return
+
+    def force_out(self, plot=False):
+        """
+        Reconstructs force by dividing by transfer function
+
+        Parameters
+        ----------
+        plot : bool, optional
+            Generates plot of reconstructed force. The default is False.
+
+        Returns
+        -------
+        None.
+
+        """
+        if not any(self.TF_norm):
+            raise AttributeError('Supply Transfer Function or use generate_tf()')
+            
+        self.FORCE = self.SIG / self.TF_norm
+        self.force = np.real(np.fft.ifft(np.fft.ifftshift(self.FORCE)))
+    
+        if plot:
+            start = int(0.5 * self.trigger * self.sampling_rate)
+            stop = int(1.5 * self.trigger * self.sampling_rate)
+            plt.figure()
+            plt.plot(self.t_ax[start:stop], self.force[start:stop])
+            plt.title('Force (output/TF_norm) vs time')
+            plt.xlabel('Time (s)')
+            plt.ylabel('Force (N)')
+    
+        return 
+    
+    def plot_response(self):
+        
+        plt.figure()
+        plt.semilogy(self.f_ax, np.abs(self.SIG), 'b')
+        plt.semilogy(self.f_ax, np.abs(self.TF_norm), 'g')
+        plt.semilogy(self.f_ax, np.abs(self.FORCE), 'k')
+        plt.xlim((0, 2.5*self.drive_freq))
+        plt.legend(labels=['Signal', 'TF-normalized', 'Force_out'])
+        plt.title('Frequency Response of the Data')
 
         return
 
@@ -258,7 +320,48 @@ class GKPixel:
 
         return 
 
-    def min_phase(self, signal):
+    def min_phase(self, phases_to_test = [2.0708, 2.1208, 2.1708]):
+        """
+        Determine the optimal phase shift due to cable lag
+        
+        Parameters
+        ----------
+        phases_to_test : list, optional
+            Which phases to shift the signal with. The default is [2.0708, 2.1208, 2.1708],
+            which is 0.5, 0.55, 0.5 + pi/2
+
+        Returns
+        -------
+        None.
+
+        """
+        # have to iterate this cell many times to find the right phase
+        phases_to_test = np.array(phases_to_test)
+        
+        start = int(0.5 * self.trigger)
+        stop = int(1.5 * self.trigger)
+        
+        mid = int(len(self.f_ax) / 2)
+        drive_bin = np.searchsorted(self.f_ax[mid:], self.drive_freq) + mid
+        
+        # that processes is very slow for large datasets
+        noise_floor = px.processing.fft.get_noise_floor(self.signal_array, 1e-6)[0]
+        Noiselimit = np.ceil(noise_floor)
+        
+        fig, a = plt.subplots(nrows=3, figsize=(6, 14))
+        
+        for x, ph in zip(range(len(phases_to_test)), phases_to_test):
+           
+            SIG_shifted = self.SIG * np.exp(-1j * self.f_Z/self.f_Z[drive_bin] * ph)
+            Gout_shifted = SIG_shifted / self.TF_norm
+            gout_shifted = np.real(np.fft.ifft(np.fft.ifftshift(Gout_shifted)))
+        
+            a[x].plot(self.exc_wfm[start:start+1000], gout_shifted[start:start+1000], 'b')
+            a[x].plot(self.exc_wfm[stop:stop+1000], gout_shifted[stop:stop+1000], 'r')
+
+        return
+
+    def min_phase_old(self, signal):
 
         fits = []
         errors = []
@@ -318,13 +421,3 @@ class GKPixel:
         ph = xpts[ph_test[np.argmin(fitsp)]]
 
         return ph
-
-    def min_phase_fast(self, signal):
-
-        fs = np.fft.fft(signal)
-        idx = np.argmax(np.abs(fs))
-        ph = np.angle(fs)[idx]
-
-        return ph
-
-
