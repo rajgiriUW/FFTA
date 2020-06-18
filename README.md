@@ -1,3 +1,5 @@
+[![PyPI version](https://badge.fury.io/py/FFTA.svg)](https://badge.fury.io/py/FFTA)
+
 # Fast-Free Time-Resolved Electrostatic Force Microscopy (FF-trEFM)
 A package for processing time-dependent frequency response information in atomic force microscopy data. This package is primarily geared towards electrostatic force microscopy, with the resulting output being the amplitude, phase, and instantaneous frequency as a function of time and position.
 
