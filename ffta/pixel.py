@@ -414,6 +414,25 @@ class Pixel:
         self.amplitude = np.abs( np.fft.ifft(np.fft.ifftshift(AMP)) )
         
         return
+    
+    def frequency_filter(self, width=1000):
+        '''
+        Filters the instantaneous frequency to remove noise
+        
+        width : int, optional
+            Size of the boxcar. Empirically 1000 is fine
+        '''
+        FREQ = np.fft.fftshift(np.fft.fft(self.inst_freq)) 
+        
+        center = int(len(FREQ)/2)
+        
+        # crude boxcar
+        FREQ[:center-width] = 0
+        FREQ[center+width:] = 0
+        
+        self.inst_freq = np.real( np.fft.ifft(np.fft.ifftshift(FREQ)) )
+        
+        return
 
     def calculate_phase(self, correct_slope=True):
         """Gets the phase of the signal and correct the slope by removing
@@ -735,7 +754,7 @@ class Pixel:
 
         self.amplitude = amplitude
         self.inst_freq_raw = inst_freq
-        self.inst_freq = inst_freq - inst_freq[tidx]
+        self.inst_freq =-1 * (inst_freq - inst_freq[tidx]) #-1 due to way scales are ordered
         self.spectrogram = np.abs(spectrogram)
         self.wavelet_freq = freq # the wavelet frequencies
 
@@ -752,20 +771,10 @@ class Pixel:
     def calculate_stft(self, time_res=20e-6, fit=False, nfft=200):
         '''
         Sliding FFT approach
-        -Take self.fft_cycles number of cycles of data
-        -multiply by a window function
-        -Take FFT
-        -Find frequency corresponding to the peak
-        -set the data to that frequency
-        -slide by one pixel and repeat
         
         time_res : float, optional
             What timescale to evaluate each FFT over
-            
-        decimate : bool, optional
-            Whether to shift window by time_res or by single point
-            no decimate is quite slow but better visually
-        
+                  
         fit : bool, optional
             Fits a parabola to the frequency peak to get the actual frequency
             Otherwise defaults to parabolic interpolation (see parab.fit)
@@ -776,6 +785,10 @@ class Pixel:
         '''
 
         pts_per_ncycle = int(time_res * self.sampling_rate)
+        
+        if nfft < pts_per_ncycle:
+            print('Error with nfft setting')
+            nfft = pts_per_ncycle
             
         #drivebin = int(self.drive_freq / (self.sampling_rate / nfft ))
         freq, times, spectrogram = sps.spectrogram(self.signal,
@@ -794,8 +807,10 @@ class Pixel:
         else:
             
             for c in range(spectrogram.shape[1]):
+                
                 SIG = spectrogram[:,c]
                 if fit:
+                    
                     pk = np.argmax(np.abs(SIG))
                     popt = np.polyfit(freq[pk - 2:pk + 2], np.abs(SIG[pk - 2:pk + 2]), 2)
                     inst_freq[c] = -0.5 * popt[1] / popt[0]
