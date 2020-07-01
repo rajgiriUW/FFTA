@@ -8,7 +8,7 @@ Created on Tue Mar 31 11:16:36 2020
 
 import numpy as np
 import h5py
-from scipy.optimize import fmin_tnc
+from scipy.optimize import minimize
 import os
 
 import pyUSID as usid
@@ -41,7 +41,7 @@ By default, this will average the ringdown data together per-pixel and mirror to
 def wrapper(ibw_file_path='', rd_folder='', verbose=False, subfolder='/', 
             loadverbose = True, mirror = True, average=True, AMPINVOLS = 100e-9):
     """
-    Wrapper function for processing a .ibw file and associated FF data
+    Wrapper function for processing a .ibw file and associated ringdown data
     
     Average just uses the pixel-wise averaged data
     Raw_Avg processes the raw deflection data, then averages those together
@@ -72,7 +72,7 @@ def wrapper(ibw_file_path='', rd_folder='', verbose=False, subfolder='/',
         Whether to reverse the data on each line read (since data are usually saved during a RETRACE scan)
     
     AMPINVOLS : float
-        inverted optical level sensititivty (scaling factor for amplitude). 
+        inverted optical level sensitivity (scaling factor for amplitude). 
         if not provided, it will search for one in the attributes of h5_rd or use default
 
     Returns
@@ -280,12 +280,13 @@ def test_fitting(h5_rd,  pixel=0, fit_time=[1, 5]):
     cut = h5_rd[()][pixel]
     popt = fit_exp(tx[start:stop], cut[start:stop]*1e9) # 1e9 for amplitude for better curve-fitting
     
+    popt[0] *= 1e-9
     popt[1] *= 1e-9
-    print ('Fit params:', popt, ' and Q=', popt[3] * drive_freq * np.pi)
+    print ('Fit params:', popt, ' and Q=', popt[2] * drive_freq * np.pi)
     
     fig, a = plt.subplots()
     a.plot(tx, cut, 'k')
-    a.plot(tx[start:stop], exp(tx[start:stop],*popt), 'g--')
+    a.plot(tx[start:stop], exp(tx[start:stop]-tx[start],*popt), 'g--')
     
     a.set_xlabel('Time (s)')
     a.set_ylabel('Amplitude (nm)')
@@ -328,24 +329,21 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     return
 
 
-def exp(t, xoff, A1, y0, tau):
+def exp(t, A1, y0, tau):
     '''Uses a single exponential for the case of no drive'''
-    return y0 + A1 * np.exp(-(t-xoff)/tau)
+    return y0 + A1 * np.exp(-t/tau)
 
 def fit_exp(t, cut):
            
     # Cost function to minimize. Faster than normal scipy optimize or lmfit
-    cost = lambda p: np.sum((exp(t, *p) - cut) ** 2)
+    cost = lambda p: np.sum((exp(t-t[0], *p) - cut) ** 2)
     
-    pinit = [cut.min(), t[0], cut.min(), 1e-4]
+    pinit = [cut.max() - cut.min(), cut.min(), 1e-4]
     
-    popt, n_eval, rcode = fmin_tnc(cost, pinit, approx_grad=True, disp=0,
-                                   bounds=[(t[0], t[0]),
-                                           (0, 5*(cut.max() - cut.min())),
-                                           (0, 0),
-                                           (1e-8, 1)])
+    bounds=[(0, 5*(cut.max() - cut.min())), (0, cut.min()), (1e-8, 1)]
+    popt = minimize(cost, pinit, method='TNC', bounds = bounds)
         
-    return popt
+    return popt.x
     
 def plot_ringdown(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
     """
