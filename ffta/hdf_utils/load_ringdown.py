@@ -242,10 +242,12 @@ def reprocess_ringdown(h5_rd, fit_time=[1, 5]):
     tx = np.arange(0, h5_rd.attrs['total_time'], h5_rd.attrs['total_time']/h5_rd.attrs['pnts_per_avg'])
     [start, stop] = [np.searchsorted(tx, fit_time[0]*1e-3), np.searchsorted(tx, fit_time[1]*1e-3)]
     
-    for pxl, n in zip(h5_rd[()], np.arange(h5_rd[()].shape[0])):
+    for n, pxl in enumerate(h5_rd[()]):
+        
         popt = fit_exp(tx[start:stop], pxl[start:stop]*1e9)
+        popt[0] *= 1e-9
         popt[1] *= 1e-9
-        Q[n] = popt[3] * np.pi * drive_freq
+        Q[n] = popt[2] * np.pi * drive_freq
         A[n] = popt[1]
     
     Q = np.reshape(Q, [ h5_rd.attrs['num_rows'], h5_rd.attrs['num_cols']])
@@ -258,7 +260,7 @@ def reprocess_ringdown(h5_rd, fit_time=[1, 5]):
     
     return h5_Q
 
-def test_fitting(h5_rd,  pixel=0, fit_time=[1, 5]):
+def test_fitting(h5_rd,  pixel=0, fit_time=[1, 5], plot=True):
     '''
     Tests curve fitting on a particular pixel, then plots the result
     
@@ -282,14 +284,15 @@ def test_fitting(h5_rd,  pixel=0, fit_time=[1, 5]):
     
     popt[0] *= 1e-9
     popt[1] *= 1e-9
-    print ('Fit params:', popt, ' and Q=', popt[2] * drive_freq * np.pi)
     
-    fig, a = plt.subplots()
-    a.plot(tx, cut, 'k')
-    a.plot(tx[start:stop], exp(tx[start:stop]-tx[start],*popt), 'g--')
+    if plot:
+        print ('Fit params:', popt, ' and Q=', popt[2] * drive_freq * np.pi)
     
-    a.set_xlabel('Time (s)')
-    a.set_ylabel('Amplitude (nm)')
+        fig, a = plt.subplots()
+        a.plot(tx, cut, 'k')
+        a.plot(tx[start:stop], exp(tx[start:stop]-tx[start],*popt), 'g--')
+        a.set_xlabel('Time (s)')
+        a.set_ylabel('Amplitude (nm)')
     
     return popt
 
