@@ -7,6 +7,7 @@ Created on Tue Feb 11 18:07:06 2020
 
 import pyUSID as usid
 import ffta
+from ffta.pixel import Pixel
 from ffta.pixel_utils import badpixels
 import os
 import numpy as np
@@ -151,7 +152,7 @@ class FFtrEFM(usid.Process):
         # as an array, not an ffta.Pixel
         defl = get_utils.get_pixel(self.h5_main, pixel_ind, array_form=True)
 
-        pix = ffta.pixel.Pixel(defl, self.parm_dict, **self.pixel_params)
+        pix = Pixel(defl, self.parm_dict, **self.pixel_params)
 
         tfp, shift, inst_freq = pix.analyze()
         pix.plot()
@@ -349,7 +350,7 @@ class FFtrEFM(usid.Process):
         parm_dict = args[0]
         pixel_params = args[1]
 
-        pix = ffta.pixel.Pixel(defl, parm_dict, **pixel_params)
+        pix = Pixel(defl, parm_dict, **pixel_params)
 
         if parm_dict['if_only']:
             inst_freq, _, _ = pix.generate_inst_freq()

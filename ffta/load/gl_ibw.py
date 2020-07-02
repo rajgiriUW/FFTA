@@ -6,7 +6,7 @@ Created on Wed Feb 21 10:06:12 2018
 """
 
 from __future__ import division, print_function, absolute_import, unicode_literals
-from os import path, remove  # File Path formatting
+from os import path  # File Path formatting
 import numpy as np  # For array operations
 
 from igor import binarywave as bw
@@ -18,17 +18,12 @@ from igor import binarywave as bw
 #from ..microdata import MicroDataGroup, \
 #    MicroDataset  # The building blocks for defining hierarchical storage in the H5 file
 
-import pycroscopy as px
-
 from pyUSID.io.translator import Translator#, generate_dummy_main_parms
 
-from pycroscopy.io.hdf_writer import HDFwriter
-from pycroscopy.io.virtual_data import VirtualDataset, VirtualGroup
-from pycroscopy.io.write_utils import build_ind_val_dsets
-from pycroscopy.io.write_utils import Dimension, VALUES_DTYPE
-from pyUSID.io.hdf_utils import get_h5_obj_refs, link_h5_objects_as_attrs
-
-from ffta.pixel_utils import load
+from pycroscopy.io.write_utils import Dimension
+from pyUSID.io.hdf_utils import write_ind_val_dsets
+from pyUSID.io.hdf_utils import write_main_dataset, create_indexed_group
+import h5py 
 
 class GLIBWTranslator(Translator):
     """
@@ -68,6 +63,17 @@ class GLIBWTranslator(Translator):
         h5_path : String / unicode
             Absolute path of the .h5 file
         """
+
+        # Prepare the .h5 file:
+        if not any(h5_path):
+            folder_path, base_name = path.split(file_path)
+            base_name = base_name[:-4]
+            h5_path = path.join(folder_path, base_name + '.h5')
+            # hard-coded exception, rarely occurs but can be useful
+            if path.exists(h5_path):
+                h5_path = path.join(folder_path, base_name + '_00.h5')
+
+        h5_file = h5py.File(h5_path, 'w')
 
         # If subfolder improperly formatted
         if subfolder == '':
@@ -113,79 +119,25 @@ class GLIBWTranslator(Translator):
 
         pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
                     Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
+        spec_desc = Dimension('arb', 'a.u.', [1])
 
-        ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False, verbose=verbose)
-        ds_spec_inds, ds_spec_vals = build_ind_val_dsets(Dimension('arb', 'a.u.', [1]), is_spectral=True,
-                                                         verbose=verbose)
-
+        # Create Position and spectroscopic datasets
+        h5_pos_inds, h5_pos_vals = write_ind_val_dsets(h5_file['/'], pos_desc, is_spectral=False)
+        h5_spec_inds, h5_spec_vals = write_ind_val_dsets(h5_file['/'], spec_desc, is_spectral=True)
+        
         # Prepare the list of raw_data datasets
-        chan_raw_dsets = list()
         for chan_data, chan_name, chan_unit in zip(images, chan_labels, chan_units):
-            ds_raw_data = VirtualDataset('Raw_Data', data=np.atleast_2d(chan_data), dtype=np.float32, compression='gzip')
-            ds_raw_data.attrs['quantity'] = chan_name
-            ds_raw_data.attrs['units'] = [chan_unit]
-            chan_raw_dsets.append(ds_raw_data)
-        if verbose:
-            print('Finished preparing raw datasets')
-
-        # Prepare the tree structure
-        # technically should change the date, etc.
-        spm_data = VirtualGroup('')
-        #global_parms = generate_dummy_main_parms()
-        global_parms = {}
-        global_parms['data_type'] = 'IgorIBW_' + type_suffix
-        global_parms['translator'] = 'IgorIBW'
-        spm_data.attrs = global_parms
-        #meas_grp = MicroDataGroup('Measurement_000')
-        meas_grp = VirtualGroup(subfolder)
-        meas_grp.attrs = parm_dict
-        spm_data.add_children([meas_grp])
-
-        if verbose:
-            print('Finished preparing tree trunk')
-
-        # Prepare the .h5 file:
-        if not any(h5_path):
-            folder_path, base_name = path.split(file_path)
-            base_name = base_name[:-4]
-            h5_path = path.join(folder_path, base_name + '.h5')
-            # hard-coded exception, rarely occurs but can be useful
-            if path.exists(h5_path):
-                h5_path = path.join(folder_path, base_name + '_00.h5')
             
-        # Write head of tree to file:
-        hdf = HDFwriter(h5_path)
-        try:
-            hdf.write(spm_data, print_log=verbose)
-        except:
-            pass
-
-        if verbose:
-            print('Finished writing tree trunk')
-
-        # Standard list of auxiliary datasets that get linked with the raw dataset:
-        aux_ds_names = ['Position_Indices', 'Position_Values', 'Spectroscopic_Indices', 'Spectroscopic_Values']
-
-        # Create Channels, populate and then link:
-        for chan_index, raw_dset in enumerate(chan_raw_dsets):
-            if verbose:
-                print('Channel number: ',chan_index)
-            if channel_label_name == True:
-                chan_grp = VirtualGroup(chan_labels[chan_index], '/'+subfolder+'/')
-            else:
-                #chan_grp = MicroDataGroup('{:s}{:03d}'.format('Channel_', chan_index), '/Measurement_000/')
-                chan_grp = VirtualGroup('{:s}{:03d}'.format('Channel_', chan_index), '/'+subfolder+'/')
-            
-            chan_grp.attrs['name'] = raw_dset.attrs['quantity']
-            chan_grp.add_children([ds_pos_ind, ds_pos_val, ds_spec_inds, ds_spec_vals, raw_dset])
-            h5_refs = hdf.write(chan_grp, print_log=verbose)
-            h5_raw = get_h5_obj_refs(['Raw_Data'], h5_refs)[0]
-            link_h5_objects_as_attrs(h5_raw, get_h5_obj_refs(aux_ds_names, h5_refs))
+            chan_grp = create_indexed_group(h5_file['/'], chan_name)
+            write_main_dataset(chan_grp, np.atleast_2d(chan_data), 'Raw_Data',
+                               chan_name, chan_unit,
+                               pos_desc, spec_desc,
+                               dtype=np.float32)
 
         if verbose:
             print('Finished writing all channels')
 
-        hdf.close()
+        h5_file.close()
         return h5_path
 
     @staticmethod

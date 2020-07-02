@@ -92,7 +92,7 @@ class GKPixel:
         self.SIG = np.fft.fftshift(np.fft.fft(signal_array))
         self.TF_norm = []
         if any(TF_norm):
-            self.TF_norm = TF
+            self.TF_norm = TF_norm
         
         return
     

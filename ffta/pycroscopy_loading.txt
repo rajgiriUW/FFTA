@@ -10,12 +10,12 @@ ff_folder = r'E:\Data\20190107 - BAPI trEFM\FF02_128x64_455nm_7V_400mA'
 h5_path, parm_dict, h5_avg = ffta.hdf_utils.load_hdf.load_wrapper(ibw_file_path=ibw_file, ff_file_path=ff_folder, verbose=False, average=True)
 
 # SVD
-h5_svd = ffta.analysis.svd.FF_SVD(h5_avg)
+h5_svd = ffta.analysis.svd.test_svd(h5_avg)
 
 # Rebuild
 clean_components = [0,1,2,3,4] # change based on SVD
 
-h5_rb = ffta.analysis.svd.FF_SVD_filter(h5_avg, clean_components)
+h5_rb = ffta.analysis.svd.svd_filter(h5_avg, clean_components)
 
 # The actual FF-trEFM processing. 
 # Note that plotting does not currently work in Jupyter...

@@ -168,7 +168,10 @@ def cantilever_params(path, asDataFrame=False):
     
     '''
     
-    df = pd.read_csv(path, sep='\t', skiprows=1, index_col = 'Unnamed: 0')
+    try:
+        df = pd.read_csv(path, sep='\t', skiprows=1, index_col = 'Unnamed: 0')
+    except:
+        df = pd.read_csv(path, sep=',', skiprows=1, index_col=r'x/y')
     for c in df.columns:
     
         df[c][df[c] != 'NAN'] = pd.to_numeric(df[c][df[c] != 'NAN'])
