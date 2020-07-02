@@ -10,7 +10,7 @@ import pyUSID as usid
 import warnings
 import numpy as np
 
-from ffta.hdf_utils import get_utils
+from ffta.load import get_utils
 
 from pycroscopy.io.write_utils import build_ind_val_dsets, build_ind_val_matrices, Dimension
 

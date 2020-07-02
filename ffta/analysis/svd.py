@@ -13,7 +13,8 @@ from pycroscopy.processing.svd_utils import SVD
 
 from matplotlib import pyplot as plt
 
-from ffta.hdf_utils import hdf_utils, get_utils
+from ffta.hdf_utils import hdf_utils
+from ffta.load import get_utils
 import h5py
 
 """

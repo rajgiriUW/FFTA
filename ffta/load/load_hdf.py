@@ -17,9 +17,9 @@ import pyUSID as usid
 from pycroscopy.io.write_utils import build_ind_val_dsets, Dimension
 
 from ffta.pixel_utils import load
-from ffta.hdf_utils import gl_ibw
+from ffta.load import gl_ibw
 from ffta.hdf_utils import hdf_utils
-from ffta.hdf_utils import get_utils
+from ffta.load import get_utils
 from ffta import line
 
 import warnings

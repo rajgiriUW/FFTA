@@ -14,8 +14,8 @@ import os
 import pyUSID as usid
 from pycroscopy.io.write_utils import build_ind_val_dsets, Dimension
 
-from ffta.hdf_utils.load_hdf import load_folder
-from ffta.hdf_utils import gl_ibw
+from ffta.load.load_hdf import load_folder
+from ffta.load import gl_ibw
 from ffta.pixel_utils import badpixels
 
 from igor.binarywave import load as loadibw

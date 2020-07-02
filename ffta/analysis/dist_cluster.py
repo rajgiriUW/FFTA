@@ -16,7 +16,7 @@ from matplotlib import pyplot as plt
 import matplotlib.animation as animation
 from ffta.analysis import mask_utils
 from ffta.hdf_utils import hdf_utils
-from ffta.hdf_utils import get_utils
+from ffta.load import get_utils
 from ffta import pixel
 """
 Creates a Class with various data grouped based on distance to masked edges

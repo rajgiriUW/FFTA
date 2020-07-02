@@ -11,7 +11,7 @@ import pyUSID as usid
 import numpy as np
 from scipy import signal as sps
 
-from ffta.hdf_utils import get_utils
+from ffta.load import get_utils
 
 from ffta import pixel
 from matplotlib import pyplot as plt

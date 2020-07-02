@@ -11,7 +11,8 @@ import h5py
 
 from matplotlib import pyplot as plt
 
-from ffta.hdf_utils import hdf_utils, get_utils
+from ffta.load import get_utils
+from ffta.hdf_utils import hdf_utils
 from ffta.pixel_utils import badpixels
 import pycroscopy as px
 import pyUSID as usid
