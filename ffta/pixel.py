@@ -149,7 +149,8 @@ class Pixel:
 
     def __init__(self, signal_array, params, can_params={},
                  fit=True, pycroscopy=False, 
-                 method='hilbert', fit_form='product', filter_amplitude=False):
+                 method='hilbert', fit_form='product', filter_amplitude=False,
+                 filter_frequency=False):
 
         # Create parameter attributes for optional parameters.
         # These defaults are overwritten by values in 'params'
@@ -157,6 +158,7 @@ class Pixel:
         # FIR (Hilbert) filtering parameters
         self.n_taps = 1499
         self.filter_bandwidth = 5000
+        self.filter_frequency = filter_frequency
         
         # Wavelet parameters
         self.wavelet_analysis = False
@@ -196,7 +198,10 @@ class Pixel:
         for key, value in can_params.items():
             
             setattr(self, key, float(value))
-                
+        
+        if self.filter_frequency:
+            self.bandpass_filter = 0 # turns off FIR
+        
         # Assign values from inputs.
         self.signal_array = signal_array
         self.signal_orig = None # used in amplitude calc to undo any Windowing beforehand
@@ -206,7 +211,6 @@ class Pixel:
 
         # Set dimensions correctly
         # Three cases: 1) 2D (has many averages) 2) 1D (but set as 1xN) and 3) True 1D
-
         if len(signal_array.shape) == 2 and 1 not in signal_array.shape:
 
             self.n_points, self.n_signals = self.signal_array.shape
@@ -426,9 +430,14 @@ class Pixel:
         
         center = int(len(FREQ)/2)
         
+        # Find drive_bin
+        df = self.sampling_rate / self.n_points
+        f_Z = np.arange(-self.sampling_rate/2, self.sampling_rate/2, df)
+        drive_bin = np.searchsorted(f_Z[center:], self.drive_freq)
+    
         # crude boxcar
-        FREQ[:center-width] = 0
-        FREQ[center+width:] = 0
+        FREQ[:center-drive_bin+2*df] = 0
+        FREQ[center+drive_bin+2*df:] = 0
         
         self.inst_freq = np.real( np.fft.ifft(np.fft.ifftshift(FREQ)) )
         
@@ -891,7 +900,10 @@ class Pixel:
         inst_freq : (n_points,) array_like
             Instantaneous frequency of the signal.
         """
-
+        
+        if timing:
+            t1 = time.time()
+            
         # Remove DC component, first.
         # self.remove_dc()
 
@@ -912,21 +924,7 @@ class Pixel:
         # DWT Denoise
         # self.dwt_denoise()
 
-        if timing:
-            t1 = time.time()
-
-        if self.method == 'emd':
-
-            # Get the analytical signal doing a Hilbert transform.
-            self.hilbert_transform()
-
-            # Calculate the phase from analytic signal.
-            self.calculate_phase()
-
-            # Calculate the instantaneous frequency
-            self.EMD_inst_freq()
-
-        elif self.method == 'wavelet':
+        if self.method == 'wavelet':
 
             # Calculate instantenous frequency using wavelet transform.
             self.calculate_cwt(**self.wavelet_params)
@@ -958,6 +956,7 @@ class Pixel:
             # Calculate the amplitude and phase from the analytic signal
             self.calculate_amplitude()
             
+            # Filter out oscillatory noise from amplitude
             if self.filter_amplitude:
                 
                 self.amplitude_filter()
@@ -968,14 +967,20 @@ class Pixel:
             self.calculate_inst_freq()
             
         else:
-            raise ValueError('Invalid analysis method! Valid options: hilbert, wavelet, fft, emd')
+            raise ValueError('Invalid analysis method! Valid options: hilbert, wavelet, fft')
         
         if timing:
             print('Time:', time.time() - t1, 's')
         
         # If it's a recombination image invert it to find minimum.
         if self.recombination:
+            
             self.inst_freq = self.inst_freq * -1
+            
+        # Filter out oscillatory noise from instantaneous frequency
+        if self.filter_frequency:
+            
+            self.frequency_filter(self.freq_filter_width)
 
         return self.inst_freq, self.amplitude, self.phase
 
@@ -1029,7 +1034,7 @@ class Pixel:
             
             if self.method == 'hilbert':
             
-                    self.restore_signal()
+                self.restore_signal()
 
         # If caught any exception, set everything to zero and log it.
         except Exception as exception:

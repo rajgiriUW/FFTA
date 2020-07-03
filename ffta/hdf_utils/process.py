@@ -91,7 +91,7 @@ class FFtrEFM(usid.Process):
 
         self.parm_dict = parm_dict
         if not any(parm_dict):
-            self.parm_dict = get_utils.get_params(h5_main)
+            self.parm_dict = usid.hdf_utils.get_attributes(h5_main)
             self.parm_dict.update({'if_only': if_only})
         
         for key, val in parm_dict.items():

@@ -113,12 +113,8 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         pass
 
     try:
-        parameters = get_utils.get_params(hdf.file)
-        if not any(parameters):
-            parameters = get_utils.get_params(h5_avg)
-            commands.append("parameters = ffta.hdf_utils.get_utils.get_params(h5_avg)")
-        else:
-            commands.append("parameters = ffta.hdf_utils.get_utils.get_params(hdf.file)")
+        parameters = usid.hdf_utils.get_attributes(h5_avg)
+        commands.append("parameters = usid.hdf_utils.get_attributes(h5_avg)")
     except:
         pass
 
