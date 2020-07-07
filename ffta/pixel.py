@@ -364,6 +364,85 @@ class Pixel:
 
         return
 
+    def amplitude_filter(self):
+        '''
+        Filters the drive signal out of the amplitude response
+        '''
+        AMP = np.fft.fftshift(np.fft.fft(self.amplitude)) 
+        
+        DRIVE = self.drive_freq/(self.sampling_rate/self.n_points) # drive location in frequency space
+        center = int(len(AMP)/2)
+        
+        # crude boxcar
+        AMP[:center-int(DRIVE/2)+1] = 0
+        AMP[center+int(DRIVE/2)-1:] = 0
+        
+        self.amplitude = np.abs( np.fft.ifft(np.fft.ifftshift(AMP)) )
+        
+        return
+    
+    def frequency_filter(self):
+        '''
+        Filters the instantaneous frequency around DC peak to remove noise
+        Uses self.filter_bandwidth for the frequency filter
+        '''
+        FREQ = np.fft.fftshift(np.fft.fft(self.inst_freq)) 
+        
+        center = int(len(FREQ)/2)
+
+        df = self.sampling_rate / self.n_points
+        drive_bin = int(np.ceil(self.drive_freq / df)) 
+        bin_width = int(self.filter_bandwidth / df)
+        
+        if bin_width > drive_bin:
+            print('width exceeds first resonance')
+            bin_width = drive_bin-1
+        
+        FREQ[:center - bin_width] = 0
+        FREQ[center + bin_width:] = 0
+        
+        self.inst_freq = np.real(np.fft.ifft(np.fft.ifftshift(FREQ)))
+        
+        return
+        
+    
+    def frequency_harmonic_filter(self, width=5):
+        '''
+        Filters the instantaneous frequency to remove noise
+        Defaults to DC and then every multiple harmonic up to sampling
+        
+        width : int, optional
+            Size of the boxcar around the various peaks
+        '''
+        FREQ = np.fft.fftshift(np.fft.fft(self.inst_freq)) 
+        
+        center = int(len(FREQ)/2)
+        
+        # Find drive_bin
+        df = self.sampling_rate / self.n_points
+        drive_bin = int(np.ceil(self.drive_freq / df)) 
+        bins = np.arange(len(FREQ)/2)[::drive_bin]
+        bins = np.append(center-bins, center+bins)
+        
+        FREQ_filt = np.zeros(len(FREQ), dtype='complex128')
+        for b in bins:
+            FREQ_filt[int(b)-width:int(b)+width] = FREQ[int(b)-width:int(b)+width]
+        
+        self.inst_freq = np.real( np.fft.ifft(np.fft.ifftshift(FREQ)) )
+        
+        return
+
+    def hilbert(self):
+        """Analytical signal and calculate phase/frequency via Hilbert transform"""
+        
+        self.hilbert_transform()
+        self.calculate_amplitude()
+        self.calculate_phase()
+        self.calculate_inst_freq()
+        
+        return
+
+
     def hilbert_transform(self):
         """Gets the analytical signal doing a Hilbert transform."""
 
@@ -401,47 +480,6 @@ class Pixel:
         self.power_dissipated = A * (B - C)
         
         return 
-    
-    def amplitude_filter(self):
-        '''
-        Filters the drive signal out of the amplitude response
-        '''
-        AMP = np.fft.fftshift(np.fft.fft(self.amplitude)) 
-        
-        DRIVE = self.drive_freq/(self.sampling_rate/self.n_points) # drive location in frequency space
-        center = int(len(AMP)/2)
-        
-        # crude boxcar
-        AMP[:center-int(DRIVE/2)+1] = 0
-        AMP[center+int(DRIVE/2)-1:] = 0
-        
-        self.amplitude = np.abs( np.fft.ifft(np.fft.ifftshift(AMP)) )
-        
-        return
-    
-    def frequency_filter(self, width=1000):
-        '''
-        Filters the instantaneous frequency to remove noise
-        
-        width : int, optional
-            Size of the boxcar. Empirically 1000 is fine
-        '''
-        FREQ = np.fft.fftshift(np.fft.fft(self.inst_freq)) 
-        
-        center = int(len(FREQ)/2)
-        
-        # Find drive_bin
-        df = self.sampling_rate / self.n_points
-        f_Z = np.arange(-self.sampling_rate/2, self.sampling_rate/2, df)
-        drive_bin = np.searchsorted(f_Z[center:], self.drive_freq)
-    
-        # crude boxcar
-        FREQ[:center-drive_bin+2*df] = 0
-        FREQ[center+drive_bin+2*df:] = 0
-        
-        self.inst_freq = np.real( np.fft.ifft(np.fft.ifftshift(FREQ)) )
-        
-        return
 
     def calculate_phase(self, correct_slope=True):
         """Gets the phase of the signal and correct the slope by removing
@@ -834,6 +872,7 @@ class Pixel:
         self.inst_freq = inst_freq - inst_freq[tidx]
         self.spectrogram = spectrogram
         self.stft_freq = freq
+        self.stft_times = times
 
         # subtract the w*t line (drive frequency line) from phase
         start = int(0.3 * tidx)
@@ -951,20 +990,12 @@ class Pixel:
                 self.iir_filter()
 
             # Get the analytical signal doing a Hilbert transform.
-            self.hilbert_transform()
+            self.hilbert()
 
-            # Calculate the amplitude and phase from the analytic signal
-            self.calculate_amplitude()
-            
             # Filter out oscillatory noise from amplitude
             if self.filter_amplitude:
                 
                 self.amplitude_filter()
-            
-            self.calculate_phase()
-
-            # Calculate instantenous frequency.
-            self.calculate_inst_freq()
             
         else:
             raise ValueError('Invalid analysis method! Valid options: hilbert, wavelet, fft')
