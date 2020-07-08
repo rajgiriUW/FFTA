@@ -17,6 +17,7 @@ from ffta.pixel_utils import noise
 from ffta.pixel_utils import parab
 from ffta.pixel_utils import fitting
 from ffta.pixel_utils import dwavelet
+from ffta.pixel_utils import tfp_calc
 
 from matplotlib import pyplot as plt
 
@@ -404,7 +405,6 @@ class Pixel:
         self.inst_freq = np.real(np.fft.ifft(np.fft.ifftshift(FREQ)))
         
         return
-        
     
     def frequency_harmonic_filter(self, width=5):
         '''
@@ -528,178 +528,40 @@ class Pixel:
 
         return
 
-    def find_minimum(self):
-        """Finds when the minimum of instantaneous frequency happens."""
-
-        # Cut the signal into region of interest.
+    def find_tfp(self):
+        """Calculate tfp and shift based self.fit_form and self.fit selection"""
         ridx = int(self.roi * self.sampling_rate)
         cut = self.inst_freq[self.tidx:(self.tidx + ridx)]
-
-        # Define a spline to be used in finding minimum.
-        x = np.arange(ridx)
-        y = cut
-
-        _spline_sz = 2 * self.sampling_rate / self.drive_freq
-        func = spi.UnivariateSpline(x, y, k=4, ext=3, s=_spline_sz)
+        cut -= self.inst_freq[self.tidx]
+        self.cut = cut
+        t = np.arange(cut.shape[0]) / self.sampling_rate
         
-        # Find the minimum of the spline using TNC method.
-        res = spo.minimize(func, cut.argmin(),
-                           method='TNC', bounds=((0, ridx),))
-        idx = res.x[0]
-
-        self.cut = cut
-        self.best_fit = func(np.arange(ridx))
-
-        # Do index to time conversion and find shift.
-        self.tfp = idx / self.sampling_rate
-        self.shift = func(0) - func(idx)
-
-        return
-
-    def fit_freq_product(self):
-        """Fits the frequency shift to an approximate functional form using
-        an analytical fit with bounded values."""
-
-        # Calculate the region of interest and if filtered move the fit index.
-        ridx = int(self.roi * self.sampling_rate)
-        fidx = self.tidx
-
-        # Make sure cut starts from 0 and never goes over.
-        cut = self.inst_freq[fidx:(fidx + ridx)] - self.inst_freq[fidx]
-        t = np.arange(cut.shape[0]) / self.sampling_rate
-
-        # Fit the cut to the model.
-        popt = fitting.fit_bounded_product(self.Q, self.drive_freq, t, cut)
-
-        A, tau1, tau2 = popt
-
-        # Analytical minimum of the fit.
-        # self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
-        # self.shift = -A * np.exp(-self.tfp / tau1) * np.expm1(-self.tfp / tau2)
-
-        # For diagnostic purposes.
-        self.cut = cut
-        self.popt = popt
-        self.best_fit = -A * (np.exp(-t / tau1) - 1) * np.exp(-t / tau2)
-
-        self.tfp = np.argmin(self.best_fit) / self.sampling_rate
-        self.shift = np.min(self.best_fit)
-
-        self.rms = np.sqrt(np.mean(np.square(self.best_fit - cut)))
-
-        return
-
-    def fit_freq_sum(self):
-        """Fits the frequency shift to an approximate functional form using
-        an analytical fit with bounded values."""
-
-        # Calculate the region of interest and if filtered move the fit index.
-        ridx = int(self.roi * self.sampling_rate)
-        fidx = self.tidx
-
-        # Make sure cut starts from 0 and never goes over.
-        cut = self.inst_freq[fidx:(fidx + ridx)] - self.inst_freq[fidx]
-
-        t = np.arange(cut.shape[0]) / self.sampling_rate
-
-        # Fit the cut to the model.
-        popt = fitting.fit_bounded_sum(self.Q, self.drive_freq, t, cut)
-        A1, A2, tau1, tau2 = popt
-
-        # For diagnostic purposes.
-        self.cut = cut
-        self.popt = popt
-        self.best_fit = A1 * (np.exp(-t / tau1) - 1) - A2 * np.exp(-t / tau2)
-
-        self.tfp = np.argmin(self.best_fit) / self.sampling_rate
-        self.shift = np.min(self.best_fit)
-
-        return
-
-    def fit_freq_exp(self):
-        """Fits the frequency shift to a single exponential in the case where
-        there is no return to 0 Hz offset (if drive is cut)."""
-
-        ridx = int(self.roi * self.sampling_rate)
-        fidx = self.tidx
-
-        # Make sure cut starts from 0 and never goes over.
-        cut = self.inst_freq[fidx:(fidx + ridx)] - self.inst_freq[fidx]
-
-        t = np.arange(cut.shape[0]) / self.sampling_rate
-
-        # Fit the cut to the model.
-        popt = fitting.fit_bounded_exp(t, cut)
-
-        # For diagnostics
-        A, y0, tau = popt
-        self.cut = cut
-        self.popt = popt
-        self.best_fit = A * (np.exp(-t / tau)) + y0
-
-        self.shift = A
-        self.tfp = tau
-
-        return
-    
-    def fit_ringdown(self):
-        """Fits the amplitude to determine Q from single exponential fit."""
-
-        ridx = int(self.roi * self.sampling_rate)
-        fidx = int(self.tidx)
-
-        cut = self.amplitude[fidx:(fidx + ridx)]
-
-        t = np.arange(cut.shape[0]) / self.sampling_rate
-
-        # Fit the cut to the model.
-        popt = fitting.fit_ringdown_exp(t, cut*1e9)
-        popt[0] *= 1e-9
-        popt[1] *= 1e-9
-
-        # For diagnostics
-        A, y0, tau = popt
-        self.cut = cut
-        self.popt = popt
-        self.best_fit = A * (np.exp(-t / tau)) + y0
-
-        self.shift = A
-        self.tfp = np.pi * self.drive_freq * tau # same as ringdown_Q to help with pycroscopy bugs that call tfp
-        self.ringdown_Q = np.pi * self.drive_freq * tau
-
-        return
-
-    def fit_phase(self):
-        """Fits the phase to an approximate functional form using an
-        analytical fit with bounded values."""
-
-        # Calculate the region of interest and if filtered move the fit index.
-        ridx = int(self.roi * self.sampling_rate)
-
-        fidx = self.tidx
-
-        # Make sure cut starts from 0 and never goes over.
-        # -1 on cut is because of sign error in generating phase
-        cut = -1 * (self.phase[fidx:(fidx + ridx)] - self.phase[fidx])
-        t = np.arange(cut.shape[0]) / self.sampling_rate
-
-        # Fit the cut to the model.
-        popt = fitting.fit_bounded_phase(self.Q, self.drive_freq, t, cut)
-
-        A, tau1, tau2 = popt
-
-        # Analytical minimum of the fit.
-        self.tfp = tau2 * np.log((tau1 + tau2) / tau2)
-        self.shift = A * np.exp(-self.tfp / tau1) * np.expm1(-self.tfp / tau2)
-
-        # For diagnostic purposes.
-        postfactor = (tau2 / (tau1 + tau2)) * np.exp(-t / tau2) - 1
-
-        self.cut = cut
-        self.popt = popt
-        self.best_fit = -A * np.exp(-t / tau1) * np.expm1(-t / tau2)
-        self.best_phase = A * tau1 * np.exp(-t / tau1) * postfactor + A * tau1 * (1 - tau2 / (tau1 + tau2))
-
+        if not self.fit: 
+            
+            tfp_calc.find_minimum(self, cut)
+            
+        elif self.fit_form == 'sum':
+            
+            tfp_calc.fit_freq_sum(self, cut, t)
+            
+        elif self.fit_form == 'exp':
+            
+            tfp_calc.fit_freq_exp(self, cut, t)
+            
+        elif self.fit_form == 'ringdown':
+            
+            cut = self.amplitude[self.tidx:(self.tidx + ridx)]
+            tfp_calc.fit_ringdown(self, ridx, cut, t)
+            
+        elif self.fit_form == 'product':
+            
+            tfp_calc.fit_freq_product(self, cut, t)
+            
+        elif self.fit_form == 'phase':
+            
+            cut = -1 * (self.phase[self.tidx:(self.tidx + ridx)] - self.phase[self.tidx])
+            tfp_calc.fit_phase(self, cut, t)
+        
         return
 
     def restore_signal(self):
@@ -780,9 +642,12 @@ class Pixel:
         
         # slow serial curve fitting
         else:
+            
             inst_freq = np.zeros(self.n_points)
             amplitude = np.zeros(self.n_points)
+            
             for c in range(spectrogram.shape[1]):
+                
                 SIG = spectrogram[:,c]
                 if fit:
                     pk = np.argmax(np.abs(SIG))
@@ -791,7 +656,6 @@ class Pixel:
                     inst_freq[c] = -0.5 * popt[1] / popt[0]
                     amplitude[c] = np.abs(SIG)[pk]
         
-
         # rescale to correct frequency 
         inst_freq = pywt.scale2frequency(self.wavelet, inst_freq + self.scales[0]) / dt
         
@@ -1011,7 +875,7 @@ class Pixel:
         # Filter out oscillatory noise from instantaneous frequency
         if self.filter_frequency:
             
-            self.frequency_filter(self.freq_filter_width)
+            self.frequency_filter()
 
         return self.inst_freq, self.amplitude, self.phase
 
@@ -1034,35 +898,9 @@ class Pixel:
             self.inst_freq, self.amplitude, self.phase = self.generate_inst_freq()
 
             # Find where the minimum is.
-            if self.fit:
+            self.find_tfp()
 
-                if self.phase_fitting:
-
-                    self.fit_phase()
-
-                else:
-
-                    if self.fit_form == 'product':
-
-                        self.fit_freq_product()
-
-                    elif self.fit_form == 'sum':
-
-                        self.fit_freq_sum()
-
-                    elif self.fit_form == 'exp':
-
-                        self.fit_freq_exp()
-                        
-                    elif self.fit_form == 'ringdown':
-
-                        self.fit_ringdown()
-            else:
-
-                self.find_minimum()
-
-            # Restore the length.
-            
+            # Restore the length due to FIR filter being causal
             if self.method == 'hilbert':
             
                 self.restore_signal()
