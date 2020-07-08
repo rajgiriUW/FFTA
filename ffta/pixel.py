@@ -756,8 +756,6 @@ class Pixel:
             generates a new plot (True) or plots on existing plot figure (False)
         
         raw : bool, optional
-            
-        
         """
 
         if newplot:
@@ -918,8 +916,5 @@ class Pixel:
             return self.tfp, self.shift, self.phase
 
         else:
-
-            if self.tfp == 5e-7:
-                return np.NaN, np.NaN, self.inst_freq
 
             return self.tfp, self.shift, self.inst_freq
