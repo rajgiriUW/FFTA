@@ -11,27 +11,17 @@ from scipy.optimize import fmin_tnc
 from matplotlib import pyplot as plt
 from ffta.simulation.cantilever import Cantilever
 from ffta.pixel_utils.load import cantilever_params
+from ffta.pixel import Pixel
 import warnings
 
-def poly2(t, a, b, c):
-    return a * t ** 2 + b * t + c
+from igor.binarywave import load as loadibw
 
-def cost_func(resp_wfm, signal):
+class GKPixel(Pixel):
 
-    cost = lambda p: np.sum((poly2(resp_wfm, *p) - signal) ** 2)
-
-    pinit = [-1 * np.abs(np.max(signal) - np.min(signal)), 0, 0]
-
-    popt, _, _ = fmin_tnc(cost, pinit, approx_grad=True, disp=0,
-                          bounds=[(-10, 10),
-                                  (-10, 10),
-                                  (-10, 10)])
-
-    return popt
-
-class GKPixel:
-
-    def __init__(self, signal_array, params, TF_norm=[], periods = 2):
+    def __init__(self, signal_array, params, can_params={},
+                 fit=True, pycroscopy=False, 
+                 method='hilbert', fit_form='product', filter_amplitude=False,
+                 filter_frequency=False, TF_norm=[], periods = 2):
         '''
         Class for processing G-KPFM data
 
@@ -41,17 +31,14 @@ class GKPixel:
             Assigns that as the CPD
 
         Parameters:
-            signal_array : h5Py Dataset or USIDDataset
-                This currently only works on data that is one signal per pixel (i.e already averaged/flattened)
-            params : dict
-                Specifies parameters for analysis. Should include drive_freq, sampling_rate, total_time.
+            See Pixel of parameter defintions
+            
+            Additional parameters:
+                
             TF_norm : array, optional
                 Transfer function supplied in Shifted Fourier domain, normalized to desired Q
             periods: int
                 Number of periods to average over
-
-        ncycles : int
-            number of cantilever cycles to average over
 
         Returns:
             CPD : array
@@ -61,18 +48,16 @@ class GKPixel:
             CPD_mean : float
                 Simple average of the CPD trace, useful for plotting
         '''
-
-        self.signal_array = signal_array
+        super(GKPixel, self).__init__(signal_array, params, can_params,
+                                      fit, False, method, fit_form, 
+                                      filter_amplitude, filter_frequency)
 
         # This functionality is for single lines
-        if len(signal_array.shape) > 1:
+        if len(self.signal_array.shape) > 1:
             warnings.warn('This function only works on 1D (single lines). Flattening..')
             self.signal_array.flatten()
 
-        for key, value in params.items():
-            setattr(self, key, value)
-
-        self.n_points = len(signal_array)
+        self.n_points = len(self.signal_array)
         self.periods = periods
         
         self.pxl_time = self.n_points/self.sampling_rate   # how long each pixel is in time (8.192 ms)
@@ -89,7 +74,7 @@ class GKPixel:
         
         self.excitation()
         
-        self.SIG = np.fft.fftshift(np.fft.fft(signal_array))
+        self.SIG = np.fft.fftshift(np.fft.fft(self.signal_array))
         self.TF_norm = []
         if any(TF_norm):
             self.TF_norm = TF_norm
@@ -143,6 +128,33 @@ class GKPixel:
             plt.title('DC Offset')
         
         self.sig_dc = sig_dc
+        
+        return
+    
+    def process_tf(self, tf_path, excitation_path, remove_dc = False):
+        '''
+        Process transfer function and broadband excitation from supplied file
+        This function does not check shape or length
+        '''
+        tf = loadibw(tf_path)['wave']['wData']
+        exc = loadibw(excitation_path)['wave']['wData']
+        self.tf = np.mean(tf, axis=1)
+        self.TF = np.fft.fftshift(np.fft.fft(self.tf))
+        
+        if remove_dc:
+            self.TF[int(len(tf)/2)] = 0
+
+        self.exc = np.mean(exc, axis=1)
+        self.EXC = np.fft.fftshift(np.fft.fft(self.exc))
+        
+        center = int(len(tf)/2)
+        df = self.sampling_rate / self.n_points
+        drive_bin = int(np.ceil(self.drive_freq / df)) 
+        
+        TFmax = np.abs(self.TF[drive_bin+center])
+        
+        self.TF_norm = self.Q * (self.TF- np.min(np.abs(self.TF))) /  \
+                                (TFmax - np.min(np.abs(self.TF)))
         
         return
 
@@ -257,8 +269,33 @@ class GKPixel:
         """
         if not any(self.TF_norm):
             raise AttributeError('Supply Transfer Function or use generate_tf()')
-            
-        self.FORCE = self.SIG / self.TF_norm
+        self.FORCE = np.zeros(len(self.SIG), dtype=complex)
+        
+    #         signal_ind_vec=np.arange(w_vec2.size)
+    
+    # G = np.zeros(w_vec2.size,dtype=complex)         # G = raw
+    
+    # # Step 3B) Phase correction; ph value is defined way above in Step 2B.i
+    # if PCA_pre_reconstruction_clean == True:
+    #     test_data = PCA_clean_data_prerecon[i,:] - np.mean(PCA_clean_data_prerecon[i,:])   
+    # else:
+    #     test_data = h5_filt[i,:] - np.mean(h5_filt[i,:])
+    
+    # # filt_line is from filtered data above  
+    # test_data = np.fft.fftshift(np.fft.fft(test_data)) 
+    # signal_kill = np.where(np.abs(test_data) < NoiseLimit)
+    # signal_ind_vec = np.delete(signal_ind_vec,signal_kill)
+    # test_data_ph = (test_data) * np.exp(-1j*w_vec2/(w_vec2[ind_drive])*ph)
+
+    # # Step 3C)  iFFT the response above a user defined noise floor to recover Force in time domain.
+    # G[signal_ind_vec] = test_data_ph[signal_ind_vec]
+    # G = G/TF_norm
+    # G_time[i,:] = np.real(np.fft.ifft(np.fft.ifftshift(G)))
+        
+        
+        bins = []
+        
+        self.FORCE[bins] = self.SIG[bins] / self.TF_norm[bins]
         self.force = np.real(np.fft.ifft(np.fft.ifftshift(self.FORCE)))
     
         if plot:
@@ -421,3 +458,20 @@ class GKPixel:
         ph = xpts[ph_test[np.argmin(fitsp)]]
 
         return ph
+
+# Support
+def poly2(t, a, b, c):
+    return a * t ** 2 + b * t + c
+
+def cost_func(resp_wfm, signal):
+
+    cost = lambda p: np.sum((poly2(resp_wfm, *p) - signal) ** 2)
+
+    pinit = [-1 * np.abs(np.max(signal) - np.min(signal)), 0, 0]
+
+    popt, _, _ = fmin_tnc(cost, pinit, approx_grad=True, disp=0,
+                          bounds=[(-10, 10),
+                                  (-10, 10),
+                                  (-10, 10)])
+
+    return popt
