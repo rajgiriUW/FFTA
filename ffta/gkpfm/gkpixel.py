@@ -14,6 +14,8 @@ from ffta.pixel_utils.load import cantilever_params
 from ffta.pixel import Pixel
 import warnings
 
+from pycroscopy.processing.fft import get_noise_floor
+
 from igor.binarywave import load as loadibw
 
 class GKPixel(Pixel):
@@ -253,7 +255,7 @@ class GKPixel(Pixel):
 
         return
 
-    def force_out(self, plot=False):
+    def force_out(self, plot=False, noise_tolerance=1e-6):
         """
         Reconstructs force by dividing by transfer function
 
@@ -271,14 +273,18 @@ class GKPixel(Pixel):
             raise AttributeError('Supply Transfer Function or use generate_tf()')
         self.FORCE = np.zeros(len(self.SIG), dtype=complex)
         
+        noise_limit = np.ceil(get_noise_floor(self.TF_norm, noise_tolerance))
+        
+        signal_kill = np.where(np.abs(self.SIG) < noise_limit)
+        
     #         signal_ind_vec=np.arange(w_vec2.size)
+    
+    # noise_floor = px.processing.fft.get_noise_floor(fft_h5row, noise_tolerance)[0]
+# print('Noise floor = ', noise_floor)
+# Noiselimit = np.ceil(noise_floor)4444455
     
     # G = np.zeros(w_vec2.size,dtype=complex)         # G = raw
     
-    # # Step 3B) Phase correction; ph value is defined way above in Step 2B.i
-    # if PCA_pre_reconstruction_clean == True:
-    #     test_data = PCA_clean_data_prerecon[i,:] - np.mean(PCA_clean_data_prerecon[i,:])   
-    # else:
     #     test_data = h5_filt[i,:] - np.mean(h5_filt[i,:])
     
     # # filt_line is from filtered data above  
