@@ -15,7 +15,8 @@ from ffta.pixel import Pixel
 import warnings
 
 from pycroscopy.processing.fft import get_noise_floor
-
+from pycroscopy.analysis.utils.be_sho import SHOfunc, SHOestimateGuess
+import pycroscopy as px
 from igor.binarywave import load as loadibw
 
 class GKPixel(Pixel):
@@ -133,7 +134,7 @@ class GKPixel(Pixel):
         
         return
     
-    def process_tf(self, tf_path, excitation_path, remove_dc = False):
+    def load_tf(self, tf_path, excitation_path, remove_dc = False):
         '''
         Process transfer function and broadband excitation from supplied file
         This function does not check shape or length
@@ -148,15 +149,93 @@ class GKPixel(Pixel):
 
         self.exc = np.mean(exc, axis=1)
         self.EXC = np.fft.fftshift(np.fft.fft(self.exc))
-        
-        center = int(len(tf)/2)
+
+    def process_tf(self, resonances = 2, width = 20e3, exc_floor = 10, plot=False):
+        '''
+        Parameters
+        ----------
+        resonances : int, optional
+            Number of resonances to fit SHO to. The default is 2.
+        width : int, optional
+            Width of resonance peaks to fit against. The default is 20e3.
+        exc_floot : float, optional
+            Sets the floor for the transfer function, below that is ignored. 
+            The default is 10
+        plot : bool, optional
+            Displays fits. The default is False
+    
+        Returns
+        -------
+        None.
+
+        '''
+    
+        #      
+        center = int(len(self.f_ax)/2)
         df = self.sampling_rate / self.n_points
         drive_bin = int(np.ceil(self.drive_freq / df)) 
         
-        TFmax = np.abs(self.TF[drive_bin+center])
+        # Reconstruct from SHO
+        excited_bins = np.where(np.abs(self.EXC) > exc_floor)[0]
+        band_edges = tf_fit_mat(self.drive_freq, resonances, width)
+    
+        Q_guesses = [self.Q, 3*self.Q, 6*self.Q, 9*self.Q]
+        self.coef_mat = np.zeros((resonances,4))
         
-        self.TF_norm = self.Q * (self.TF- np.min(np.abs(self.TF))) /  \
-                                (TFmax - np.min(np.abs(self.TF)))
+        TF = np.zeros(len(self.TF))
+      
+        if plot:
+            fig = plt.figure(10, figsize=(8,int(4*resonances)), facecolor='white')  
+      
+        # Constructs effective SHO
+        for n, q_guess in enumerate(Q_guesses[:resonances]):
+            
+            # find the bins in frequency axis if above exc_floor threshold
+            bin_lo, bin_hi = np.ceil(band_edges[n] / df).astype(int) + center
+            _exc = np.intersect1d(excited_bins, np.arange(bin_lo, bin_hi))
+            band = self.f_ax[_exc]
+            response = self.TF[bin_lo:bin_hi]
+            
+            if not any(band):
+                _msg = 'Ignoring resonance '+str(n) + ' outside excitation band'
+                warnings.warn(_msg)
+                break
+            
+            # initial guesses    
+            a_guess = np.max(np.abs(response)) / q_guess
+            w_guess = band[int(len(band)/2)] 
+            phi_guess = -np.pi
+            coef_guess = [np.real(a_guess), w_guess, q_guess, phi_guess]
+
+            #SHO fit
+            coef = SHOestimateGuess(response, band, 10)
+            self.coef_mat[n,:] = coef
+            response_guess = SHOfunc(coef_guess, band)
+            response_fit = SHOfunc(coef, band)         
+            response_full = SHOfunc(coef, self.f_ax)
+            TF = TF + response_full
+      
+            if plot:
+                
+                plt.subplot(resonances, 2, n+1)
+                plt.plot(band/1e6, np.abs(response),'b.-')
+                plt.plot(band/1e6, np.abs(response_guess), 'g')
+                plt.plot(band/1e6, np.abs(response_fit), 'r')
+                plt.xlabel('Frequency (MHz)')
+                plt.ylabel('Amplitude (nm)')
+                plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
+    
+                plt.subplot(resonances, 2, (n+1)+2)
+                plt.plot(band/1e6, np.angle(response),'.-')
+                plt.plot(band/1e6, np.angle(response_guess),'g')
+                plt.plot(band/1e6, np.angle(response_fit),'r')
+                plt.xlabel('Frequency (MHz)')
+                plt.ylabel('Phase (Rad)')
+                plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
+        
+        # Normalize to first resonance Q
+        self.TF_norm = self.coef_mat[0,2] * (TF - np.min(np.abs(TF))) /  \
+                                            (np.max(np.abs(TF)) - np.min(np.abs(TF)))
         
         return
 
@@ -263,6 +342,8 @@ class GKPixel(Pixel):
         ----------
         plot : bool, optional
             Generates plot of reconstructed force. The default is False.
+        noise_tolerance : float, optional
+            Use to determine noise_floor, The default is 1e-6
 
         Returns
         -------
@@ -273,37 +354,20 @@ class GKPixel(Pixel):
             raise AttributeError('Supply Transfer Function or use generate_tf()')
         self.FORCE = np.zeros(len(self.SIG), dtype=complex)
         
-        noise_limit = np.ceil(get_noise_floor(self.TF_norm, noise_tolerance))
+        noise_limit = np.ceil(get_noise_floor(self.SIG, noise_tolerance))
         
-        signal_kill = np.where(np.abs(self.SIG) < noise_limit)
+        # Only save bins above the noise_limit
+        signal_pass = np.where(np.abs(self.SIG) > noise_limit)[0]
         
-    #         signal_ind_vec=np.arange(w_vec2.size)
-    
-    # noise_floor = px.processing.fft.get_noise_floor(fft_h5row, noise_tolerance)[0]
-# print('Noise floor = ', noise_floor)
-# Noiselimit = np.ceil(noise_floor)4444455
-    
-    # G = np.zeros(w_vec2.size,dtype=complex)         # G = raw
-    
-    #     test_data = h5_filt[i,:] - np.mean(h5_filt[i,:])
-    
-    # # filt_line is from filtered data above  
-    # test_data = np.fft.fftshift(np.fft.fft(test_data)) 
-    # signal_kill = np.where(np.abs(test_data) < NoiseLimit)
-    # signal_ind_vec = np.delete(signal_ind_vec,signal_kill)
-    # test_data_ph = (test_data) * np.exp(-1j*w_vec2/(w_vec2[ind_drive])*ph)
-
-    # # Step 3C)  iFFT the response above a user defined noise floor to recover Force in time domain.
-    # G[signal_ind_vec] = test_data_ph[signal_ind_vec]
-    # G = G/TF_norm
-    # G_time[i,:] = np.real(np.fft.ifft(np.fft.ifftshift(G)))
+        drive_bin = self.drive_freq / (self.sampling_rate / len(self.SIG))
         
+        if 2 * drive_bin not in signal_pass:
+            warnings.warn('Second resonance not in passband; increase noise_tolerance')
         
-        bins = []
-        
-        self.FORCE[bins] = self.SIG[bins] / self.TF_norm[bins]
+        self.FORCE[signal_pass] = self.SIG[signal_pass]
+        self.FORCE = self.FORCE / self.TF_norm
         self.force = np.real(np.fft.ifft(np.fft.ifftshift(self.FORCE)))
-    
+        
         if plot:
             start = int(0.5 * self.trigger * self.sampling_rate)
             stop = int(1.5 * self.trigger * self.sampling_rate)
@@ -481,3 +545,13 @@ def cost_func(resp_wfm, signal):
                                   (-10, 10)])
 
     return popt
+
+def tf_fit_mat(drive_freq, resonances=2, width=20e3):
+
+    # Cantilever resonances, see Table 1 in doi:10.1016/j.surfrep.2005.08.003
+    eigen_factors = [1, 6.255, 17.521, 34.33]
+    
+    band_edge_mat = [np.array([drive_freq * e - width, drive_freq * e + width])  
+                     for e in eigen_factors[:resonances]]
+
+    return np.array(band_edge_mat)
