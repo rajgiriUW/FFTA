@@ -15,7 +15,7 @@ from ffta.pixel import Pixel
 import warnings
 
 from pycroscopy.processing.fft import get_noise_floor
-from pycroscopy.analysis.utils.be_sho import SHOfunc, SHOestimateGuess
+from pycroscopy.analysis.utils.be_sho import SHOfunc, SHOestimateGuess, SHOfit
 import pycroscopy as px
 from igor.binarywave import load as loadibw
 
@@ -24,7 +24,7 @@ class GKPixel(Pixel):
     def __init__(self, signal_array, params, can_params={},
                  fit=True, pycroscopy=False, 
                  method='hilbert', fit_form='product', filter_amplitude=False,
-                 filter_frequency=False, TF_norm=[], periods = 2):
+                 filter_frequency=False, TF_norm=[], exc_wfm=[], periods = 2):
         '''
         Class for processing G-KPFM data
 
@@ -41,7 +41,7 @@ class GKPixel(Pixel):
             TF_norm : array, optional
                 Transfer function supplied in Shifted Fourier domain, normalized to desired Q
             periods: int
-                Number of periods to average over
+                Number of periods to average over for CPD calc
 
         Returns:
             CPD : array
@@ -75,12 +75,15 @@ class GKPixel(Pixel):
         self.t_ax = np.linspace(0, self.total_time, self.n_points) #time axis
         self.f_ax = np.linspace(-self.sampling_rate/2, self.sampling_rate/2, num=self.n_points)
         
-        self.excitation()
-        
         self.SIG = np.fft.fftshift(np.fft.fft(self.signal_array))
+        
         self.TF_norm = []
         if any(TF_norm):
             self.TF_norm = TF_norm
+        
+        self.exc_wfm = exc_wfm
+        if not any(exc_wfm):
+            self.excitation()
         
         return
     
@@ -173,7 +176,7 @@ class GKPixel(Pixel):
         #      
         center = int(len(self.f_ax)/2)
         df = self.sampling_rate / self.n_points
-        drive_bin = int(np.ceil(self.drive_freq / df)) 
+        # drive_bin = int(np.ceil(self.drive_freq / df)) 
         
         # Reconstruct from SHO
         excited_bins = np.where(np.abs(self.EXC) > exc_floor)[0]
@@ -208,7 +211,8 @@ class GKPixel(Pixel):
             coef_guess = [np.real(a_guess), w_guess, q_guess, phi_guess]
 
             #SHO fit
-            coef = SHOestimateGuess(response, band, 10)
+            # coef = SHOestimateGuess(response, band, 10)
+            coef = SHOfit(coef_guess, band, response)
             self.coef_mat[n,:] = coef
             response_guess = SHOfunc(coef_guess, band)
             response_fit = SHOfunc(coef, band)         
@@ -358,10 +362,10 @@ class GKPixel(Pixel):
         
         # Only save bins above the noise_limit
         signal_pass = np.where(np.abs(self.SIG) > noise_limit)[0]
-        
+        center = int(len(self.SIG)/2)
         drive_bin = self.drive_freq / (self.sampling_rate / len(self.SIG))
         
-        if 2 * drive_bin not in signal_pass:
+        if 2 * drive_bin + center not in signal_pass:
             warnings.warn('Second resonance not in passband; increase noise_tolerance')
         
         self.FORCE[signal_pass] = self.SIG[signal_pass]
@@ -391,7 +395,7 @@ class GKPixel(Pixel):
 
         return
 
-    def analyze(self, verbose=False, deg = 2):
+    def analyze_cpd(self, verbose=False, deg = 2, use_raw=False):
         """
         Extracts CPD and capacitance gradient from data.
         Parameters:
@@ -412,7 +416,11 @@ class GKPixel(Pixel):
         
         for p in range(num_CPD):
 
-            resp_x = np.float32(self.signal_array[pnts*p:pnts*(p+1)])
+            if use_raw:
+                resp_x = np.float32(self.signal_array[pnts*p:pnts*(p+1)])
+            else:
+                resp_x = np.float32(self.force[pnts*p:pnts*(p+1)])
+            
             resp_x -= np.mean(resp_x)
             
             V_per_osc = self.exc_wfm[pnts*p:pnts*(p+1)]
@@ -449,17 +457,13 @@ class GKPixel(Pixel):
         stop = int(1.5 * self.trigger)
         
         mid = int(len(self.f_ax) / 2)
-        drive_bin = np.searchsorted(self.f_ax[mid:], self.drive_freq) + mid
-        
-        # that processes is very slow for large datasets
-        noise_floor = px.processing.fft.get_noise_floor(self.signal_array, 1e-6)[0]
-        Noiselimit = np.ceil(noise_floor)
+        drive_bin = self.drive_freq / (self.sampling_rate / len(self.SIG)) + mid
         
         fig, a = plt.subplots(nrows=3, figsize=(6, 14))
         
         for x, ph in zip(range(len(phases_to_test)), phases_to_test):
            
-            SIG_shifted = self.SIG * np.exp(-1j * self.f_Z/self.f_Z[drive_bin] * ph)
+            SIG_shifted = self.SIG * np.exp(-1j * self.f_ax/self.f_ax[drive_bin] * ph)
             Gout_shifted = SIG_shifted / self.TF_norm
             gout_shifted = np.real(np.fft.ifft(np.fft.ifftshift(Gout_shifted)))
         

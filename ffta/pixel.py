@@ -461,7 +461,9 @@ class Pixel:
             
         self.amplitude = np.abs(sps.hilbert(signal_orig))
         
-        self.amplitude *= self.AMPINVOLS
+        if not np.isnan(self.AMPINVOLS):
+            
+            self.amplitude *= self.AMPINVOLS
 
         return
     
@@ -840,6 +842,7 @@ class Pixel:
 
             # Apply window.
             if self.window != 0:
+                
                 self.apply_window()
 
             # Filter the signal with a filter, if wanted.
