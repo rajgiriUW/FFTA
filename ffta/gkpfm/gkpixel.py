@@ -457,7 +457,7 @@ class GKPixel(Pixel):
         stop = int(1.5 * self.trigger)
         
         mid = int(len(self.f_ax) / 2)
-        drive_bin = self.drive_freq / (self.sampling_rate / len(self.SIG)) + mid
+        drive_bin = int(self.drive_freq / (self.sampling_rate / len(self.SIG))) + mid
         
         fig, a = plt.subplots(nrows=3, figsize=(6, 14))
         
