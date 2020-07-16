@@ -238,6 +238,17 @@ class Pixel:
         
         self.verbose = False # for console feedback
 
+        # For accidental passing ancillary datasets from Pycroscopy, this will fail
+        # when pickling
+        if hasattr(self, 'Position_Indices'):
+            del self.Position_Indices
+        if hasattr(self, 'Position_Values'):
+            del self.Position_Values
+        if hasattr(self, 'Spectroscopic_Indices'):
+            del self.Spectroscopic_Indices
+        if hasattr(self, 'Spectroscopic_Values'):
+            del self.Spectroscopic_Values
+
         return
 
     def clear_filter_flags(self):

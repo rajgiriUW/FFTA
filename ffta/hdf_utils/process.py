@@ -110,6 +110,17 @@ class FFtrEFM(usid.Process):
         
         super(FFtrEFM, self).__init__(h5_main, 'Fast_Free', parms_dict=self.parm_dict, **kwargs)
         
+        # For accidental passing ancillary datasets from Pycroscopy, this will fail
+        # when pickling
+        if hasattr(self, 'Position_Indices'):
+            del self.Position_Indices
+        if hasattr(self, 'Position_Values'):
+            del self.Position_Values
+        if hasattr(self, 'Spectroscopic_Indices'):
+            del self.Spectroscopic_Indices
+        if hasattr(self, 'Spectroscopic_Values'):
+            del self.Spectroscopic_Values
+
         return
 
     def update_parm(self, **kwargs):
