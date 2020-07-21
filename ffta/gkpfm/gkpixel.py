@@ -61,16 +61,6 @@ class GKPixel(Pixel):
             self.signal_array.flatten()
 
         self.n_points = len(self.signal_array)
-        self.periods = periods
-        
-        self.pxl_time = self.n_points/self.sampling_rate   # how long each pixel is in time (8.192 ms)
-        self.time_per_osc = (1/self.drive_freq) # period of drive frequency 
-        self.pnts_per_period = self.sampling_rate * self.time_per_osc  # points in a cycle 
-        self.num_periods = int(self.pxl_time/self.time_per_osc)  # number of periods in each pixel
-        
-        self.num_CPD = int(np.floor(self.num_periods / self.periods))  # number of CPD samples, since each CPD takes some number of periods
-        self.pnts_per_CPD = int(np.floor(self.pnts_per_period * self.periods))  # points used to calculate CPD
-        self.remainder = int(self.n_points % self.pnts_per_CPD)
 
         self.t_ax = np.linspace(0, self.total_time, self.n_points) #time axis
         self.f_ax = np.linspace(-self.sampling_rate/2, self.sampling_rate/2, num=self.n_points)
@@ -338,7 +328,7 @@ class GKPixel(Pixel):
 
         return
 
-    def force_out(self, plot=False, noise_tolerance=1e-6):
+    def force_out(self, plot=False, noise_tolerance=1e-6, shifted=False):
         """
         Reconstructs force by dividing by transfer function
 
@@ -348,7 +338,8 @@ class GKPixel(Pixel):
             Generates plot of reconstructed force. The default is False.
         noise_tolerance : float, optional
             Use to determine noise_floor, The default is 1e-6
-
+        shifted : bool, optional
+            Uses shifted data to correct for phase lag.
         Returns
         -------
         None.
@@ -356,19 +347,24 @@ class GKPixel(Pixel):
         """
         if not any(self.TF_norm):
             raise AttributeError('Supply Transfer Function or use generate_tf()')
-        self.FORCE = np.zeros(len(self.SIG), dtype=complex)
+
+        center = int(len(self.SIG)/2)
+        drive_bin = int(self.drive_freq / (self.sampling_rate / len(self.SIG))            )
+
+        SIG = self.SIG
+        if shifted:
+            SIG = self.SIG * np.exp(-1j * self.f_ax[drive_bin] * self.phase_shift)
+        self.FORCE = np.zeros(len(SIG), dtype=complex)
         
-        noise_limit = np.ceil(get_noise_floor(self.SIG, noise_tolerance))
+        noise_limit = np.ceil(get_noise_floor(SIG, noise_tolerance))
         
         # Only save bins above the noise_limit
-        signal_pass = np.where(np.abs(self.SIG) > noise_limit)[0]
-        center = int(len(self.SIG)/2)
-        drive_bin = self.drive_freq / (self.sampling_rate / len(self.SIG))
+        signal_pass = np.where(np.abs(SIG) > noise_limit)[0]
         
         if 2 * drive_bin + center not in signal_pass:
             warnings.warn('Second resonance not in passband; increase noise_tolerance')
         
-        self.FORCE[signal_pass] = self.SIG[signal_pass]
+        self.FORCE[signal_pass] = SIG[signal_pass]
         self.FORCE = self.FORCE / self.TF_norm
         self.force = np.real(np.fft.ifft(np.fft.ifftshift(self.FORCE)))
         
@@ -384,7 +380,10 @@ class GKPixel(Pixel):
         return 
     
     def plot_response(self):
-        
+        """
+        Plots the transfer function and calculated force
+
+        """
         plt.figure()
         plt.semilogy(self.f_ax, np.abs(self.SIG), 'b')
         plt.semilogy(self.f_ax, np.abs(self.TF_norm), 'g')
@@ -394,8 +393,44 @@ class GKPixel(Pixel):
         plt.title('Frequency Response of the Data')
 
         return
+    
+    def _calc_cpd_params(self, periods=2, return_dict=False):
+        """
+        Calculates the parameters needed to calculate the CPD
 
-    def analyze_cpd(self, verbose=False, deg = 2, use_raw=False):
+        Parameters
+        ----------
+        periods : int, optional
+            Number of cantilever cycles to average over. The default is 2.
+        return_dict : bool, optional
+            Dictionary of these parameters for debugging purposes
+        """
+        
+        self.periods = periods
+        
+        self.pxl_time = self.n_points/self.sampling_rate   # how long each pixel is in time (8.192 ms)
+        self.time_per_osc = (1/self.drive_freq) # period of drive frequency 
+        self.pnts_per_period = self.sampling_rate * self.time_per_osc  # points in a cycle 
+        self.num_periods = int(self.pxl_time/self.time_per_osc)  # number of periods in each pixel
+        
+        self.num_CPD = int(np.floor(self.num_periods / self.periods))  # number of CPD samples, since each CPD takes some number of periods
+        self.pnts_per_CPD = int(np.floor(self.pnts_per_period * self.periods))  # points used to calculate CPD
+        self.remainder = int(self.n_points % self.pnts_per_CPD)
+        
+        if return_dict:
+            _cpdd = {'pxl_time': self.pxl_time,
+                     'time_per_osc': self.time_per_osc,
+                     'pnts_per_period': self.pnts_per_period,
+                     'num_periods': self.num_periods,
+                     'num_CPD': self.num_CPD,
+                     'pnts_per_CPD': self.pnts_per_CPD,
+                     'remainder': self.remainder}
+            return _cpdd
+        
+        return 
+
+    def analyze_cpd(self, verbose=False, deg = 2, use_raw=False, periods=2, 
+                    overlap=False):
         """
         Extracts CPD and capacitance gradient from data.
         Parameters:
@@ -403,36 +438,75 @@ class GKPixel(Pixel):
 
             deg: int
                 Degree of polynomial fit. Default is 2, which is a quadratic fit.
+                Unless there's a good reason, quadratic is correct to use
+            
+            use_raw : bool, optional
+                Uses the signal_array instead of the reconstructed force
+                
+            periods : int, optional
+                Numer of cantilever cycles to average over for CPD extraction
+                
+            overlap : bool, optional
+                If False, each CPD is from a separate part of the signal. 
+                If True, shifts signal by 1 pixel and recalculates
         """
 
-        #        tx = np.arange(0,self.total_time, self.total_time/len(self.signal_array))
-        #        tx_cycle = np.arange(0, self.total_time, self.ncycles * self.total_time/len(self.signal_array))
+        self._calc_cpd_params(periods)
 
-        num_CPD = self.num_CPD
         pnts = self.pnts_per_CPD
-
-        self.t_ax_wH = np.linspace(0, self.periods*self.time_per_osc*self.num_CPD, num_CPD) #time ax for CPD/capacitance
-        test_wH = np.zeros((num_CPD, deg+1))
+        step = pnts
         
-        for p in range(num_CPD):
-
+        if overlap: 
+            self.t_ax_wH = np.copy(self.t_ax)
+            step=1
+        
+        cpd_px = np.arange(0, self.n_points , step)
+        test_wH = np.zeros((len(cpd_px), deg+1))
+        
+        for n, p in enumerate(cpd_px):
+        
             if use_raw:
-                resp_x = np.float32(self.signal_array[pnts*p:pnts*(p+1)])
+
+                resp_x = np.float32(self.signal_array[p:p+pnts])
+
             else:
-                resp_x = np.float32(self.force[pnts*p:pnts*(p+1)])
+
+                resp_x = np.float32(self.force[p:p+pnts])
             
             resp_x -= np.mean(resp_x)
             
-            V_per_osc = self.exc_wfm[pnts*p:pnts*(p+1)]
-            #V_per_osc = excitation[:decimation] # testing single fit
+            V_per_osc = self.exc_wfm[p:p+pnts]
                     
             popt, _ = npPoly.polyfit(V_per_osc, resp_x, deg, full=True)
-            test_wH[p] = popt.flatten()
+            test_wH[n] = popt.flatten()
        
         self.test_wH = test_wH
         self.CPD =  -0.5 * test_wH[:,1]/test_wH[:,2]
         self.capacitance = test_wH[:,2]
-
+        
+        if any(np.argwhere(np.isnan(self.CPD))):
+            self.CPD[-1] = self.CPD[-2]
+            self.capacitance[-1] = self.capacitance[-2]
+    
+    def filter_cpd(self):
+        """
+        Filters the capacitance based on pixel parameter self.filter_bandwidth
+        (typical is 10 kHz, which is somewhat large)
+        """
+        center = int(len(self.CPD)/2)
+        df = self.sampling_rate / len(self.CPD)
+        bin_width = int(self.filter_bandwidth / df)
+        
+        _CPD = np.fft.fftshift(np.fft.fft(self.CPD))
+        _CPD[:center - bin_width] = 0
+        _CPD[center + bin_width:] = 0
+        self.CPD = np.real(np.fft.ifft(np.fft.ifftshift(_CPD)))
+        
+        _CPD = np.fft.fftshift(np.fft.fft(self.capacitance))
+        _CPD[:center - bin_width] = 0
+        _CPD[center + bin_width:] = 0
+        self.capacitance = np.real(np.fft.ifft(np.fft.ifftshift(_CPD)))
+        
         return 
 
     def min_phase(self, phases_to_test = [2.0708, 2.1208, 2.1708]):
@@ -453,47 +527,27 @@ class GKPixel(Pixel):
         # have to iterate this cell many times to find the right phase
         phases_to_test = np.array(phases_to_test)
         
-        start = int(0.5 * self.trigger)
-        stop = int(1.5 * self.trigger)
+        start = int(0.5 * self.trigger * self.sampling_rate)
+        stop = int(1.5 * self.trigger * self.sampling_rate)
         
         mid = int(len(self.f_ax) / 2)
         drive_bin = int(self.drive_freq / (self.sampling_rate / len(self.SIG))) + mid
         
-        fig, a = plt.subplots(nrows=3, figsize=(6, 14))
+        fig, a = plt.subplots(nrows=len(phases_to_test), figsize=(6, 14))
         
         for x, ph in zip(range(len(phases_to_test)), phases_to_test):
            
-            SIG_shifted = self.SIG * np.exp(-1j * self.f_ax/self.f_ax[drive_bin] * ph)
+            #SIG_shifted = self.SIG * np.exp(-1j * self.f_ax/self.f_ax[drive_bin] * ph)
+            SIG_shifted = self.SIG * np.exp(-1j * self.f_ax[drive_bin] * ph)
             Gout_shifted = SIG_shifted / self.TF_norm
             gout_shifted = np.real(np.fft.ifft(np.fft.ifftshift(Gout_shifted)))
         
             a[x].plot(self.exc_wfm[start:start+1000], gout_shifted[start:start+1000], 'b')
             a[x].plot(self.exc_wfm[stop:stop+1000], gout_shifted[stop:stop+1000], 'r')
 
+        print('Set self.phase_shift to match desired phase offset (radians)')
+
         return
-
-    def min_phase_old(self, signal):
-
-        fits = []
-        errors = []
-        xpts = np.arange(-2 * np.pi, 2 * np.pi, 0.1)
-
-        for i in xpts:
-            txl = np.linspace(0, self.total_time, self.n_points)
-            resp_wfm = np.sin(txl * 2 * np.pi * self.drive_freq + i)[:len(signal)]
-
-            mid = int(self.pts_per_cycle / 2)
-
-            # find fits for first half-cycle and second half-cycle
-            p1 = cost_func(resp_wfm[:mid], signal[:mid])
-            p2 = cost_func(resp_wfm[-mid:], signal[-mid:])
-
-            fit1 = -0.5 * p1[1] / p1[0]
-            fit2 = -0.5 * p2[1] / p2[0]
-
-            fits.append(np.abs(fit2 - fit1))
-
-        return xpts[np.argmin(fits)]
 
     def min_phase_fft(self, signal):
 
