@@ -1,6 +1,6 @@
 [![PyPI version](https://badge.fury.io/py/FFTA.svg)](https://badge.fury.io/py/FFTA)
 
-# Fast-Free Time-Resolved Electrostatic Force Microscopy (FF-trEFM)
+# Fast-Free Transient Analysis
 A package for processing time-dependent frequency response information in atomic force microscopy data. This package is primarily geared towards electrostatic force microscopy, with the resulting output being the amplitude, phase, and instantaneous frequency as a function of time and position.
 
 ### For further information and discussion, primary point-of-contact:
@@ -17,7 +17,7 @@ E-mail: rgiri@uw.edu
 ```
 
 ### Overview
-FFTA extracts Instantaneous frequency from  Time-Resolved Electrostatic Force Microscopy (FF-trEFM) data[1-4]. This package also returns time-to-first frequency peak (tFP) and phase from atomic force microscopy. The use case is if your experiment records AFM deflection data and you wish to reconstruct the instantaneous frequency vs time.
+FFTA extracts Instantaneous frequency from  Time-Resolved AFM data, such as Fast Free Time-Resolved Electrostatic Force Microscopy (FF-trEFM) data[1-4]. This package also returns time-to-first frequency peak (tFP) and phase from atomic force microscopy. The use case is if your experiment records AFM deflection data and you wish to reconstruct the instantaneous frequency vs time.
 
 This includes a few types of frequency analysis:
 * Hilbert Transform (primary use case) 
