@@ -22,9 +22,9 @@ from igor.binarywave import load as loadibw
 class GKPixel(Pixel):
 
     def __init__(self, signal_array, params, can_params={},
-                 fit=True, pycroscopy=False, 
-                 method='hilbert', fit_form='product', filter_amplitude=False,
-                 filter_frequency=False, TF_norm=[], exc_wfm=[], periods = 2):
+                 fit=True, pycroscopy=False, method='hilbert', fit_form='product', 
+                 filter_amplitude=False, filter_frequency=False, 
+                 TF_norm=[], exc_wfm=[], periods = 2, phase_shift=0):
         '''
         Class for processing G-KPFM data
 
@@ -42,6 +42,8 @@ class GKPixel(Pixel):
                 Transfer function supplied in Shifted Fourier domain, normalized to desired Q
             periods: int
                 Number of periods to average over for CPD calc
+            phase_shift : float
+                Amount to shift the phase of the deflection by (cable lag)
 
         Returns:
             CPD : array
@@ -51,6 +53,9 @@ class GKPixel(Pixel):
             CPD_mean : float
                 Simple average of the CPD trace, useful for plotting
         '''
+        self.periods = periods
+        self.phase_shift = phase_shift
+
         super(GKPixel, self).__init__(signal_array, params, can_params,
                                       fit, False, method, fit_form, 
                                       filter_amplitude, filter_frequency)
@@ -328,7 +333,7 @@ class GKPixel(Pixel):
 
         return
 
-    def force_out(self, plot=False, noise_tolerance=1e-6, shifted=False):
+    def force_out(self, plot=False, noise_tolerance=1e-6):
         """
         Reconstructs force by dividing by transfer function
 
@@ -338,8 +343,7 @@ class GKPixel(Pixel):
             Generates plot of reconstructed force. The default is False.
         noise_tolerance : float, optional
             Use to determine noise_floor, The default is 1e-6
-        shifted : bool, optional
-            Uses shifted data to correct for phase lag.
+
         Returns
         -------
         None.
@@ -352,8 +356,10 @@ class GKPixel(Pixel):
         drive_bin = int(self.drive_freq / (self.sampling_rate / len(self.SIG))            )
 
         SIG = self.SIG
-        if shifted:
+        
+        if self.phase_shift != 0:
             SIG = self.SIG * np.exp(-1j * self.f_ax[drive_bin] * self.phase_shift)
+            
         self.FORCE = np.zeros(len(SIG), dtype=complex)
         
         noise_limit = np.ceil(get_noise_floor(SIG, noise_tolerance))

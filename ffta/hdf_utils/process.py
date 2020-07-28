@@ -46,7 +46,8 @@ class FFtrEFM(usid.Process):
     """
 
     def __init__(self, h5_main, parm_dict = {}, can_params = {}, 
-                 pixel_params ={}, if_only=False, override=False, **kwargs):
+                 pixel_params ={}, if_only=False, override=False, process_name = 'Fast_Free',
+                 **kwargs):
         """
         Parameters
         ----------
@@ -109,7 +110,7 @@ class FFtrEFM(usid.Process):
         self.pixel_params = pixel_params    
         self.override = override
         
-        super(FFtrEFM, self).__init__(h5_main, 'Fast_Free', parms_dict=self.parm_dict, **kwargs)
+        super(FFtrEFM, self).__init__(h5_main, process_name, parms_dict=self.parm_dict, **kwargs)
         
         # For accidental passing ancillary datasets from Pycroscopy, this will fail
         # when pickling

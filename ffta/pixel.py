@@ -149,63 +149,61 @@ class Pixel:
     """
 
     def __init__(self, signal_array, params, can_params={},
-                 fit=True, pycroscopy=False, 
+                 fit=True, pycroscopy=False,
                  method='hilbert', fit_form='product', filter_amplitude=False,
                  filter_frequency=False):
 
         # Create parameter attributes for optional parameters.
         # These defaults are overwritten by values in 'params'
-        
+
         # FIR (Hilbert) filtering parameters
         self.n_taps = 1499
         self.filter_bandwidth = 5000
         self.filter_frequency = filter_frequency
-        
+
         # Wavelet parameters
         self.wavelet_analysis = False
-        self.wavelet = 'cmor1-1' # default complex Morlet wavelet
+        self.wavelet = 'cmor1-1'  # default complex Morlet wavelet
         self.scales = np.arange(100, 2, -1)
-        self.wavelet_params = {} # currently just optimize flag is supported
-        
+        self.wavelet_params = {}  # currently just optimize flag is supported
+
         # Short Time Fourier Transform
         self.fft_analysis = False
         self.fft_cycles = 2
-        self.fft_params = {} # for sliding FFT
-        
+        self.fft_params = {}  # for sliding FFT
+
         self.recombination = False
         self.phase_fitting = False
         self.check_drive = True
-        
+
         # Assign the fit parameter.
         self.fit = fit
         self.fit_form = fit_form
         self.method = method
         self.filter_amplitude = filter_amplitude
-        
+
         # Default Cantilever parameters, plugging in some reasonable defaults
-        self.AMPINVOLS = 122e-9 
+        self.AMPINVOLS = 122e-9
         self.SpringConstant = 23.2
-        self.k = self.SpringConstant 
+        self.k = self.SpringConstant
         self.DriveAmplitude = 1.7e-9
         self.Mass = 4.55e-12
         self.Beta = 3114
         self.Q = 360
-        
+
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
-            
             setattr(self, key, value)
-        
+
         for key, value in can_params.items():
-            
             setattr(self, key, float(value))
-        
+
         if self.filter_frequency:
-            self.bandpass_filter = 0 # turns off FIR
-        
+            self.bandpass_filter = 0  # turns off FIR
+
         # Assign values from inputs.
         self.signal_array = signal_array
-        self.signal_orig = None # used in amplitude calc to undo any Windowing beforehand
+        self.signal_orig = None  # used in amplitude calc to undo any Windowing beforehand
         if pycroscopy:
             self.signal_array = signal_array.T
         self.tidx = int(self.trigger * self.sampling_rate)
@@ -235,8 +233,8 @@ class Pixel:
         self.tfp = None
         self.shift = None
         self.cwt_matrix = None
-        
-        self.verbose = False # for console feedback
+
+        self.verbose = False  # for console feedback
 
         # For accidental passing ancillary datasets from Pycroscopy, this will fail
         # when pickling
@@ -380,43 +378,43 @@ class Pixel:
         '''
         Filters the drive signal out of the amplitude response
         '''
-        AMP = np.fft.fftshift(np.fft.fft(self.amplitude)) 
-        
-        DRIVE = self.drive_freq/(self.sampling_rate/self.n_points) # drive location in frequency space
-        center = int(len(AMP)/2)
-        
+        AMP = np.fft.fftshift(np.fft.fft(self.amplitude))
+
+        DRIVE = self.drive_freq / (self.sampling_rate / self.n_points)  # drive location in frequency space
+        center = int(len(AMP) / 2)
+
         # crude boxcar
-        AMP[:center-int(DRIVE/2)+1] = 0
-        AMP[center+int(DRIVE/2)-1:] = 0
-        
-        self.amplitude = np.abs( np.fft.ifft(np.fft.ifftshift(AMP)) )
-        
+        AMP[:center - int(DRIVE / 2) + 1] = 0
+        AMP[center + int(DRIVE / 2) - 1:] = 0
+
+        self.amplitude = np.abs(np.fft.ifft(np.fft.ifftshift(AMP)))
+
         return
-    
+
     def frequency_filter(self):
         '''
         Filters the instantaneous frequency around DC peak to remove noise
         Uses self.filter_bandwidth for the frequency filter
         '''
-        FREQ = np.fft.fftshift(np.fft.fft(self.inst_freq)) 
-        
-        center = int(len(FREQ)/2)
+        FREQ = np.fft.fftshift(np.fft.fft(self.inst_freq))
+
+        center = int(len(FREQ) / 2)
 
         df = self.sampling_rate / self.n_points
-        drive_bin = int(np.ceil(self.drive_freq / df)) 
+        drive_bin = int(np.ceil(self.drive_freq / df))
         bin_width = int(self.filter_bandwidth / df)
-        
+
         if bin_width > drive_bin:
             print('width exceeds first resonance')
-            bin_width = drive_bin-1
-        
+            bin_width = drive_bin - 1
+
         FREQ[:center - bin_width] = 0
         FREQ[center + bin_width:] = 0
-        
+
         self.inst_freq = np.real(np.fft.ifft(np.fft.ifftshift(FREQ)))
-        
+
         return
-    
+
     def frequency_harmonic_filter(self, width=5):
         '''
         Filters the instantaneous frequency to remove noise
@@ -425,34 +423,33 @@ class Pixel:
         width : int, optional
             Size of the boxcar around the various peaks
         '''
-        FREQ = np.fft.fftshift(np.fft.fft(self.inst_freq)) 
-        
-        center = int(len(FREQ)/2)
-        
+        FREQ = np.fft.fftshift(np.fft.fft(self.inst_freq))
+
+        center = int(len(FREQ) / 2)
+
         # Find drive_bin
         df = self.sampling_rate / self.n_points
-        drive_bin = int(np.ceil(self.drive_freq / df)) 
-        bins = np.arange(len(FREQ)/2)[::drive_bin]
-        bins = np.append(center-bins, center+bins)
-        
+        drive_bin = int(np.ceil(self.drive_freq / df))
+        bins = np.arange(len(FREQ) / 2)[::drive_bin]
+        bins = np.append(center - bins, center + bins)
+
         FREQ_filt = np.zeros(len(FREQ), dtype='complex128')
         for b in bins:
-            FREQ_filt[int(b)-width:int(b)+width] = FREQ[int(b)-width:int(b)+width]
-        
-        self.inst_freq = np.real( np.fft.ifft(np.fft.ifftshift(FREQ)) )
-        
+            FREQ_filt[int(b) - width:int(b) + width] = FREQ[int(b) - width:int(b) + width]
+
+        self.inst_freq = np.real(np.fft.ifft(np.fft.ifftshift(FREQ)))
+
         return
 
     def hilbert(self):
         """Analytical signal and calculate phase/frequency via Hilbert transform"""
-        
+
         self.hilbert_transform()
         self.calculate_amplitude()
         self.calculate_phase()
         self.calculate_inst_freq()
-        
-        return
 
+        return
 
     def hilbert_transform(self):
         """Gets the analytical signal doing a Hilbert transform."""
@@ -469,30 +466,29 @@ class Pixel:
             signal_orig = self.signal_array.mean(axis=1)
         else:
             signal_orig = self.signal_array
-            
+
         self.amplitude = np.abs(sps.hilbert(signal_orig))
-        
+
         if not np.isnan(self.AMPINVOLS):
-            
             self.amplitude *= self.AMPINVOLS
 
         return
-    
+
     def calculate_power_dissipation(self):
         """Calculates the power dissipation using amplitude, phase, and frequency
         and the Cleveland eqn (see DOI:10.1063/1.121434)"""
-        
-        phase = self.phase# + np.pi/2 #offsets the phase to be pi/2 at resonance
-        
+
+        phase = self.phase  # + np.pi/2 #offsets the phase to be pi/2 at resonance
+
         # check for incorrect values (some off by 1e9 in our code)
-       
-        A = self.k/self.Q * self.amplitude**2 * (self.inst_freq + self.drive_freq)
+
+        A = self.k / self.Q * self.amplitude ** 2 * (self.inst_freq + self.drive_freq)
         B = self.Q * self.DriveAmplitude * np.sin(phase) / self.amplitude
-        C = self.inst_freq /self.drive_freq
-        
+        C = self.inst_freq / self.drive_freq
+
         self.power_dissipated = A * (B - C)
-        
-        return 
+
+        return
 
     def calculate_phase(self, correct_slope=True):
         """Gets the phase of the signal and correct the slope by removing
@@ -516,9 +512,9 @@ class Pixel:
             # Remove the fit from phase.
             self.phase -= (xfit[0] * np.arange(self.n_points)) + xfit[1]
 
-        self.phase = -self.phase #need to correct for negative in DDHO solution
+        self.phase = -self.phase  # need to correct for negative in DDHO solution
 
-        self.phase += np.pi/2 # corrects to be at resonance pre-trigger
+        self.phase += np.pi / 2  # corrects to be at resonance pre-trigger
 
         return
 
@@ -530,10 +526,10 @@ class Pixel:
 
         # Do a Savitzky-Golay smoothing derivative
         # using 5 point 1st order polynomial.
-        
-        #-self.phase to correct for sign in DDHO solution
+
+        # -self.phase to correct for sign in DDHO solution
         self.inst_freq_raw = sps.savgol_filter(-self.phase, 5, 1, deriv=1,
-                                           delta=dtime)
+                                               delta=dtime)
 
         # Bring trigger to zero.
         self.tidx = int(self.tidx)
@@ -548,33 +544,33 @@ class Pixel:
         cut -= self.inst_freq[self.tidx]
         self.cut = cut
         t = np.arange(cut.shape[0]) / self.sampling_rate
-        
-        if not self.fit: 
-            
+
+        if not self.fit:
+
             tfp_calc.find_minimum(self, cut)
-            
+
         elif self.fit_form == 'sum':
-            
+
             tfp_calc.fit_freq_sum(self, cut, t)
-            
+
         elif self.fit_form == 'exp':
-            
+
             tfp_calc.fit_freq_exp(self, cut, t)
-            
+
         elif self.fit_form == 'ringdown':
-            
+
             cut = self.amplitude[self.tidx:(self.tidx + ridx)]
             tfp_calc.fit_ringdown(self, ridx, cut, t)
-            
+
         elif self.fit_form == 'product':
-            
+
             tfp_calc.fit_freq_product(self, cut, t)
-            
+
         elif self.fit_form == 'phase':
-            
+
             cut = -1 * (self.phase[self.tidx:(self.tidx + ridx)] - self.phase[self.tidx])
             tfp_calc.fit_phase(self, cut, t)
-        
+
         return
 
     def restore_signal(self):
@@ -594,7 +590,7 @@ class Pixel:
 
             self.phase = np.pad(self.phase, (d_trig, 0), 'edge')
             self.phase = self.phase[:self._n_points_orig]
-            
+
             self.amplitude = np.pad(self.amplitude, (d_trig, 0), 'edge')
             self.amplitude = self.amplitude[:self._n_points_orig]
 
@@ -615,7 +611,7 @@ class Pixel:
 
         return
 
-    def calculate_cwt(self, f_center = None, verbose=False, optimize = False, fit=False):
+    def calculate_cwt(self, f_center=None, verbose=False, optimize=False, fit=False):
         '''
         Calculate instantaneous frequency using continuous wavelet transfer
         
@@ -624,19 +620,19 @@ class Pixel:
         Optimize : bool, optionals
             Currently placeholder for iteratively determining wavelet scales
         '''
-        
-        #wavlist = pywt.wavelist(kind='continuous')
+
+        # wavlist = pywt.wavelist(kind='continuous')
         # w0, wavelet_increment, cwt_scale = self.__get_cwt__()
 
         # determine if scales will capture the relevant frequency
         if not f_center:
             f_center = self.drive_freq
-            
-        dt = 1/self.sampling_rate
+
+        dt = 1 / self.sampling_rate
         sc = pywt.scale2frequency(self.wavelet, self.scales) / dt
         if self.verbose:
-            print('Wavelet scale from', np.min(sc),'to', np.max(sc))
-            
+            print('Wavelet scale from', np.min(sc), 'to', np.max(sc))
+
         if f_center < np.min(sc) or f_center > np.max(sc):
             raise ValueError('Choose a scale that captures frequency of interest')
 
@@ -646,41 +642,41 @@ class Pixel:
             hi = int(1.2 * drive_bin)
             lo = int(0.8 * drive_bin)
             self.scales = np.arange(hi, lo, -0.1)
-        
-        spectrogram, freq = pywt.cwt(self.signal, self.scales,self.wavelet, sampling_period=dt)
-        
+
+        spectrogram, freq = pywt.cwt(self.signal, self.scales, self.wavelet, sampling_period=dt)
+
         if not fit:
-        
-            inst_freq, amplitude,_ = parab.ridge_finder(np.abs(spectrogram), np.arange(len(freq)))
-        
+
+            inst_freq, amplitude, _ = parab.ridge_finder(np.abs(spectrogram), np.arange(len(freq)))
+
         # slow serial curve fitting
         else:
-            
+
             inst_freq = np.zeros(self.n_points)
             amplitude = np.zeros(self.n_points)
-            
+
             for c in range(spectrogram.shape[1]):
-                
-                SIG = spectrogram[:,c]
+
+                SIG = spectrogram[:, c]
                 if fit:
                     pk = np.argmax(np.abs(SIG))
-                    popt = np.polyfit(np.arange(20), 
+                    popt = np.polyfit(np.arange(20),
                                       np.abs(SIG[pk - 10:pk + 10]), 2)
                     inst_freq[c] = -0.5 * popt[1] / popt[0]
                     amplitude[c] = np.abs(SIG)[pk]
-        
+
         # rescale to correct frequency 
         inst_freq = pywt.scale2frequency(self.wavelet, inst_freq + self.scales[0]) / dt
-        
+
         phase = spg.cumtrapz(inst_freq)
         phase = np.append(phase, phase[-1])
-        tidx = int(self.tidx * len(inst_freq)/self.n_points)
+        tidx = int(self.tidx * len(inst_freq) / self.n_points)
 
         self.amplitude = amplitude
         self.inst_freq_raw = inst_freq
-        self.inst_freq =-1 * (inst_freq - inst_freq[tidx]) #-1 due to way scales are ordered
+        self.inst_freq = -1 * (inst_freq - inst_freq[tidx])  # -1 due to way scales are ordered
         self.spectrogram = np.abs(spectrogram)
-        self.wavelet_freq = freq # the wavelet frequencies
+        self.wavelet_freq = freq  # the wavelet frequencies
 
         # subtract the w*t line (drive frequency line) from phase
         start = int(0.3 * tidx)
@@ -688,8 +684,8 @@ class Pixel:
         xfit = np.polyfit(np.arange(start, end), phase[start:end], 1)
         phase -= (xfit[0] * np.arange(len(inst_freq))) + xfit[1]
 
-        self.phase = phase 
-        
+        self.phase = phase
+
         return
 
     def calculate_stft(self, time_res=20e-6, fit=False, nfft=200):
@@ -709,40 +705,39 @@ class Pixel:
         '''
 
         pts_per_ncycle = int(time_res * self.sampling_rate)
-        
+
         if nfft < pts_per_ncycle:
             print('Error with nfft setting')
             nfft = pts_per_ncycle
-            
-        #drivebin = int(self.drive_freq / (self.sampling_rate / nfft ))
+
+        # drivebin = int(self.drive_freq / (self.sampling_rate / nfft ))
         freq, times, spectrogram = sps.spectrogram(self.signal,
                                                    self.sampling_rate,
-                                                   nperseg = pts_per_ncycle,
-                                                   noverlap = pts_per_ncycle-1,
-                                                   nfft = nfft,
+                                                   nperseg=pts_per_ncycle,
+                                                   noverlap=pts_per_ncycle - 1,
+                                                   nfft=nfft,
                                                    window=self.window,
                                                    mode='magnitude')
-            
+
         # Parabolic ridge finder
         if not fit:
-            inst_freq, amplitude,_ = parab.ridge_finder(spectrogram, freq)
-        
+            inst_freq, amplitude, _ = parab.ridge_finder(spectrogram, freq)
+
         # slow serial curve fitting
         else:
-            
+
             for c in range(spectrogram.shape[1]):
-                
-                SIG = spectrogram[:,c]
+
+                SIG = spectrogram[:, c]
                 if fit:
-                    
                     pk = np.argmax(np.abs(SIG))
                     popt = np.polyfit(freq[pk - 2:pk + 2], np.abs(SIG[pk - 2:pk + 2]), 2)
                     inst_freq[c] = -0.5 * popt[1] / popt[0]
                     amplitude[c] = np.abs(SIG)[pk]
-    
+
         phase = spg.cumtrapz(inst_freq)
         phase = np.append(phase, phase[-1])
-        tidx = int(self.tidx * len(inst_freq)/self.n_points)
+        tidx = int(self.tidx * len(inst_freq) / self.n_points)
 
         self.amplitude = amplitude
         self.inst_freq_raw = inst_freq
@@ -772,37 +767,37 @@ class Pixel:
         """
 
         if newplot:
-            fig, a = plt.subplots(nrows=3, figsize=(6,9), facecolor='white')
+            fig, a = plt.subplots(nrows=3, figsize=(6, 9), facecolor='white')
 
-        dt = 1/self.sampling_rate
+        dt = 1 / self.sampling_rate
         ridx = int(self.roi * self.sampling_rate)
         fidx = int(self.tidx)
 
         cut = self.amplitude[fidx:(fidx + ridx)]
-        
+
         cut = [fidx, (fidx + ridx)]
-        tx = np.arange(cut[0], cut[1])*dt
-        
-        a[0].plot(tx*1e3, self.inst_freq[cut[0]:cut[1]], 'r-')
-        
+        tx = np.arange(cut[0], cut[1]) * dt
+
+        a[0].plot(tx * 1e3, self.inst_freq[cut[0]:cut[1]], 'r-')
+
         if self.fit_form == 'ringdown':
-            a[1].plot(tx*1e3, self.best_fit, 'g--')
+            a[1].plot(tx * 1e3, self.best_fit, 'g--')
         else:
-            a[0].plot(tx*1e3, self.best_fit, 'g--')
-        a[1].plot(tx*1e3, self.amplitude[cut[0]:cut[1]], 'b')
-        a[2].plot(tx*1e3, self.phase[cut[0]:cut[1]]*180/np.pi, 'm') 
-        
+            a[0].plot(tx * 1e3, self.best_fit, 'g--')
+        a[1].plot(tx * 1e3, self.amplitude[cut[0]:cut[1]], 'b')
+        a[2].plot(tx * 1e3, self.phase[cut[0]:cut[1]] * 180 / np.pi, 'm')
+
         a[0].set_title('Instantaneous Frequency')
         a[0].set_ylabel('Frequency Shift (Hz)')
         a[1].set_ylabel('Amplitude (nm)')
         a[2].set_ylabel('Phase (deg)')
-        a[2].set_xlabel('Time (ms)')        
+        a[2].set_xlabel('Time (ms)')
 
         plt.tight_layout()
 
         return
 
-    def generate_inst_freq(self, timing = False):
+    def generate_inst_freq(self, timing=False):
         """
         Generates the instantaneous frequency
         
@@ -814,10 +809,10 @@ class Pixel:
         inst_freq : (n_points,) array_like
             Instantaneous frequency of the signal.
         """
-        
+
         if timing:
             t1 = time.time()
-            
+
         # Remove DC component, first.
         # self.remove_dc()
 
@@ -832,7 +827,6 @@ class Pixel:
 
         # Check the drive frequency.
         if self.check_drive:
-            
             self.check_drive_freq()
 
         # DWT Denoise
@@ -853,7 +847,6 @@ class Pixel:
 
             # Apply window.
             if self.window != 0:
-                
                 self.apply_window()
 
             # Filter the signal with a filter, if wanted.
@@ -870,23 +863,20 @@ class Pixel:
 
             # Filter out oscillatory noise from amplitude
             if self.filter_amplitude:
-                
                 self.amplitude_filter()
-            
+
         else:
             raise ValueError('Invalid analysis method! Valid options: hilbert, wavelet, fft')
-        
+
         if timing:
             print('Time:', time.time() - t1, 's')
-        
+
         # If it's a recombination image invert it to find minimum.
         if self.recombination:
-            
             self.inst_freq = self.inst_freq * -1
-            
+
         # Filter out oscillatory noise from instantaneous frequency
         if self.filter_frequency:
-            
             self.frequency_filter()
 
         return self.inst_freq, self.amplitude, self.phase
@@ -904,7 +894,7 @@ class Pixel:
         inst_freq : (n_points,) array_like
             Instantenous frequency of the signal.
         """
-        
+
         try:
 
             self.inst_freq, self.amplitude, self.phase = self.generate_inst_freq()
@@ -914,7 +904,6 @@ class Pixel:
 
             # Restore the length due to FIR filter being causal
             if self.method == 'hilbert':
-            
                 self.restore_signal()
 
         # If caught any exception, set everything to zero and log it.

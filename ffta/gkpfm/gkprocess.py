@@ -51,15 +51,12 @@ class GKPFM(FFtrEFM):
     def __init__(self, h5_main, parm_dict = {}, can_params = {}, 
                  pixel_params ={}, TF_norm=[], exc_wfm=[], periods = 2, 
                  tip_response = '', tip_excitation = '', exc_wfm_file = '',
-                 override=False, **kwargs):
+                 override=False, noise_tolerance = 1e-4, **kwargs):
         """
         Parameters
         ----------
         h5_main : h5py.Dataset object
             Dataset to process
-
-        if_only : bool, optional
-            If True, only calculates the instantaneous frequency and not tfp/shift
 
         parm_dict : dict, optional
             Additional updates to the parameters dictionary. e.g. changing the trigger.
@@ -94,12 +91,25 @@ class GKPFM(FFtrEFM):
                     
         self.pixel_params = pixel_params    
         self.override = override
-        self.tip_response = tip_response
-        self.tip_excitation = tip_excitation
-        self.exc_wfm = h5py.File(exc_wfm_file, 'r')['excitation'][0,:]
+        self.parm_dict['tip_response'] = tip_response
+        self.parm_dict['tip_excitation'] = tip_excitation
+        self.exc_wfm = exc_wfm
+
+        self.parm_dict['periods'] = periods
+        self.parm_dict['noise_tolerance'] = noise_tolerance
+           
+        super().__init__(h5_main, parm_dict=self.parm_dict ,
+                                    can_params = can_params, process_name='GKPFM', 
+                                    **kwargs)
+
+        # save Transfer Function
+        defl = get_utils.get_pixel(self.h5_main, [0,0], array_form=True).flatten()
+        _gk = GKPixel(defl, self.parm_dict, exc_wfm = exc_wfm)
+        _gk.load_tf(self.parm_dict['tip_response'], self.parm_dict['tip_excitation'])
+        _gk.process_tf()
         
-        super(GKPFM, self).__init__(h5_main, 'GKPFM', parms_dict=self.parm_dict ,
-                                    can_params = can_params, **kwargs)
+        self.TF_norm = _gk.TF_norm
+        del _gk
         
         return
 
@@ -141,14 +151,17 @@ class GKPFM(FFtrEFM):
             pixel_ind = [row, col]
 
         # as an array, not an ffta.Pixel
-        defl = get_utils.get_pixel(self.h5_main, pixel_ind, array_form=True)
+        defl = get_utils.get_pixel(self.h5_main, pixel_ind, array_form=True).flatten()
 
-        gk = GKPixel(defl, self.parm_dict, **self.pixel_params)
-        gk.load_tf(self.tip_response, self.tip_excitation)
-        gk.process_tf(plot=True)
-        gk.force_out(plot=True, noise_tolerance=1e-4)
+        _gk = GKPixel(defl, self.parm_dict, exc_wfm = self.exc_wfm, 
+                      TF_norm = self.TF_norm)        
+        _gk.force_out(plot=True, noise_tolerance=self.parm_dict['noise_tolerance'])
+        _gk.min_phase()
+        _gk.analyze_cpd(use_raw=False, periods=self.parm_dict['periods'])
+        plt.figure()
+        plt.plot(_gk.CPD)
 
-        return self._map_function(defl, self.parm_dict, self.pixel_params)
+        return self._map_function(defl, self.parm_dict, self.TF_norm, self.exc_wfm)
 
     def _create_results_datasets(self):
         '''
@@ -202,10 +215,29 @@ class GKPFM(FFtrEFM):
                                                        'capacitance',  # Name of main dataset
                                                        'Capacitance',  # Physical quantity contained in Main dataset
                                                        'F',  # Units for the physical quantity
-                                                       pos_desc,  # Position dimensions
-                                                       spec_desc,  # Spectroscopic dimensions
+                                                       None,  # Position dimensions
+                                                       None,  # Spectroscopic dimensions
+                                                       h5_pos_inds = self.h5_main.h5_pos_inds, # Copy Pos Dimensions
+                                                       h5_pos_vals = self.h5_main.h5_pos_vals, 
+                                                       h5_spec_inds = self.h5_main.h5_spec_inds, # Copy Spectroscopy Dimensions
+                                                       h5_spec_vals = self.h5_main.h5_spec_vals,
                                                        dtype=np.float32,  # data type / precision
                                                        main_dset_attrs=self.parm_dict)
+        
+        self.h5_force = usid.hdf_utils.write_main_dataset(self.h5_results_grp,
+                                                       ds_shape,
+                                                       'force',  # Name of main dataset
+                                                       'Force',  # Physical quantity contained in Main dataset
+                                                       'N',  # Units for the physical quantity
+                                                       None,  # Position dimensions
+                                                       None,  # Spectroscopic dimensions
+                                                       h5_pos_inds = self.h5_main.h5_pos_inds, # Copy Pos Dimensions
+                                                       h5_pos_vals = self.h5_main.h5_pos_vals, 
+                                                       h5_spec_inds = self.h5_main.h5_spec_inds, # Copy Spectroscopy Dimensions
+                                                       h5_spec_vals = self.h5_main.h5_spec_vals,
+                                                       dtype=np.float32,  # data type / precision
+                                                       main_dset_attrs=self.parm_dict)
+        
         
         self.h5_cpd.file.flush()
 
@@ -247,7 +279,7 @@ class GKPFM(FFtrEFM):
 
         # write the results to the file
         self.h5_cpd[pos_in_batch, :] = _results
-        self.h5_capacitance[pos_in_batch, :] = _capacitance
+        self.h5_cap[pos_in_batch, :] = _capacitance
 
         return
 
@@ -261,9 +293,9 @@ class GKPFM(FFtrEFM):
         
         if not self.override:
 
-            self.h5_results_grp = usid.hdf_utils.find_dataset(self.h5_main.parent, 'Inst_Freq')[index].parent
+            self.h5_results_grp = usid.hdf_utils.find_dataset(self.h5_main.parent, 'CPD')[index].parent
             self.h5_new_spec_vals = self.h5_results_grp['Spectroscopic_Values']
-            self.h5_cpd = self.h5_results_grp['cpd']
+            self.h5_cpd = self.h5_results_grp['CPD']
             self.h5_capacitance = self.h5_results_grp['capacitance']
 
         return
@@ -273,10 +305,8 @@ class GKPFM(FFtrEFM):
         The unit computation that is performed per data chunk. This allows room for any data pre / post-processing
         as well as multiple calls to parallel_compute if necessary
         """
-        # TODO: Try to use the functools.partials to preconfigure the map function
-        # cores = number of processes / rank here
 
-        args = [self.parm_dict, self.pixel_params]
+        args = [self.parm_dict, self.TF_norm, self.exc_wfm]
 
         if self.verbose and self.mpi_rank == 0:
             print("Rank {} at Process class' default _unit_computation() that "
@@ -290,25 +320,18 @@ class GKPFM(FFtrEFM):
     def _map_function(defl, *args, **kwargs):
 
         parm_dict = args[0]
-        pixel_params = args[1]
+        TF_norm = args[1]
+        exc_wfm = args[2]
 
-        pix = GKPixel(defl, parm_dict, **pixel_params)
+        gk = GKPixel(defl, parm_dict, exc_wfm=exc_wfm, TF_norm=TF_norm)    
+        gk.force_out(noise_tolerance=parm_dict['noise_tolerance'])
+        gk.analyze_cpd(use_raw=False)
 
-        if parm_dict['if_only']:
-            inst_freq, _, _ = pix.generate_inst_freq()
-            tfp = 0
-            shift = 0
-            amplitude = 0
-            phase = 0
-            pwr_diss = 0
-        else:
-            tfp, shift, inst_freq = pix.analyze()
-            pix.calculate_power_dissipation()
-            amplitude = pix.amplitude
-            phase = pix.phase
-            pwr_diss = pix.power_dissipated
-
-        return [cpd, capacitance]
+        cpd = gk.CPD
+        capacitance = gk.capacitance
+        force = gk.force
+    
+        return [force, cpd, capacitance]
 
 
 def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
