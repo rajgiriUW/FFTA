@@ -170,7 +170,7 @@ class Pixel:
         # Short Time Fourier Transform
         self.fft_analysis = False
         self.fft_cycles = 2
-        self.fft_params = {}  # for sliding FFT
+        self.fft_params = {}  # for STFT
 
         self.recombination = False
         self.phase_fitting = False
@@ -827,6 +827,7 @@ class Pixel:
 
         # Check the drive frequency.
         if self.check_drive:
+            
             self.check_drive_freq()
 
         # DWT Denoise
@@ -837,7 +838,7 @@ class Pixel:
             # Calculate instantenous frequency using wavelet transform.
             self.calculate_cwt(**self.wavelet_params)
 
-        elif self.method == 'fft':
+        elif self.method == 'stft':
 
             # Calculate instantenous frequency using sliding FFT
             self.calculate_stft(**self.fft_params)
@@ -863,6 +864,7 @@ class Pixel:
 
             # Filter out oscillatory noise from amplitude
             if self.filter_amplitude:
+                
                 self.amplitude_filter()
 
         else:
@@ -871,12 +873,9 @@ class Pixel:
         if timing:
             print('Time:', time.time() - t1, 's')
 
-        # If it's a recombination image invert it to find minimum.
-        if self.recombination:
-            self.inst_freq = self.inst_freq * -1
-
         # Filter out oscillatory noise from instantaneous frequency
         if self.filter_frequency:
+            
             self.frequency_filter()
 
         return self.inst_freq, self.amplitude, self.phase
@@ -895,24 +894,27 @@ class Pixel:
             Instantenous frequency of the signal.
         """
 
-        try:
+        self.inst_freq, self.amplitude, self.phase = self.generate_inst_freq()
 
-            self.inst_freq, self.amplitude, self.phase = self.generate_inst_freq()
+        # If it's a recombination image invert it to find minimum.
+        if self.recombination:
+            
+            self.inst_freq = self.inst_freq * -1
 
-            # Find where the minimum is.
-            self.find_tfp()
+        # Find where the minimum is.
+        self.find_tfp()
 
-            # Restore the length due to FIR filter being causal
-            if self.method == 'hilbert':
-                self.restore_signal()
+        # Restore the length due to FIR filter being causal
+        if self.method == 'hilbert':
+            
+            self.restore_signal()
 
-        # If caught any exception, set everything to zero and log it.
-        except Exception as exception:
-            self.tfp = 0
-            self.shift = 0
-            self.inst_freq = np.zeros(self._n_points_orig)
-
-            logging.exception(exception, exc_info=True)
+        # If it's a recombination image invert it to find minimum.
+        if self.recombination:
+            
+            self.inst_freq = self.inst_freq * -1
+            self.best_fit = self.best_fit * -1
+            self.cut = self.cut * -1
 
         if self.phase_fitting:
 

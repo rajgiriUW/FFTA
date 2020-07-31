@@ -7,7 +7,7 @@ import numpy as np
 from scipy import interpolate as spi
 from scipy import optimize as spo
 
-def find_minimum(pix, ridx, cut):
+def find_minimum(pix, cut):
     """
     Finds when the minimum of instantaneous frequency happens using spline fitting
     
@@ -17,8 +17,6 @@ def find_minimum(pix, ridx, cut):
         pixel object to analyze
     cut : ndarray
         The slice of frequency data to fit against
-    t : ndarray
-        The time-array (x-axis) for fitting
 
     Returns
     -------
@@ -32,10 +30,12 @@ def find_minimum(pix, ridx, cut):
     """
 
     # Cut the signal into region of interest.
-    ridx = int(pix.roi * pix.sampling_rate)
-    cut = pix.inst_freq[pix.tidx:(pix.tidx + ridx)]
+    #ridx = int(pix.roi * pix.sampling_rate)
+    #cut = pix.inst_freq[pix.tidx:(pix.tidx + ridx)]
 
     # Define a spline to be used in finding minimum.
+    ridx = len(cut)
+    
     x = np.arange(ridx)
     y = cut
 

@@ -123,6 +123,15 @@ class FFtrEFM(usid.Process):
         if hasattr(self, 'Spectroscopic_Values'):
             del self.Spectroscopic_Values
 
+        if 'Position_Indices' in self.parm_dict:
+            del self.parm_dict['Position_Indices']
+        if 'Position_Values' in self.parm_dict:
+            del self.parm_dict['Position_Values']
+        if 'Spectroscopic_Indices' in self.parm_dict:
+            del self.parm_dict['Spectroscopic_Indices']
+        if 'Spectroscopic_Values' in self.parm_dict:
+            del self.parm_dict['Spectroscopic_Values']
+
         return
 
     def update_parm(self, **kwargs):
