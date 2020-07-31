@@ -735,6 +735,14 @@ class Pixel:
                     inst_freq[c] = -0.5 * popt[1] / popt[0]
                     amplitude[c] = np.abs(SIG)[pk]
 
+        # Correctly pad the signals
+        _pts = self.n_points - len(inst_freq)
+        _pre = int(np.floor(_pts/2))
+        _post = int(np.ceil(_pts/2)) 
+        
+        inst_freq = np.pad(inst_freq, (_pre, _post))
+        amplitude = np.pad(amplitude, (_pre, _post))
+
         phase = spg.cumtrapz(inst_freq)
         phase = np.append(phase, phase[-1])
         tidx = int(self.tidx * len(inst_freq) / self.n_points)

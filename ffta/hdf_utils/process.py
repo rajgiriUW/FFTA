@@ -335,6 +335,7 @@ class FFtrEFM(usid.Process):
         """
         
         if not self.override:
+            
             self.h5_results_grp = usid.hdf_utils.find_dataset(self.h5_main.parent, 'Inst_Freq')[index].parent
             self.h5_new_spec_vals = self.h5_results_grp['Spectroscopic_Values']
             self.h5_tfp = self.h5_results_grp['tfp']
