@@ -18,12 +18,6 @@ import h5py
 
 from matplotlib import pyplot as plt
 
-'''
-To do:
-    Separate the instantaneous frequency and tFP/shift calculations
-'''
-
-
 class FFtrEFM(usid.Process):
     """
     Implements the pixel-by-pixel processing using ffta.pixel routines

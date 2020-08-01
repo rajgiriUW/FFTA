@@ -385,6 +385,27 @@ class GKPixel(Pixel):
     
         return 
     
+    def noise_filter(self, bw=1e3, plot=True, noise_tolerance=1e-6):
+        """
+        Denoising filter for 50 kHz harmonics (electrical noise in the system)
+        
+        bw : float, optional
+            Bandwidth for the notch filters
+        
+        """
+        nbf = px.processing.fft.NoiseBandFilter(len(self.force), self.sampling_rate, 
+                                        [2E3, 50E3, 100E3, 150E3, 200E3],
+                                        [4E3, bw, bw, bw, bw]) 
+       
+        filt_line, _, _ = px.processing.gmode_utils.test_filter(self.force,
+                                                                frequency_filters=nbf,
+                                                                noise_threshold=noise_tolerance,
+                                                                show_plots=plot)
+        self.force = np.real(filt_line)
+        self.FORCE = np.fft.fftshift(np.fft.fft(self.force))
+        
+        return
+    
     def plot_response(self):
         """
         Plots the transfer function and calculated force
@@ -550,6 +571,7 @@ class GKPixel(Pixel):
         
             a[x].plot(self.exc_wfm[start:start+1000], gout_shifted[start:start+1000], 'b')
             a[x].plot(self.exc_wfm[stop:stop+1000], gout_shifted[stop:stop+1000], 'r')
+            a[x].set_title('Phase='+str(ph))
 
         print('Set self.phase_shift to match desired phase offset (radians)')
 

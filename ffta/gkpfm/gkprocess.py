@@ -17,6 +17,8 @@ from pyUSID.processing.comp_utils import parallel_compute
 from pyUSID.io.write_utils import Dimension
 import h5py
 
+from scipy.ndimage import gaussian_filter1d
+
 from ffta.hdf_utils.process import FFtrEFM
 
 from matplotlib import pyplot as plt
@@ -111,6 +113,9 @@ class GKPFM(FFtrEFM):
         self.TF_norm = _gk.TF_norm
         del _gk
         
+        self.parm_dict['denoise'] = False
+        self.parm_dict['filter_cpd'] = False
+        
         return
 
     def update_parm(self, **kwargs):
@@ -157,11 +162,25 @@ class GKPFM(FFtrEFM):
                       TF_norm = self.TF_norm)        
         _gk.force_out(plot=True, noise_tolerance=self.parm_dict['noise_tolerance'])
         _gk.min_phase()
+        
+        if self.parm_dict['denoise']:
+            print('aa')
+            _gk.noise_filter()
+        
         _gk.analyze_cpd(use_raw=False, periods=self.parm_dict['periods'])
+        
+        if self.parm_dict['filter_cpd']:
+            print('bb')
+            _gk.CPD = gaussian_filter1d(_gk.CPD, 1)[:_gk.num_CPD]
+        
         plt.figure()
         plt.plot(_gk.CPD)
+        
+        self.cpd_dict = _gk._calc_cpd_params(return_dict=True, periods=self.parm_dict['periods'])
 
-        return self._map_function(defl, self.parm_dict, self.TF_norm, self.exc_wfm)
+        _,_,_, = self._map_function(defl, self.parm_dict, self.TF_norm, self.exc_wfm)
+    
+        return
 
     def _create_results_datasets(self):
         '''
@@ -185,10 +204,13 @@ class GKPFM(FFtrEFM):
         pnts_per_avg = self.parm_dict['pnts_per_avg']
 
         ds_shape = [num_rows * num_cols, pnts_per_avg]
+        cpd_ds_shape = [num_rows * num_cols, self.cpd_dict['num_CPD']]
 
         self.h5_results_grp = usid.hdf_utils.create_results_group(self.h5_main, self.process_name)
+        self.h5_cpd_grp = usid.hdf_utils.create_results_group(self.h5_main, self.process_name+'_CPD')
 
         usid.hdf_utils.copy_attributes(self.h5_main.parent, self.h5_results_grp)
+        usid.hdf_utils.copy_attributes(self.h5_main.parent, self.h5_cpd_grp)
 
         # Create dimensions
         pos_desc = [Dimension('X', 'm', np.linspace(0, self.parm_dict['FastScanSize'], num_cols)),
@@ -196,49 +218,49 @@ class GKPFM(FFtrEFM):
 
         # ds_pos_ind, ds_pos_val = build_ind_val_matrices(pos_desc, is_spectral=False)
         spec_desc = [Dimension('Time', 's', np.linspace(0, self.parm_dict['total_time'], pnts_per_avg))]
+        cpd_spec_desc = [Dimension('Time', 's', np.linspace(0, self.parm_dict['total_time'], self.cpd_dict['num_CPD']))]
         # ds_spec_inds, ds_spec_vals = build_ind_val_matrices(spec_desc, is_spectral=True)
 
         # Writes main dataset
-        self.h5_cpd = usid.hdf_utils.write_main_dataset(self.h5_results_grp,
-                                                       ds_shape,
+        self.h5_force = usid.hdf_utils.write_main_dataset(self.h5_results_grp,
+                                                          ds_shape,
+                                                          'force',  # Name of main dataset
+                                                          'Force',  # Physical quantity contained in Main dataset
+                                                          'N',  # Units for the physical quantity
+                                                          pos_desc,  # Position dimensions
+                                                          spec_desc,  # Spectroscopic dimensions
+                                                          dtype=np.float32,  # data type / precision
+                                                          main_dset_attrs=self.parm_dict)
+        
+
+        self.h5_cpd = usid.hdf_utils.write_main_dataset(self.h5_cpd_grp,
+                                                       cpd_ds_shape,
                                                        'CPD',  # Name of main dataset
                                                        'Potential',  # Physical quantity contained in Main dataset
                                                        'V',  # Units for the physical quantity
-                                                       pos_desc,  # Position dimensions
-                                                       spec_desc,  # Spectroscopic dimensions
+                                                       None,  # Position dimensions
+                                                       cpd_spec_desc,  # Spectroscopic dimensions
+                                                       h5_pos_inds = self.h5_main.h5_pos_inds, # Copy Pos Dimensions
+                                                       h5_pos_vals = self.h5_main.h5_pos_vals, 
                                                        dtype=np.float32,  # data type / precision
                                                        main_dset_attrs=self.parm_dict)
         
 
-        self.h5_cap = usid.hdf_utils.write_main_dataset(self.h5_results_grp,
-                                                       ds_shape,
+        self.h5_cap = usid.hdf_utils.write_main_dataset(self.h5_cpd_grp,
+                                                       cpd_ds_shape,
                                                        'capacitance',  # Name of main dataset
                                                        'Capacitance',  # Physical quantity contained in Main dataset
                                                        'F',  # Units for the physical quantity
                                                        None,  # Position dimensions
-                                                       None,  # Spectroscopic dimensions
+                                                       None,
                                                        h5_pos_inds = self.h5_main.h5_pos_inds, # Copy Pos Dimensions
                                                        h5_pos_vals = self.h5_main.h5_pos_vals, 
-                                                       h5_spec_inds = self.h5_main.h5_spec_inds, # Copy Spectroscopy Dimensions
-                                                       h5_spec_vals = self.h5_main.h5_spec_vals,
+                                                       h5_spec_inds = self.h5_cpd.h5_spec_inds, # Copy Spectroscopy Dimensions
+                                                       h5_spec_vals = self.h5_cpd.h5_spec_vals,
                                                        dtype=np.float32,  # data type / precision
                                                        main_dset_attrs=self.parm_dict)
         
-        self.h5_force = usid.hdf_utils.write_main_dataset(self.h5_results_grp,
-                                                       ds_shape,
-                                                       'force',  # Name of main dataset
-                                                       'Force',  # Physical quantity contained in Main dataset
-                                                       'N',  # Units for the physical quantity
-                                                       None,  # Position dimensions
-                                                       None,  # Spectroscopic dimensions
-                                                       h5_pos_inds = self.h5_main.h5_pos_inds, # Copy Pos Dimensions
-                                                       h5_pos_vals = self.h5_main.h5_pos_vals, 
-                                                       h5_spec_inds = self.h5_main.h5_spec_inds, # Copy Spectroscopy Dimensions
-                                                       h5_spec_vals = self.h5_main.h5_spec_vals,
-                                                       dtype=np.float32,  # data type / precision
-                                                       main_dset_attrs=self.parm_dict)
-        
-        
+
         self.h5_cpd.file.flush()
 
         return
@@ -274,12 +296,14 @@ class GKPFM(FFtrEFM):
         pos_in_batch = self._get_pixels_in_current_batch()
 
         # unflatten the list of results, which are [inst_freq array, amp, phase, tfp, shift]
-        _results = np.array([j for i in self._results for j in i[:1]])
-        _capacitance = np.array([j for i in self._results for j in i[1:2]])
+        _force = np.array([j for i in self._results for j in i[:1]])
+        _cpd = np.array([j for i in self._results for j in i[1:2]])
+        _capacitance = np.array([j for i in self._results for j in i[2:3]])
 
         # write the results to the file
-        self.h5_cpd[pos_in_batch, :] = _results
-        self.h5_cap[pos_in_batch, :] = _capacitance
+        self.h5_force[pos_in_batch, :] = _force
+        self.h5_cpd[pos_in_batch, :] = _cpd[:,:self.h5_cpd.shape[1]]
+        self.h5_cap[pos_in_batch, :] = _capacitance[:,:self.h5_cap.shape[1]]
 
         return
 
@@ -325,9 +349,16 @@ class GKPFM(FFtrEFM):
 
         gk = GKPixel(defl, parm_dict, exc_wfm=exc_wfm, TF_norm=TF_norm)    
         gk.force_out(noise_tolerance=parm_dict['noise_tolerance'])
-        gk.analyze_cpd(use_raw=False)
+
+        if parm_dict['denoise']:
+            gk.noise_filter()
+
+        gk.analyze_cpd(use_raw=False, periods=parm_dict['periods'])
 
         cpd = gk.CPD
+        if parm_dict['filter_cpd']:
+            cpd = gaussian_filter1d(gk.CPD, 1)[:gk.num_CPD]
+
         capacitance = gk.capacitance
         force = gk.force
     

@@ -1,7 +1,6 @@
 import matplotlib.animation as animation
 from matplotlib import pyplot as plt
 import pyUSID as usid
-import ffta
 from scipy import signal as sps
 import numpy as np
 
@@ -9,12 +8,15 @@ import numpy as np
 def set_mpeg(path=None):
     if not any(path):
         plt.rcParams[
-            'animation.ffmpeg_path'] = r'C:\Users\Raj\Downloads\ffmpeg-20180124-1948b76-win64-static\bin\ffmpeg.exe'
-
+            'animation.ffmpeg_path'] = r'C:/Users/Raj/Downloads/ffmpeg/ffmpeg/bin/ffmpeg.exe'
+    
+    else:
+        plt.rcParams['animation.ffmpeg_path'] = path
     return
 
 
-def setup_movie(h5_ds, size=(10,6), vscale=[None, None]):
+def setup_movie(h5_ds, size=(10,6), vscale=[None, None], cmap='inferno'):
+    
     fig, ax = plt.subplots(nrows=1, figsize=size, facecolor='white')
 
     if 'USID' not in str(type(h5_ds)):
@@ -24,7 +26,7 @@ def setup_movie(h5_ds, size=(10,6), vscale=[None, None]):
     if 'trigger' not in params:
         params = usid.hdf_utils.get_attributes(h5_ds.parent)
 
-    ds = h5_ds.get_n_dim_form()[:, :, 0].T
+    ds = h5_ds.get_n_dim_form()[:, :, 0]
 
     # set scale based on the first line, pre-trigger to post-trigger
     tdx = params['trigger'] * params['sampling_rate'] / params['pnts_per_avg']
@@ -38,7 +40,7 @@ def setup_movie(h5_ds, size=(10,6), vscale=[None, None]):
     length = h5_ds.get_pos_values('X')
     height = h5_ds.get_pos_values('Y')
 
-    im0 = ax.imshow(ds, cmap='inferno_r', origin='lower',
+    im0 = ax.imshow(ds, cmap=cmap, origin='lower',
                     extent=[0, length[-1] * 1e6, 0, height[-1] * 1e6],
                     vmin=vmin, vmax=vmax)
     cbar = plt.colorbar(im0, ax=ax, orientation='vertical',
@@ -49,7 +51,7 @@ def setup_movie(h5_ds, size=(10,6), vscale=[None, None]):
 
 def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
                       idx_start=500, idx_stop=100, smooth=None, size=(10,6),
-                      vscale=[None, None], interval=60, repeat_delay=100, crop=None):
+                      vscale=[None, None], cmap='inferno', interval=60, repeat_delay=100, crop=None):
     '''
     Creates an animation that goes through all the instantaneous frequency data.
     
@@ -67,7 +69,7 @@ def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
         What index to start at. Typically to avoid the Hilbert Transform edge artifacts, you start a little ahead
 
     idx_stop : int
-        Same as the above,in terms of how many points before the end to stop
+        Same as the above,in terms of how many points BEFORE the end to stop
 
     smooth : int, optional
         Whether to apply a simple boxcar smoothing kernel to the data
@@ -83,16 +85,16 @@ def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
     '''
 
     if any(vscale):
-        fig, ax, cbar, _,_ = setup_movie(h5_ds, size, vscale)
+        fig, ax, cbar, _,_ = setup_movie(h5_ds, size, vscale, cmap=cmap)
         [vmin, vmax] = vscale
     else:
-        fig, ax, cbar, vmin, vmax = setup_movie(h5_ds, size)
+        fig, ax, cbar, vmin, vmax = setup_movie(h5_ds, size ,cmap=cmap)
 
     _orig = np.copy(h5_ds[()])
     length = h5_ds.get_pos_values('X')
     height = h5_ds.get_pos_values('Y')
     if isinstance(crop, int):
-        height = height * crop / h5_ds.get_n_dim_form()[:, :, 0].T.shape[0]
+        height = height * crop / h5_ds.get_n_dim_form()[:, :, 0].shape[0]
 
     params = usid.hdf_utils.get_attributes(h5_ds)
     if 'trigger' not in params:
@@ -109,9 +111,9 @@ def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
 
     # Loop through time segments
     ims = []
-    for k, t in zip(np.arange(idx_start, len(tx) - idx_stop, time_step), tx[idx_start:-idx_stop:time_step]):
+    for k, t in enumerate(tx[idx_start:-idx_stop:time_step]):
 
-        _if = h5_ds.get_n_dim_form()[:, :, k].T
+        _if = h5_ds.get_n_dim_form()[:, :, k]
         if isinstance(crop, int):
             if crop < 0:
                 _if = _if[crop:, :]
@@ -119,7 +121,7 @@ def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
                 _if = _if[:crop, :]
 
         htitle = 'at ' + '{0:.4f}'.format(t * 1e3) + ' ms'
-        im0 = ax.imshow(_if, cmap='inferno_r', origin='lower', animated=True,
+        im0 = ax.imshow(_if, cmap=cmap, origin='lower', animated=True,
                         extent=[0, length[-1] * 1e6, 0, height[-1] * 1e6],
                         vmin=vmin, vmax=vmax)
 
@@ -144,7 +146,7 @@ def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
 
 
 def create_cpd_movie(h5_ds, filename='cpd', size=(10, 6),
-                     vscale=[None, None], smooth=None, interval=60, repeat_delay=100):
+                     vscale=[None, None], cmap='inferno', smooth=None, interval=60, repeat_delay=100):
     '''
 
     :param h5_ds:
@@ -158,10 +160,10 @@ def create_cpd_movie(h5_ds, filename='cpd', size=(10, 6),
     '''
 
     if any(vscale):
-        fig, ax, cbar, _, _ = setup_movie(h5_ds, size)
+        fig, ax, cbar, _, _ = setup_movie(h5_ds, size, vscale, cmap=cmap)
         [vmin, vmax] = vscale
     else:
-        fig, ax, cbar, vmin, vmax = setup_movie(h5_ds, size)
+        fig, ax, cbar, vmin, vmax = setup_movie(h5_ds, size, cmap=cmap)
 
     cbar.set_label('Potential (V)', rotation=270, labelpad=20, fontsize=16)
 
@@ -181,11 +183,11 @@ def create_cpd_movie(h5_ds, filename='cpd', size=(10, 6),
 
     # Loop through time segments
     ims = []
-    for k, t in zip(np.arange(len(tx)), tx):
+    for k, t in enumerate(tx):
 
-        _if = h5_ds.get_n_dim_form()[:, :, k].T
+        _if = h5_ds.get_n_dim_form()[:, :, k]
         htitle = 'at ' + '{0:.4f}'.format(t * 1e3) + ' ms'
-        im0 = ax.imshow(_if, cmap='inferno_r', origin='lower', animated=True,
+        im0 = ax.imshow(_if, cmap=cmap, origin='lower', animated=True,
                         extent=[0, length[-1] * 1e6, 0, height[-1] * 1e6],
                         vmin=vmin, vmax=vmax)
 

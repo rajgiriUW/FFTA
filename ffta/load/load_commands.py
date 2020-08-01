@@ -12,21 +12,9 @@ __maintainer__ = "Rajiv Giridharagopal"
 __email__ = "rgiri@uw.edu"
 __status__ = "Development"
 
-import numpy as np
-import os
 import h5py
-
-import pycroscopy as px
 import pyUSID as usid
-from pycroscopy.io.write_utils import build_ind_val_dsets, Dimension
-
-from ffta.pixel_utils import load
-from ffta.load import gl_ibw
-from ffta.hdf_utils import hdf_utils
 from ffta.load import get_utils
-from ffta import line
-
-import warnings
 
 
 def hdf_commands(h5_path, ds='FF_Raw'):
@@ -120,13 +108,13 @@ def hdf_commands(h5_path, ds='FF_Raw'):
 
     try:
         h5_ll = get_utils.get_line(h5_if, line_num=0)
-        commands.append("h5_ll = ffta.hdf_utils.get_utils.get_line(h5_if, line_num=0)")
+        commands.append("h5_ll = ffta.load.get_utils.get_line(h5_if, line_num=0)")
     except:
         pass
 
     try:
         h5_px = get_utils.get_pixel(h5_if, rc=[0,0])
-        commands.append("h5_px = ffta.hdf_utils.get_utils.get_pixel(h5_if, rc=[0,0])")
+        commands.append("h5_px = ffta.load.get_utils.get_pixel(h5_if, rc=[0,0])")
     except:
         pass
 

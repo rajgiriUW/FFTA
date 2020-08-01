@@ -76,10 +76,11 @@ class Pixel:
         One of 
             hilbert: Hilbert transform method (default)
             wavelet: Morlet CWT approach
-            emd: Hilbert-Huang decomposition
-            fft: sliding FFT approach
-    filter_amp : bool, optional
+            stft: short time Fourier transform (sliding FFT)
+    filter_amplitude : bool, optional
         The Hilbert Transform amplitude can sometimes have drive frequency artifact.
+    filter_frequency : bool, optional
+        Filters the instantaneous frequency to remove noise peaks
 
     Attributes
     ----------
@@ -145,6 +146,8 @@ class Pixel:
     >>>
     >>> p = pixel.Pixel(signal_array, params)
     >>> tfp, shift, inst_freq = p.analyze()
+    >>>
+    >>> p.plot()
 
     """
 
@@ -323,6 +326,8 @@ class Pixel:
         rate = self.sampling_rate
         lpf = self.drive_freq * 0.1
         self.signal, _, _ = dwavelet.dwt_denoise(self.signal, lpf, rate / 2, rate)
+        
+        return
 
     def fir_filter(self):
         """Filters signal with a FIR bandpass filter."""
