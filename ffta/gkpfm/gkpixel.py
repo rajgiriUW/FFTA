@@ -18,6 +18,7 @@ from pycroscopy.processing.fft import get_noise_floor
 from pycroscopy.analysis.utils.be_sho import SHOfunc, SHOestimateGuess, SHOfit
 import pycroscopy as px
 from igor.binarywave import load as loadibw
+import pyUSID as usid
 
 class GKPixel(Pixel):
 
@@ -56,7 +57,7 @@ class GKPixel(Pixel):
         self.periods = periods
         self.phase_shift = phase_shift
 
-        super(GKPixel, self).__init__(signal_array, params, can_params,
+        super().__init__(signal_array, params, can_params,
                                       fit, False, method, fit_form, 
                                       filter_amplitude, filter_frequency)
 
@@ -560,21 +561,27 @@ class GKPixel(Pixel):
         mid = int(len(self.f_ax) / 2)
         drive_bin = int(self.drive_freq / (self.sampling_rate / len(self.SIG))) + mid
         
-        fig, a = plt.subplots(nrows=len(phases_to_test), figsize=(6, 14))
+        numplots = len(phases_to_test)
+        fig, ax = plt.subplots(nrows=numplots, figsize=(6, int(4*numplots)), 
+                              facecolor='white')
         
-        for x, ph in zip(range(len(phases_to_test)), phases_to_test):
+        for x, ph in enumerate(phases_to_test):
            
             #SIG_shifted = self.SIG * np.exp(-1j * self.f_ax/self.f_ax[drive_bin] * ph)
             SIG_shifted = self.SIG * np.exp(-1j * self.f_ax[drive_bin] * ph)
             Gout_shifted = SIG_shifted / self.TF_norm
             gout_shifted = np.real(np.fft.ifft(np.fft.ifftshift(Gout_shifted)))
-        
-            a[x].plot(self.exc_wfm[start:start+1000], gout_shifted[start:start+1000], 'b')
-            a[x].plot(self.exc_wfm[stop:stop+1000], gout_shifted[stop:stop+1000], 'r')
-            a[x].set_title('Phase='+str(ph))
+            self.phase_shift = ph
+            self.force_out(plot=False)
+            usid.plot_utils.rainbow_plot(ax[x], self.exc_wfm, self.force)
+            ax[x].set_title('Phase='+str(ph))
+
+            # a[x].plot(self.exc_wfm[start:start+1000], gout_shifted[start:start+1000], 'b')
+            # a[x].plot(self.exc_wfm[stop:stop+1000], gout_shifted[stop:stop+1000], 'r')
+            # a[x].set_title('Phase='+str(ph))
 
         print('Set self.phase_shift to match desired phase offset (radians)')
-
+        
         return
 
     def min_phase_fft(self, signal):
