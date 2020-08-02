@@ -7,7 +7,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='FFTA',
-    version='0.2.1',
+    version='0.3.0',
     description='Fast Free Transient Analysis',
     long_description=long_description,
     long_description_content_type='text/markdown',
