@@ -4,6 +4,10 @@ import pyUSID as usid
 from scipy import signal as sps
 import numpy as np
 
+'''
+Note: A 'str is not callable' bug is often due to not running set_mpeg
+
+'''
 
 def set_mpeg(path=None):
     if not any(path):
@@ -111,7 +115,8 @@ def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
 
     # Loop through time segments
     ims = []
-    for k, t in enumerate(tx[idx_start:-idx_stop:time_step]):
+    for k, t in zip(np.arange(idx_start, len(tx)-idx_stop, time_step),
+                    tx[idx_start:-idx_stop:time_step]):
 
         _if = h5_ds.get_n_dim_form()[:, :, k]
         if isinstance(crop, int):
@@ -136,7 +141,11 @@ def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
 
     ani = animation.ArtistAnimation(fig, ims, interval=interval, repeat_delay=repeat_delay)
 
-    ani.save(filename + '.mp4')
+    try:    
+        ani.save(filename + '.mp4')
+    except TypeError as e:
+        print(e)
+        print('A "str is not callable" message is often due to not running set_mpeg function')
 
     # restore data
     for i in np.arange(h5_ds.shape[0]):
@@ -202,7 +211,10 @@ def create_cpd_movie(h5_ds, filename='cpd', size=(10, 6),
 
     ani = animation.ArtistAnimation(fig, ims, interval=interval, repeat_delay=repeat_delay)
 
-    ani.save(filename + '.mp4')
+    try:    
+        ani.save(filename + '.mp4')
+    except TypeError:
+        print('A "str is not callable" message is often due to not running set_mpeg function')
 
     # restore data
     for i in np.arange(h5_ds.shape[0]):
