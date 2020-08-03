@@ -196,7 +196,7 @@ class GKPFM(FFtrEFM):
             Contains the frequency shift data as a 1D matrix
         '''
 
-        print ('Creating results datasets')
+        print ('Creating CPD results datasets')
 
         # Get relevant parameters
         num_rows = self.parm_dict['num_rows']
@@ -321,6 +321,7 @@ class GKPFM(FFtrEFM):
             self.h5_new_spec_vals = self.h5_results_grp['Spectroscopic_Values']
             self.h5_cpd = self.h5_results_grp['CPD']
             self.h5_capacitance = self.h5_results_grp['capacitance']
+            self.h5_force = usid.hdf_utils.find_dataset(self.h5_main.parent, 'CPD')[index].parent['force']
 
         return
 

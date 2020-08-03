@@ -326,7 +326,7 @@ class Pixel:
         rate = self.sampling_rate
         lpf = self.drive_freq * 0.1
         self.signal, _, _ = dwavelet.dwt_denoise(self.signal, lpf, rate / 2, rate)
-        
+
         return
 
     def fir_filter(self):
@@ -742,9 +742,9 @@ class Pixel:
 
         # Correctly pad the signals
         _pts = self.n_points - len(inst_freq)
-        _pre = int(np.floor(_pts/2))
-        _post = int(np.ceil(_pts/2)) 
-        
+        _pre = int(np.floor(_pts / 2))
+        _post = int(np.ceil(_pts / 2))
+
         inst_freq = np.pad(inst_freq, (_pre, _post))
         amplitude = np.pad(amplitude, (_pre, _post))
 
@@ -840,7 +840,6 @@ class Pixel:
 
         # Check the drive frequency.
         if self.check_drive:
-            
             self.check_drive_freq()
 
         # DWT Denoise
@@ -877,7 +876,6 @@ class Pixel:
 
             # Filter out oscillatory noise from amplitude
             if self.filter_amplitude:
-                
                 self.amplitude_filter()
 
         else:
@@ -888,7 +886,6 @@ class Pixel:
 
         # Filter out oscillatory noise from instantaneous frequency
         if self.filter_frequency:
-            
             self.frequency_filter()
 
         return self.inst_freq, self.amplitude, self.phase
@@ -911,7 +908,6 @@ class Pixel:
 
         # If it's a recombination image invert it to find minimum.
         if self.recombination:
-            
             self.inst_freq = self.inst_freq * -1
 
         # Find where the minimum is.
@@ -919,12 +915,10 @@ class Pixel:
 
         # Restore the length due to FIR filter being causal
         if self.method == 'hilbert':
-            
             self.restore_signal()
 
         # If it's a recombination image invert it to find minimum.
         if self.recombination:
-            
             self.inst_freq = self.inst_freq * -1
             self.best_fit = self.best_fit * -1
             self.cut = self.cut * -1

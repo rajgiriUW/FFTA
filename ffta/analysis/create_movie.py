@@ -88,6 +88,9 @@ def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
         Crops the image to a certain line, in case part of the scan is bad
     '''
 
+    if not isinstance(h5_ds, usid.USIDataset):
+        h5_ds = usid.USIDataset(h5_ds)
+
     if any(vscale):
         fig, ax, cbar, _,_ = setup_movie(h5_ds, size, vscale, cmap=cmap)
         [vmin, vmax] = vscale
@@ -167,7 +170,10 @@ def create_cpd_movie(h5_ds, filename='cpd', size=(10, 6),
     :param repeat_delay:
     :return:
     '''
-
+    
+    if not isinstance(h5_ds, usid.USIDataset):
+        h5_ds = usid.USIDataset(h5_ds)
+        
     if any(vscale):
         fig, ax, cbar, _, _ = setup_movie(h5_ds, size, vscale, cmap=cmap)
         [vmin, vmax] = vscale

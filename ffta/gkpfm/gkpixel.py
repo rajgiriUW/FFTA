@@ -516,6 +516,16 @@ class GKPixel(Pixel):
             self.CPD[-1] = self.CPD[-2]
             self.capacitance[-1] = self.capacitance[-2]
     
+    def plot_cpd(self):
+        
+        fig, ax = plt.subplots(figsize=(5,5), facecolor='white')
+        tx = np.linspace(0, self.total_time, self.num_CPD)
+        ax.plot(tx*1e3, self.CPD[:self.num_CPD], 'b')
+        ax.set_xlabel('Time (ms)')
+        ax.set_ylabel('CPD (V)')
+                
+        return ax
+    
     def filter_cpd(self):
         """
         Filters the capacitance based on pixel parameter self.filter_bandwidth
