@@ -16,6 +16,7 @@ import numpy as np
 Functions for extracting certain segments from an HDF FFtrEFM file
 '''
 
+
 def get_params(h5_path, key='', verbose=False, del_indices=True):
     """
     Gets dict of parameters from the FF-file
@@ -33,52 +34,53 @@ def get_params(h5_path, key='', verbose=False, del_indices=True):
     del_indices : bool, optional
         Deletes relative links within the H5Py and any quantity/units
     """
-    
+
     if isinstance(h5_path, str):
         h5_path = px.io.HDFwriter(h5_path).file
-    
-    parameters =  usid.hdf_utils.get_attributes(h5_path)
-    
+
+    parameters = usid.hdf_utils.get_attributes(h5_path)
+
     # if this dataset does not have complete FFtrEFM parameters
     if 'trigger' not in parameters:
-        parameters =  usid.hdf_utils.get_attributes(h5_path.parent)
+        parameters = usid.hdf_utils.get_attributes(h5_path.parent)
 
     # still not there? hard-select the main dataset
     if 'trigger' not in parameters:
-        
+
         try:
             h5_file = px.io.HDFwriter(h5_path).file
             parameters = usid.hdf_utils.get_attributes(h5_file['FF_Group'])
-            
+
         except:
             raise TypeError('No proper parameters file found.')
-    
+
     # STILL not there? Find the FF AVg
     if 'trigger' not in parameters:
-        
+
         try:
             h5_file = px.io.HDFwriter(h5_path).file
             parameters = usid.hdf_utils.get_attributes(h5_file['FF_Group/FF_Avg'])
-            
+
         except:
             raise TypeError('No proper parameters file found.')
-    
+
     if any(key):
         return parameters[key]
-    
+
     if verbose:
         print(parameters)
-    
-    del_keys = ['Position_Indices', 'Position_Values','Spectroscopic_Indices',
+
+    del_keys = ['Position_Indices', 'Position_Values', 'Spectroscopic_Indices',
                 'Spectroscopic_Values', 'quantity', 'units']
-    
+
     for key in del_keys:
         if key in parameters:
             del parameters[key]
-            
+
     return parameters
 
-def change_params(h5_path, new_vals = {}, verbose=False):
+
+def change_params(h5_path, new_vals={}, verbose=False):
     """
     Changes a parameter to a new value
     
@@ -97,25 +99,26 @@ def change_params(h5_path, new_vals = {}, verbose=False):
         Prints all parameters to console
     
     """
-    parameters =  usid.hdf_utils.get_attributes(h5_path)
-    
+    parameters = usid.hdf_utils.get_attributes(h5_path)
+
     if verbose:
         print('Old parameters:')
         for key in new_vals:
-            print(key,':',parameters[key])
-    
+            print(key, ':', parameters[key])
+
     for key in new_vals:
         h5_path.attrs[key] = new_vals[key]
-        
+
     if verbose:
         print('\nNew parameters:')
         for key in new_vals:
-            print(key,':',parameters[key])
+            print(key, ':', parameters[key])
 
     return parameters
-    
+
+
 def get_line(h5_path, line_num, params={},
-             array_form=False, avg=False, transpose=False):    
+             array_form=False, avg=False, transpose=False):
     """
     Gets a line of data.
     
@@ -150,34 +153,34 @@ def get_line(h5_path, line_num, params={},
     line_inst : Line, iff array_form == False
         Line class containing the signal_array object and parameters
     """
-    
+
     # If not a dataset, then find the associated Group
     if 'Dataset' not in str(type(h5_path)):
-    
-        parameters =  get_params(h5_path)
+
+        parameters = get_params(h5_path)
         h5_file = px.io.HDFwriter(h5_path).file
 
         d = usid.hdf_utils.find_dataset(h5_file, 'FF_Raw')[0]
         c = parameters['num_cols']
         pnts = parameters['pnts_per_line']
-     
-    else: # if a Dataset, extract parameters from the shape. 
-        
+
+    else:  # if a Dataset, extract parameters from the shape.
+
         d = h5_path[()]
-        parameters =  get_params(h5_path)
-        
+        parameters = get_params(h5_path)
+
         c = parameters['num_cols']
         pnts = parameters['pnts_per_line']
-    
-    signal_line = d[line_num*pnts:(line_num+1)*pnts, :]
-    
+
+    signal_line = d[line_num * pnts:(line_num + 1) * pnts, :]
+
     if avg == True:
         signal_line = (signal_line.transpose() - signal_line.mean(axis=1)).transpose()
         signal_line = signal_line.mean(axis=0)
-        
+
     if transpose == True:
         signal_line = signal_line.transpose()
-    
+
     if array_form == True or avg == True:
         return signal_line
 
@@ -186,12 +189,12 @@ def get_line(h5_path, line_num, params={},
             parameters[key] = val
 
     line_inst = Line(signal_line, parameters, c, pycroscopy=True)
-    
+
     return line_inst
-    
+
 
 def get_pixel(h5_path, rc, params={}, pixel_params={},
-              array_form=False, avg=False, transpose=False):    
+              array_form=False, avg=False, transpose=False):
     """
     Gets a pixel of data, returns all the averages within that pixel
     Returns a specific key if requested
@@ -230,47 +233,46 @@ def get_pixel(h5_path, rc, params={}, pixel_params={},
     pixel_inst : Pixel, iff array_form == False
         Line class containing the signal_array object and parameters
     """
-    
+
     # If not a dataset, then find the associated Group
     if 'Dataset' not in str(type(h5_path)):
         p = get_params(h5_path)
         h5_file = px.io.HDFwriter(h5_path).file
-    
+
         d = usid.hdf_utils.find_dataset(h5_file, 'FF_Raw')[0]
         c = p['num_cols']
         pnts = int(p['pnts_per_pixel'])
-        parameters =  usid.hdf_utils.get_attributes(d.parent)
-        
+        parameters = usid.hdf_utils.get_attributes(d.parent)
+
     else:
-        
+
         d = h5_path[()]
-        parameters =  get_params(h5_path)
+        parameters = get_params(h5_path)
 
         c = parameters['num_cols']
         pnts = parameters['pnts_per_pixel']
 
-    signal_pixel = d[rc[0]*c + rc[1]:rc[0]*c + rc[1]+pnts, :]    
+    signal_pixel = d[rc[0] * c + rc[1]:rc[0] * c + rc[1] + pnts, :]
 
     if avg == True:
         signal_pixel = signal_pixel.mean(axis=0)
 
-    if transpose == True:   # this does nothing is avg==True
+    if transpose == True:  # this does nothing is avg==True
         signal_pixel = signal_pixel.transpose()
-        
+
     if array_form == True:
         return signal_pixel
-    
+
     if signal_pixel.shape[0] == 1:
-        
         signal_pixel = np.reshape(signal_pixel, [signal_pixel.shape[1]])
 
     if any(params):
         for key, val in params.items():
             parameters[key] = val
 
-    pixel_params.update({'pycroscopy': True}) #must be True in this specific case
+    pixel_params.update({'pycroscopy': True})  # must be True in this specific case
 
-    #pixel_inst = Pixel(signal_pixel, parameters, pycroscopy=True)
+    # pixel_inst = Pixel(signal_pixel, parameters, pycroscopy=True)
     pixel_inst = Pixel(signal_pixel, parameters, **pixel_params)
-    
-    return pixel_inst    
+
+    return pixel_inst

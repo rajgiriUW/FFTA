@@ -9,6 +9,7 @@ conditions, where t is passed relative to the trigger Cantilever.trigger
 
 import numpy as np
 
+
 def single_exp(t, tau):
     '''
     Resonance frequency exhibits single exponential decay to a new offset
@@ -22,7 +23,7 @@ def single_exp(t, tau):
         Time constant for decay
         
     '''
-    
+
     return -np.expm1(-t / tau)
 
 
@@ -32,18 +33,20 @@ def bi_exp(t, tau1, tau2):
     
     
     '''
-    
+
     A = np.exp(-t / tau1)
     B = np.exp(-t / tau2)
-    
+
     return -0.5 * (A + B - 2)
+
 
 def str_exp(t, tau, beta):
     '''
     Resonance frequency exhibits stretched exponential decay to a new offset
     '''
-    
-    return - (np.exp(-t  / tau)**beta - 1)
+
+    return - (np.exp(-t / tau) ** beta - 1)
+
 
 def step(t):
     '''

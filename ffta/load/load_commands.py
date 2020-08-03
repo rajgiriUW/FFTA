@@ -54,7 +54,7 @@ def hdf_commands(h5_path, ds='FF_Raw'):
 
     try:
         h5_main = usid.hdf_utils.find_dataset(hdf.file, ds)[0]
-        commands.append("h5_main = usid.hdf_utils.find_dataset(hdf.file, '"+ds+"')[0]")
+        commands.append("h5_main = usid.hdf_utils.find_dataset(hdf.file, '" + ds + "')[0]")
     except:
         pass
 
@@ -63,7 +63,7 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         commands.append("h5_if = usid.hdf_utils.find_dataset(hdf.file, 'inst_freq')[-1]")
     except:
         pass
-    
+
     try:
         h5_if = usid.hdf_utils.find_dataset(hdf.file, 'Inst_Freq')[-1]
         commands.append("h5_if = usid.hdf_utils.find_dataset(hdf.file, 'Inst_Freq')[-1]")
@@ -75,7 +75,7 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         commands.append("h5_tfp= usid.hdf_utils.find_dataset(hdf.file, 'tfp')[-1]")
     except:
         pass
-    
+
     try:
         h5_shift = usid.hdf_utils.find_dataset(hdf.file, 'shift')[-1]
         commands.append("h5_shift= usid.hdf_utils.find_dataset(hdf.file, 'shift')[-1]")
@@ -113,7 +113,7 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         pass
 
     try:
-        h5_px = get_utils.get_pixel(h5_if, rc=[0,0])
+        h5_px = get_utils.get_pixel(h5_if, rc=[0, 0])
         commands.append("h5_px = ffta.load.get_utils.get_pixel(h5_if, rc=[0,0])")
     except:
         pass
@@ -135,13 +135,12 @@ def hdf_commands(h5_path, ds='FF_Raw'):
         commands.append("h5_ytime = usid.hdf_utils.find_dataset(hdf.file, 'y_time')[-1]")
     except:
         pass
-    
+
     try:
         h5_Y = usid.hdf_utils.find_dataset(hdf.file, 'Y')[-1]
         commands.append("h5_Y = usid.hdf_utils.find_dataset(hdf.file, 'Y')[-1]")
     except:
         pass
-
 
     for i in commands:
         print(i)

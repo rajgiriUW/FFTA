@@ -71,16 +71,15 @@ class BroadbandPulse(Cantilever):
     """
 
     def __init__(self, can_params, force_params, sim_params, chirp_lo=10, chirp_hi=1e6):
-
         parms = [can_params, force_params, sim_params]
         super(BroadbandPulse, self).__init__(*parms)
 
         t_Z = self.t_Z
         self.chirp = chirp(t_Z, chirp_lo, t_Z[-1], chirp_hi)
-        self.delta_w = 0 # no trigger event
-        
+        self.delta_w = 0  # no trigger event
+
         return
-    
+
     def force(self, t, t0=0, tau=0):
         """
         Force on the cantilever at a given time. 
@@ -96,11 +95,11 @@ class BroadbandPulse(Cantilever):
             Force on the cantilever at a given time, in N/kg.
 
         """
-        
+
         p = int(t * self.sampling_rate)
         n_points = int(self.total_time * self.sampling_rate)
-            
+
         _ch = self.chirp[p] if p < n_points else self.chirp[-1]
         driving_force = self.f0 * _ch
-            
+
         return driving_force

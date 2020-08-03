@@ -18,6 +18,7 @@ import h5py
 
 from matplotlib import pyplot as plt
 
+
 class FFtrEFM(usid.Process):
     """
     Implements the pixel-by-pixel processing using ffta.pixel routines
@@ -39,8 +40,8 @@ class FFtrEFM(usid.Process):
         >> data._get_existing_datasets()
     """
 
-    def __init__(self, h5_main, parm_dict = {}, can_params = {}, 
-                 pixel_params ={}, if_only=False, override=False, process_name = 'Fast_Free',
+    def __init__(self, h5_main, parm_dict={}, can_params={},
+                 pixel_params={}, if_only=False, override=False, process_name='Fast_Free',
                  **kwargs):
         """
         Parameters
@@ -89,23 +90,23 @@ class FFtrEFM(usid.Process):
         if not any(parm_dict):
             self.parm_dict = usid.hdf_utils.get_attributes(h5_main)
             self.parm_dict.update({'if_only': if_only})
-        
+
         for key, val in parm_dict.items():
             self.parm_dict.update({key: val})
-                
+
         if any(can_params):
-            if 'Initial' in can_params: #only care about the initial conditions
+            if 'Initial' in can_params:  # only care about the initial conditions
                 for key, val in can_params['Initial'].items():
                     self.parm_dict.update({key: val})
             else:
                 for key, val in can_params.items():
                     self.parm_dict.update({key: val})
-                    
-        self.pixel_params = pixel_params    
+
+        self.pixel_params = pixel_params
         self.override = override
-        
+
         super(FFtrEFM, self).__init__(h5_main, process_name, parms_dict=self.parm_dict, **kwargs)
-        
+
         # For accidental passing ancillary datasets from Pycroscopy, this will fail
         # when pickling
         if hasattr(self, 'Position_Indices'):
@@ -137,7 +138,7 @@ class FFtrEFM(usid.Process):
 
         return
 
-    def test(self, pixel_ind=[0,0]):
+    def test(self, pixel_ind=[0, 0]):
         """
         Test the Pixel analysis of a single pixel
 
@@ -189,7 +190,7 @@ class FFtrEFM(usid.Process):
             Contains the frequency shift data as a 1D matrix
         '''
 
-        print ('Creating results datasets')
+        print('Creating results datasets')
 
         # Get relevant parameters
         num_rows = self.parm_dict['num_rows']
@@ -221,35 +222,37 @@ class FFtrEFM(usid.Process):
                                                        spec_desc,  # Spectroscopic dimensions
                                                        dtype=np.float32,  # data type / precision
                                                        main_dset_attrs=self.parm_dict)
-        
+
         self.h5_amp = usid.hdf_utils.write_main_dataset(self.h5_results_grp,
-                                                       ds_shape,
-                                                       'Amplitude',  # Name of main dataset
-                                                       'Amplitude',  # Physical quantity contained in Main dataset
-                                                       'nm',  # Units for the physical quantity
-                                                       None,  # Position dimensions
-                                                       None,  # Spectroscopic dimensions
-                                                       h5_pos_inds = self.h5_main.h5_pos_inds, # Copy Pos Dimensions
-                                                       h5_pos_vals = self.h5_main.h5_pos_vals, 
-                                                       h5_spec_inds = self.h5_main.h5_spec_inds, # Copy Spectroscopy Dimensions
-                                                       h5_spec_vals = self.h5_main.h5_spec_vals,
-                                                       dtype=np.float32,  # data type / precision
-                                                       main_dset_attrs=self.parm_dict)
-        
+                                                        ds_shape,
+                                                        'Amplitude',  # Name of main dataset
+                                                        'Amplitude',  # Physical quantity contained in Main dataset
+                                                        'nm',  # Units for the physical quantity
+                                                        None,  # Position dimensions
+                                                        None,  # Spectroscopic dimensions
+                                                        h5_pos_inds=self.h5_main.h5_pos_inds,  # Copy Pos Dimensions
+                                                        h5_pos_vals=self.h5_main.h5_pos_vals,
+                                                        h5_spec_inds=self.h5_main.h5_spec_inds,
+                                                        # Copy Spectroscopy Dimensions
+                                                        h5_spec_vals=self.h5_main.h5_spec_vals,
+                                                        dtype=np.float32,  # data type / precision
+                                                        main_dset_attrs=self.parm_dict)
+
         self.h5_phase = usid.hdf_utils.write_main_dataset(self.h5_results_grp,
-                                                       ds_shape,
-                                                       'Phase',  # Name of main dataset
-                                                       'Phase',  # Physical quantity contained in Main dataset
-                                                       'degrees',  # Units for the physical quantity
-                                                       None,  # Position dimensions
-                                                       None,  # Spectroscopic dimensions
-                                                       h5_pos_inds = self.h5_main.h5_pos_inds, # Copy Pos Dimensions
-                                                       h5_pos_vals = self.h5_main.h5_pos_vals, 
-                                                       h5_spec_inds = self.h5_main.h5_spec_inds, # Copy Spectroscopy Dimensions
-                                                       h5_spec_vals = self.h5_main.h5_spec_vals,
-                                                       dtype=np.float32,  # data type / precision
-                                                       main_dset_attrs=self.parm_dict)
-        
+                                                          ds_shape,
+                                                          'Phase',  # Name of main dataset
+                                                          'Phase',  # Physical quantity contained in Main dataset
+                                                          'degrees',  # Units for the physical quantity
+                                                          None,  # Position dimensions
+                                                          None,  # Spectroscopic dimensions
+                                                          h5_pos_inds=self.h5_main.h5_pos_inds,  # Copy Pos Dimensions
+                                                          h5_pos_vals=self.h5_main.h5_pos_vals,
+                                                          h5_spec_inds=self.h5_main.h5_spec_inds,
+                                                          # Copy Spectroscopy Dimensions
+                                                          h5_spec_vals=self.h5_main.h5_spec_vals,
+                                                          dtype=np.float32,  # data type / precision
+                                                          main_dset_attrs=self.parm_dict)
+
         self.h5_pwrdis = usid.hdf_utils.write_main_dataset(self.h5_results_grp,
                                                            ds_shape,
                                                            'PowerDissipation',  # Name of main dataset
@@ -257,10 +260,11 @@ class FFtrEFM(usid.Process):
                                                            'W',  # Units for the physical quantity
                                                            None,  # Position dimensions
                                                            None,  # Spectroscopic dimensions
-                                                           h5_pos_inds = self.h5_main.h5_pos_inds, # Copy Pos Dimensions
-                                                           h5_pos_vals = self.h5_main.h5_pos_vals, 
-                                                           h5_spec_inds = self.h5_main.h5_spec_inds, # Copy Spectroscopy Dimensions
-                                                           h5_spec_vals = self.h5_main.h5_spec_vals,
+                                                           h5_pos_inds=self.h5_main.h5_pos_inds,  # Copy Pos Dimensions
+                                                           h5_pos_vals=self.h5_main.h5_pos_vals,
+                                                           h5_spec_inds=self.h5_main.h5_spec_inds,
+                                                           # Copy Spectroscopy Dimensions
+                                                           h5_spec_vals=self.h5_main.h5_spec_vals,
                                                            dtype=np.float32,  # data type / precision
                                                            main_dset_attrs=self.parm_dict)
 
@@ -317,7 +321,7 @@ class FFtrEFM(usid.Process):
         self.h5_phase[pos_in_batch, :] = _phase
         self.h5_tfp[pos_in_batch, 0] = _tfp
         self.h5_shift[pos_in_batch, 0] = _shift
-        
+
         return
 
     def _get_existing_datasets(self, index=-1):
@@ -327,9 +331,9 @@ class FFtrEFM(usid.Process):
         index = which existing dataset to get
         
         """
-        
+
         if not self.override:
-            
+
             self.h5_results_grp = usid.hdf_utils.find_dataset(self.h5_main.parent, 'Inst_Freq')[index].parent
             self.h5_new_spec_vals = self.h5_results_grp['Spectroscopic_Values']
             self.h5_tfp = self.h5_results_grp['tfp']
@@ -399,18 +403,18 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     append : str, optional
         text to append to file name
     """
-    
+
     h5_ff = h5_file
-    
+
     if isinstance(h5_file, ffta.hdf_utils.process.FFtrEFM):
         print('Saving from FFtrEFM Class')
         h5_ff = h5_file.h5_main.file
         h5_path = h5_file.h5_results_grp.name
-    
+
     elif not isinstance(h5_file, h5py.File):
         print('Saving from pyUSID object')
         h5_ff = h5_file.file
-    
+
     tfp = usid.hdf_utils.find_dataset(h5_ff[h5_path], 'tfp')[0][()]
     # tfp_fixed = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp_fixed')[0][()]
     shift = usid.hdf_utils.find_dataset(h5_ff[h5_path], 'shift')[0][()]
@@ -436,7 +440,7 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     return
 
 
-def plot_tfp(ffprocess, scale_tfp = 1e6, scale_shift=1, threshold = 2, **kwargs):
+def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
     '''
     Quickly plots the tfp and shift data. If there's a height image in the h5_file associated
      with ffprocess, will plot that as well
@@ -457,8 +461,8 @@ def plot_tfp(ffprocess, scale_tfp = 1e6, scale_shift=1, threshold = 2, **kwargs)
     img_length = ffprocess.parm_dict['FastScanSize']
     img_height = ffprocess.parm_dict['SlowScanSize']
     kwarg = {'origin': 'lower', 'x_vec': img_length * 1e6,
-              'y_vec': img_height * 1e6, 'num_ticks': 5, 'stdevs': 3, 'show_cbar':True}
-    
+             'y_vec': img_height * 1e6, 'num_ticks': 5, 'stdevs': 3, 'show_cbar': True}
+
     for k, v in kwarg.items():
         if k not in kwargs:
             kwargs.update({k: v})
@@ -476,7 +480,7 @@ def plot_tfp(ffprocess, scale_tfp = 1e6, scale_shift=1, threshold = 2, **kwargs)
 
     tfp_ax.set_title('tFP Image')
     shift_ax.set_title('Shift Image')
-    
+
     tfp_fixed, _ = badpixels.fix_array(ffprocess.h5_tfp[()], threshold=threshold)
 
     tfp_image, cbar_tfp = usid.viz.plot_utils.plot_map(tfp_ax, tfp_fixed * scale_tfp,
@@ -484,7 +488,6 @@ def plot_tfp(ffprocess, scale_tfp = 1e6, scale_shift=1, threshold = 2, **kwargs)
     shift_image, cbar_sh = usid.viz.plot_utils.plot_map(shift_ax, ffprocess.h5_shift[()] * scale_shift,
                                                         cmap='inferno', **kwargs)
 
-    
     cbar_tfp.set_label('Time (us)', rotation=270, labelpad=16)
     cbar_sh.set_label('Frequency Shift (Hz)', rotation=270, labelpad=16)
     text = tfp_ax.text(num_cols / 2, num_rows + 3, '')

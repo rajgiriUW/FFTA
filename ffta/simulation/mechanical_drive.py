@@ -101,8 +101,8 @@ class MechanicalDrive(Cantilever):
     >>> c.analyze() 
     """
 
-    def __init__(self, can_params, force_params, sim_params, 
-                 v_array=[], func = excitation.single_exp, func_args=[]):
+    def __init__(self, can_params, force_params, sim_params,
+                 v_array=[], func=excitation.single_exp, func_args=[]):
 
         parms = [can_params, force_params, sim_params]
         super(MechanicalDrive, self).__init__(*parms)
@@ -111,31 +111,30 @@ class MechanicalDrive(Cantilever):
         self.use_varray = False
         if any(v_array):
 
-            if len(v_array) != int(self.total_time*self.sampling_rate):
-
+            if len(v_array) != int(self.total_time * self.sampling_rate):
                 raise ValueError('v_array must match sampling rate/length of parameters')
 
             if np.min(v_array) != 0 or np.max(v_array) != 1:
-                
+
                 raise ValueError('v_array must scale from 0 to 1')
 
             else:
 
                 self.use_varray = True
                 self.v_array = v_array
-        
+
         self.func = func
         self.func_args = func_args
-        
+
         # default case set a single tau for a single exponential function
         if not np.any(func_args):
             self.func_args = [self.tau]
-        
+
         try:
             _ = self.func(0, *self.func_args)
         except:
             print('Be sure to correctly set func_args=[params]')
-        
+
         return
 
     def __gamma__(self, t):
@@ -162,17 +161,17 @@ class MechanicalDrive(Cantilever):
         p = int(t * self.sampling_rate)
         n_points = int(self.total_time * self.sampling_rate)
         t0 = self.t0
-        
+
         if t >= t0:
-            
+
             if not self.use_varray:
 
-                return self.func(t- t0, *self.func_args)
-                
+                return self.func(t - t0, *self.func_args)
+
             else:
 
                 _g = self.v_array[p] if p < n_points else self.v_array[-1]
-                
+
                 return _g
 
         else:
@@ -199,7 +198,7 @@ class MechanicalDrive(Cantilever):
 
         """
 
-        #return self.w0 + self.delta_w * self.__gamma__(t, t0, tau)
+        # return self.w0 + self.delta_w * self.__gamma__(t, t0, tau)
         return self.w0 + self.delta_w * self.__gamma__(t)
 
     def force(self, t, t0, tau):
@@ -222,9 +221,9 @@ class MechanicalDrive(Cantilever):
             Force on the cantilever at a given time, in N/kg.
 
         """
- 
+
         driving_force = self.f0 * np.sin(self.wd * t)
-        #electro_force = self.fe * self.__gamma__(t, t0, tau)
+        # electro_force = self.fe * self.__gamma__(t, t0, tau)
         electro_force = self.fe * self.__gamma__(t)
-            
+
         return driving_force - electro_force

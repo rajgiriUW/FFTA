@@ -50,10 +50,10 @@ class GKPFM(FFtrEFM):
         >> data._get_existing_datasets()
     """
 
-    def __init__(self, h5_main, parm_dict = {}, can_params = {}, 
-                 pixel_params ={}, TF_norm=[], exc_wfm=[], periods = 2, 
-                 tip_response = '', tip_excitation = '', exc_wfm_file = '',
-                 override=False, noise_tolerance = 1e-4, **kwargs):
+    def __init__(self, h5_main, parm_dict={}, can_params={},
+                 pixel_params={}, TF_norm=[], exc_wfm=[], periods=2,
+                 tip_response='', tip_excitation='', exc_wfm_file='',
+                 override=False, noise_tolerance=1e-4, **kwargs):
         """
         Parameters
         ----------
@@ -79,19 +79,19 @@ class GKPFM(FFtrEFM):
         """
 
         self.parm_dict = parm_dict
-        
+
         for key, val in parm_dict.items():
             self.parm_dict.update({key: val})
-                
+
         if any(can_params):
-            if 'Initial' in can_params: #only care about the initial conditions
+            if 'Initial' in can_params:  # only care about the initial conditions
                 for key, val in can_params['Initial'].items():
                     self.parm_dict.update({key: val})
             else:
                 for key, val in can_params.items():
                     self.parm_dict.update({key: val})
-                    
-        self.pixel_params = pixel_params    
+
+        self.pixel_params = pixel_params
         self.override = override
         self.parm_dict['tip_response'] = tip_response
         self.parm_dict['tip_excitation'] = tip_excitation
@@ -99,23 +99,23 @@ class GKPFM(FFtrEFM):
 
         self.parm_dict['periods'] = periods
         self.parm_dict['noise_tolerance'] = noise_tolerance
-           
-        super().__init__(h5_main, parm_dict=self.parm_dict ,
-                                    can_params = can_params, process_name='GKPFM', 
-                                    **kwargs)
+
+        super().__init__(h5_main, parm_dict=self.parm_dict,
+                         can_params=can_params, process_name='GKPFM',
+                         **kwargs)
 
         # save Transfer Function
-        defl = get_utils.get_pixel(self.h5_main, [0,0], array_form=True).flatten()
-        _gk = GKPixel(defl, self.parm_dict, exc_wfm = exc_wfm)
+        defl = get_utils.get_pixel(self.h5_main, [0, 0], array_form=True).flatten()
+        _gk = GKPixel(defl, self.parm_dict, exc_wfm=exc_wfm)
         _gk.load_tf(self.parm_dict['tip_response'], self.parm_dict['tip_excitation'])
         _gk.process_tf()
-        
+
         self.TF_norm = _gk.TF_norm
         del _gk
-        
+
         self.parm_dict['denoise'] = False
         self.parm_dict['filter_cpd'] = False
-        
+
         return
 
     def update_parm(self, **kwargs):
@@ -127,7 +127,7 @@ class GKPFM(FFtrEFM):
 
         return
 
-    def test(self, pixel_ind=[0,0]):
+    def test(self, pixel_ind=[0, 0]):
         """
         Test the Pixel analysis of a single pixel
 
@@ -158,28 +158,28 @@ class GKPFM(FFtrEFM):
         # as an array, not an ffta.Pixel
         defl = get_utils.get_pixel(self.h5_main, pixel_ind, array_form=True).flatten()
 
-        _gk = GKPixel(defl, self.parm_dict, exc_wfm = self.exc_wfm, 
-                      TF_norm = self.TF_norm)        
+        _gk = GKPixel(defl, self.parm_dict, exc_wfm=self.exc_wfm,
+                      TF_norm=self.TF_norm)
         _gk.force_out(plot=True, noise_tolerance=self.parm_dict['noise_tolerance'])
         _gk.min_phase()
-        
+
         if self.parm_dict['denoise']:
             print('aa')
             _gk.noise_filter()
-        
+
         _gk.analyze_cpd(use_raw=False, periods=self.parm_dict['periods'])
-        
+
         if self.parm_dict['filter_cpd']:
             print('bb')
             _gk.CPD = gaussian_filter1d(_gk.CPD, 1)[:_gk.num_CPD]
-        
+
         plt.figure()
         plt.plot(_gk.CPD)
-        
+
         self.cpd_dict = _gk._calc_cpd_params(return_dict=True, periods=self.parm_dict['periods'])
 
-        _,_,_, = self._map_function(defl, self.parm_dict, self.TF_norm, self.exc_wfm)
-    
+        _, _, _, = self._map_function(defl, self.parm_dict, self.TF_norm, self.exc_wfm)
+
         return
 
     def _create_results_datasets(self):
@@ -196,7 +196,7 @@ class GKPFM(FFtrEFM):
             Contains the frequency shift data as a 1D matrix
         '''
 
-        print ('Creating CPD results datasets')
+        print('Creating CPD results datasets')
 
         # Get relevant parameters
         num_rows = self.parm_dict['num_rows']
@@ -207,7 +207,7 @@ class GKPFM(FFtrEFM):
         cpd_ds_shape = [num_rows * num_cols, self.cpd_dict['num_CPD']]
 
         self.h5_results_grp = usid.hdf_utils.create_results_group(self.h5_main, self.process_name)
-        self.h5_cpd_grp = usid.hdf_utils.create_results_group(self.h5_main, self.process_name+'_CPD')
+        self.h5_cpd_grp = usid.hdf_utils.create_results_group(self.h5_main, self.process_name + '_CPD')
 
         usid.hdf_utils.copy_attributes(self.h5_main.parent, self.h5_results_grp)
         usid.hdf_utils.copy_attributes(self.h5_main.parent, self.h5_cpd_grp)
@@ -231,35 +231,33 @@ class GKPFM(FFtrEFM):
                                                           spec_desc,  # Spectroscopic dimensions
                                                           dtype=np.float32,  # data type / precision
                                                           main_dset_attrs=self.parm_dict)
-        
 
         self.h5_cpd = usid.hdf_utils.write_main_dataset(self.h5_cpd_grp,
-                                                       cpd_ds_shape,
-                                                       'CPD',  # Name of main dataset
-                                                       'Potential',  # Physical quantity contained in Main dataset
-                                                       'V',  # Units for the physical quantity
-                                                       None,  # Position dimensions
-                                                       cpd_spec_desc,  # Spectroscopic dimensions
-                                                       h5_pos_inds = self.h5_main.h5_pos_inds, # Copy Pos Dimensions
-                                                       h5_pos_vals = self.h5_main.h5_pos_vals, 
-                                                       dtype=np.float32,  # data type / precision
-                                                       main_dset_attrs=self.parm_dict)
-        
+                                                        cpd_ds_shape,
+                                                        'CPD',  # Name of main dataset
+                                                        'Potential',  # Physical quantity contained in Main dataset
+                                                        'V',  # Units for the physical quantity
+                                                        None,  # Position dimensions
+                                                        cpd_spec_desc,  # Spectroscopic dimensions
+                                                        h5_pos_inds=self.h5_main.h5_pos_inds,  # Copy Pos Dimensions
+                                                        h5_pos_vals=self.h5_main.h5_pos_vals,
+                                                        dtype=np.float32,  # data type / precision
+                                                        main_dset_attrs=self.parm_dict)
 
         self.h5_cap = usid.hdf_utils.write_main_dataset(self.h5_cpd_grp,
-                                                       cpd_ds_shape,
-                                                       'capacitance',  # Name of main dataset
-                                                       'Capacitance',  # Physical quantity contained in Main dataset
-                                                       'F',  # Units for the physical quantity
-                                                       None,  # Position dimensions
-                                                       None,
-                                                       h5_pos_inds = self.h5_main.h5_pos_inds, # Copy Pos Dimensions
-                                                       h5_pos_vals = self.h5_main.h5_pos_vals, 
-                                                       h5_spec_inds = self.h5_cpd.h5_spec_inds, # Copy Spectroscopy Dimensions
-                                                       h5_spec_vals = self.h5_cpd.h5_spec_vals,
-                                                       dtype=np.float32,  # data type / precision
-                                                       main_dset_attrs=self.parm_dict)
-        
+                                                        cpd_ds_shape,
+                                                        'capacitance',  # Name of main dataset
+                                                        'Capacitance',  # Physical quantity contained in Main dataset
+                                                        'F',  # Units for the physical quantity
+                                                        None,  # Position dimensions
+                                                        None,
+                                                        h5_pos_inds=self.h5_main.h5_pos_inds,  # Copy Pos Dimensions
+                                                        h5_pos_vals=self.h5_main.h5_pos_vals,
+                                                        h5_spec_inds=self.h5_cpd.h5_spec_inds,
+                                                        # Copy Spectroscopy Dimensions
+                                                        h5_spec_vals=self.h5_cpd.h5_spec_vals,
+                                                        dtype=np.float32,  # data type / precision
+                                                        main_dset_attrs=self.parm_dict)
 
         self.h5_cpd.file.flush()
 
@@ -302,8 +300,8 @@ class GKPFM(FFtrEFM):
 
         # write the results to the file
         self.h5_force[pos_in_batch, :] = _force
-        self.h5_cpd[pos_in_batch, :] = _cpd[:,:self.h5_cpd.shape[1]]
-        self.h5_cap[pos_in_batch, :] = _capacitance[:,:self.h5_cap.shape[1]]
+        self.h5_cpd[pos_in_batch, :] = _cpd[:, :self.h5_cpd.shape[1]]
+        self.h5_cap[pos_in_batch, :] = _capacitance[:, :self.h5_cap.shape[1]]
 
         return
 
@@ -314,9 +312,8 @@ class GKPFM(FFtrEFM):
         index = which existing dataset to get
         
         """
-        
-        if not self.override:
 
+        if not self.override:
             self.h5_results_grp = usid.hdf_utils.find_dataset(self.h5_main.parent, 'CPD')[index].parent
             self.h5_new_spec_vals = self.h5_results_grp['Spectroscopic_Values']
             self.h5_cpd = self.h5_results_grp['CPD']
@@ -348,7 +345,7 @@ class GKPFM(FFtrEFM):
         TF_norm = args[1]
         exc_wfm = args[2]
 
-        gk = GKPixel(defl, parm_dict, exc_wfm=exc_wfm, TF_norm=TF_norm)    
+        gk = GKPixel(defl, parm_dict, exc_wfm=exc_wfm, TF_norm=TF_norm)
         gk.force_out(noise_tolerance=parm_dict['noise_tolerance'])
 
         if parm_dict['denoise']:
@@ -362,7 +359,7 @@ class GKPFM(FFtrEFM):
 
         capacitance = gk.capacitance
         force = gk.force
-    
+
         return [force, cpd, capacitance]
 
 
@@ -379,18 +376,18 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     append : str, optional
         text to append to file name
     """
-    
+
     h5_ff = h5_file
-    
+
     if isinstance(h5_file, ffta.hdf_utils.process.FFtrEFM):
         print('Saving from FFtrEFM Class')
         h5_ff = h5_file.h5_main.file
         h5_path = h5_file.h5_results_grp.name
-    
+
     elif not isinstance(h5_file, h5py.File):
         print('Saving from pyUSID object')
         h5_ff = h5_file.file
-    
+
     tfp = usid.hdf_utils.find_dataset(h5_ff[h5_path], 'tfp')[0][()]
     # tfp_fixed = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp_fixed')[0][()]
     shift = usid.hdf_utils.find_dataset(h5_ff[h5_path], 'shift')[0][()]
@@ -416,7 +413,7 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     return
 
 
-def plot_tfp(ffprocess, scale_tfp = 1e6, scale_shift=1, threshold = 2, **kwargs):
+def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
     '''
     Quickly plots the tfp and shift data. If there's a height image in the h5_file associated
      with ffprocess, will plot that as well
@@ -437,8 +434,8 @@ def plot_tfp(ffprocess, scale_tfp = 1e6, scale_shift=1, threshold = 2, **kwargs)
     img_length = ffprocess.parm_dict['FastScanSize']
     img_height = ffprocess.parm_dict['SlowScanSize']
     kwarg = {'origin': 'lower', 'x_vec': img_length * 1e6,
-              'y_vec': img_height * 1e6, 'num_ticks': 5, 'stdevs': 3, 'show_cbar':True}
-    
+             'y_vec': img_height * 1e6, 'num_ticks': 5, 'stdevs': 3, 'show_cbar': True}
+
     for k, v in kwarg.items():
         if k not in kwargs:
             kwargs.update({k: v})
@@ -456,7 +453,7 @@ def plot_tfp(ffprocess, scale_tfp = 1e6, scale_shift=1, threshold = 2, **kwargs)
 
     tfp_ax.set_title('tFP Image')
     shift_ax.set_title('Shift Image')
-    
+
     tfp_fixed, _ = badpixels.fix_array(ffprocess.h5_tfp[()], threshold=threshold)
 
     tfp_image, cbar_tfp = usid.viz.plot_utils.plot_map(tfp_ax, tfp_fixed * scale_tfp,
@@ -464,7 +461,6 @@ def plot_tfp(ffprocess, scale_tfp = 1e6, scale_shift=1, threshold = 2, **kwargs)
     shift_image, cbar_sh = usid.viz.plot_utils.plot_map(shift_ax, ffprocess.h5_shift[()] * scale_shift,
                                                         cmap='inferno', **kwargs)
 
-    
     cbar_tfp.set_label('Time (us)', rotation=270, labelpad=16)
     cbar_sh.set_label('Frequency Shift (Hz)', rotation=270, labelpad=16)
     text = tfp_ax.text(num_cols / 2, num_rows + 3, '')

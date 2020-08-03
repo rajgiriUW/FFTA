@@ -39,12 +39,12 @@ def signal(path, skiprows=0):
         signal_array = loadibw(path)['wave']['wData']  # Load data.
 
     elif ext.lower() == '.txt':
-        
+
         signal_array = loadtxt(path, skiprows=skiprows)
 
     else:
 
-        print ("Unrecognized file type!")
+        print("Unrecognized file type!")
         sys.exit(0)
 
     try:
@@ -98,12 +98,12 @@ def configuration(path):
     parameters = {}
 
     # These are the keys for parameters.
-    paraf_keys = ['trigger', 'total_time', 'drive_freq', 
+    paraf_keys = ['trigger', 'total_time', 'drive_freq',
                   'sampling_rate', 'Q']
     parai_keys = ['n_pixels', 'pts_per_pixel', 'lines_per_image']
     procs_keys = ['window', 'fit_form']
     procf_keys = ['roi', 'FastScanSize', 'SlowScanSize', 'liftheight']
-    proci_keys = ['n_taps', 'filter_bandwidth', 'bandpass_filter', 
+    proci_keys = ['n_taps', 'filter_bandwidth', 'bandpass_filter',
                   'wavelet_analysis', 'wavelet_parameter', 'recombination',
                   'phase_fitting', 'EMD_analysis']
 
@@ -121,34 +121,30 @@ def configuration(path):
     for key in paraf_keys:
 
         if config.has_option('Parameters', key):
-
             parameters[key] = config.getfloat('Parameters', key)
 
     for key in parai_keys:
 
         if config.has_option('Parameters', key):
-
             parameters[key] = config.getint('Parameters', key)
 
     for key in procf_keys:
 
         if config.has_option('Processing', key):
-
             parameters[key] = config.getfloat('Processing', key)
 
     for key in procs_keys:
 
         if config.has_option('Processing', key):
-
             parameters[key] = config.get('Processing', key)
-               
+
     for key in proci_keys:
 
         if config.has_option('Processing', key):
-
             parameters[key] = config.getint('Processing', key)
 
     return n_pixels, parameters
+
 
 def cantilever_params(path, asDataFrame=False):
     '''
@@ -167,19 +163,16 @@ def cantilever_params(path, asDataFrame=False):
     can_params : dict
     
     '''
-    
+
     try:
-        df = pd.read_csv(path, sep='\t', skiprows=1, index_col = 'Unnamed: 0')
+        df = pd.read_csv(path, sep='\t', skiprows=1, index_col='Unnamed: 0')
     except:
         df = pd.read_csv(path, sep=',', skiprows=1, index_col=r'x/y')
     for c in df.columns:
-    
         df[c][df[c] != 'NAN'] = pd.to_numeric(df[c][df[c] != 'NAN'])
         df[c][df[c] == 'NAN'] = np.NaN
-        
+
     if asDataFrame:
         return df
-    
-    return df.to_dict()
-    
 
+    return df.to_dict()

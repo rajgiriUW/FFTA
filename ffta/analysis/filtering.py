@@ -35,6 +35,7 @@ To set up a filter, you can choose any of the following:
 
 '''
 
+
 def test_filter(hdf_file, freq_filts, parameters={}, pixelnum=[0, 0], noise_tolerance=5e-7,
                 show_plots=True, check_filter=True):
     """

@@ -7,6 +7,7 @@ import numpy as np
 from scipy import interpolate as spi
 from scipy import optimize as spo
 
+
 def find_minimum(pix, cut):
     """
     Finds when the minimum of instantaneous frequency happens using spline fitting
@@ -30,18 +31,18 @@ def find_minimum(pix, cut):
     """
 
     # Cut the signal into region of interest.
-    #ridx = int(pix.roi * pix.sampling_rate)
-    #cut = pix.inst_freq[pix.tidx:(pix.tidx + ridx)]
+    # ridx = int(pix.roi * pix.sampling_rate)
+    # cut = pix.inst_freq[pix.tidx:(pix.tidx + ridx)]
 
     # Define a spline to be used in finding minimum.
     ridx = len(cut)
-    
+
     x = np.arange(ridx)
     y = cut
 
     _spline_sz = 2 * pix.sampling_rate / pix.drive_freq
     func = spi.UnivariateSpline(x, y, k=4, ext=3, s=_spline_sz)
-    
+
     # Find the minimum of the spline using TNC method.
     res = spo.minimize(func, cut.argmin(),
                        method='TNC', bounds=((0, ridx),))
@@ -53,7 +54,7 @@ def find_minimum(pix, cut):
     pix.tfp = idx / pix.sampling_rate
     pix.shift = func(0) - func(idx)
 
-    return 
+    return
 
 
 def fit_freq_product(pix, cut, t):
@@ -105,6 +106,7 @@ def fit_freq_product(pix, cut, t):
 
     return
 
+
 def fit_freq_sum(pix, ridx, cut, t):
     '''
     Fits the frequency shift to an approximate functional form using
@@ -144,6 +146,7 @@ def fit_freq_sum(pix, ridx, cut, t):
 
     return
 
+
 def fit_freq_exp(pix, ridx, cut, t):
     '''
     Fits the frequency shift to a single exponential in the case where
@@ -182,6 +185,7 @@ def fit_freq_exp(pix, ridx, cut, t):
 
     return
 
+
 def fit_ringdown(pix, ridx, cut, t):
     '''
     Fits the amplitude to determine Q from single exponential fit.
@@ -209,7 +213,7 @@ def fit_ringdown(pix, ridx, cut, t):
         Best-fit line calculated from popt and fit function
     '''
     # Fit the cut to the model.
-    popt = fitting.fit_ringdown(t, cut*1e9)
+    popt = fitting.fit_ringdown(t, cut * 1e9)
     popt[0] *= 1e-9
     popt[1] *= 1e-9
 
@@ -219,10 +223,11 @@ def fit_ringdown(pix, ridx, cut, t):
     pix.best_fit = A * (np.exp(-t / tau)) + y0
 
     pix.shift = A
-    pix.tfp = np.pi * pix.drive_freq * tau # same as ringdown_Q to help with pycroscopy bugs that call tfp
+    pix.tfp = np.pi * pix.drive_freq * tau  # same as ringdown_Q to help with pycroscopy bugs that call tfp
     pix.ringdown_Q = np.pi * pix.drive_freq * tau
 
     return
+
 
 def fit_phase(pix, ridx, cut, t):
     '''

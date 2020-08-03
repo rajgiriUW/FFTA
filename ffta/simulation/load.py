@@ -7,6 +7,7 @@ Created on Tue May 12 11:23:17 2020
 
 import configparser
 
+
 def simulation_configuration(path):
     """
     Reads an ASCII file with relevant parameters for simulation.
@@ -62,25 +63,22 @@ def simulation_configuration(path):
     force_keys = ['es_force', 'ac_force', 'dc_force', 'delta_freq', 'tau',
                   'v_dc', 'v_ac', 'v_cpd', 'dCdz', 'v_step']
     sim_keys = ['trigger', 'total_time', 'sampling_rate']
-    
+
     for key in can_keys:
 
         if config.has_option('Cantilever Parameters', key):
-
             _str = config.get('Cantilever Parameters', key).split(';')
             can_params[key] = float(_str[0])
 
     for key in force_keys:
 
         if config.has_option('Force Parameters', key):
-
             _str = config.get('Force Parameters', key).split(';')
             force_params[key] = float(_str[0])
 
     for key in sim_keys:
 
         if config.has_option('Simulation Parameters', key):
-
             _str = config.get('Simulation Parameters', key).split(';')
             sim_params[key] = float(_str[0])
 

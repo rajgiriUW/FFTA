@@ -10,6 +10,7 @@ from scipy.integrate import odeint
 
 from .cantilever import Cantilever
 from . import excitation
+
 # Set constant 2 * pi.
 PI2 = 2 * np.pi
 
@@ -102,17 +103,17 @@ class ElectricDrive(Cantilever):
     """
 
     def __init__(self, can_params, force_params, sim_params, v_array=[], v_step=np.nan,
-                 func = excitation.single_exp, func_args=[]):
+                 func=excitation.single_exp, func_args=[]):
 
         parms = [can_params, force_params, sim_params]
-        super(ElectricDrive, self).__init__(*parms)        
+        super(ElectricDrive, self).__init__(*parms)
 
         # Did user supply a voltage pulse themselves (Electrical drive only)
         self.use_varray = False
         self.use_vstep = False
         if any(v_array):
 
-            if len(v_array) != int(self.total_time*self.sampling_rate):
+            if len(v_array) != int(self.total_time * self.sampling_rate):
 
                 raise ValueError('v_array must match sampling rate/length of parameters')
 
@@ -120,27 +121,26 @@ class ElectricDrive(Cantilever):
 
                 self.use_varray = True
                 self.v_array = v_array
-                self.scale = [np.max(v_array)-np.min(v_array), np.min(v_array)]
-        
+                self.scale = [np.max(v_array) - np.min(v_array), np.min(v_array)]
+
         if not np.isnan(v_step):
-        
-            self.v_step = v_step # if applying a single DC step
+            self.v_step = v_step  # if applying a single DC step
             self.use_vstep = True
 
         self.func = func
         self.func_args = func_args
-        
+
         # default case set a single tau for a single exponential function
         if not np.any(func_args):
             self.func_args = [self.tau]
-        
+
         try:
             _ = self.func(0, *self.func_args)
         except:
             print('Be sure to correctly set func_args=[params]')
-        
+
         return
-        
+
         return
 
     def __gamma__(self, t):
@@ -167,18 +167,18 @@ class ElectricDrive(Cantilever):
         p = int(t * self.sampling_rate)
         n_points = int(self.total_time * self.sampling_rate)
         t0 = self.t0
-        
+
         if t >= t0:
-            
+
             if not self.use_varray:
 
-                return self.func(t- t0, *self.func_args)
-                
+                return self.func(t - t0, *self.func_args)
+
             else:
 
                 _g = self.v_array[p] if p < n_points else self.v_array[-1]
-                _g = (_g - self.scale[1])/self.scale[0]
-                
+                _g = (_g - self.scale[1]) / self.scale[0]
+
                 return _g
 
         else:
@@ -206,7 +206,7 @@ class ElectricDrive(Cantilever):
         """
 
         return self.w0 + self.delta_w * self.__gamma__(t)
-    
+
     def dc_step(self, t, t0):
         """
         Adds a DC step at the trigger point for electrical drive simulation
@@ -218,13 +218,13 @@ class ElectricDrive(Cantilever):
         t0: float
             Event time in seconds.
         """
-        
+
         if t > t0:
-            
+
             return self.v_step
-        
+
         else:
-            
+
             return self.v_dc
 
     def force(self, t, t0, tau):
@@ -247,24 +247,24 @@ class ElectricDrive(Cantilever):
             Force on the cantilever at a given time, in N/kg.
 
         """
-            
+
         # explicitly define voltage at each time step
         if self.use_varray:
-            
+
             p = int(t * self.sampling_rate)
             n_points = int(self.total_time * self.sampling_rate)
-            
+
             _g = self.v_array[p] if p < n_points else self.v_array[-1]
-            
-            driving_force = 0.5 * self.dCdz/self.mass * ((_g - self.v_cpd) \
-                                                         + self.v_ac * np.sin(self.wd * t))**2
-        else: # single voltage step
-        
-            driving_force = 0.5 * self.dCdz/self.mass * ((self.dc_step(t, t0) - self.v_cpd) \
-                                                         + self.v_ac * np.sin(self.wd * t))**2
-        
+
+            driving_force = 0.5 * self.dCdz / self.mass * ((_g - self.v_cpd) \
+                                                           + self.v_ac * np.sin(self.wd * t)) ** 2
+        else:  # single voltage step
+
+            driving_force = 0.5 * self.dCdz / self.mass * ((self.dc_step(t, t0) - self.v_cpd) \
+                                                           + self.v_ac * np.sin(self.wd * t)) ** 2
+
         return driving_force
-    
+
     def set_conditions(self, trigger_phase=180):
         """
         Sets initial conditions and other simulation parameters. Using 2w given
@@ -276,9 +276,9 @@ class ElectricDrive(Cantilever):
            Trigger phase is in degrees and wrt cosine. Default value is 180.
 
         """
-        self.delta = np.abs(np.arctan(np.divide(2 * (2*self.wd) * self.beta,
-                                                self.w0 ** 2 - (2*self.wd) ** 2)))
-        
+        self.delta = np.abs(np.arctan(np.divide(2 * (2 * self.wd) * self.beta,
+                                                self.w0 ** 2 - (2 * self.wd) ** 2)))
+
         self.trigger_phase = np.mod(np.pi * trigger_phase / 180, PI2)
         self.n_points = int(self.total_time * self.sampling_rate)
 
@@ -298,7 +298,7 @@ class ElectricDrive(Cantilever):
         # Set the initial conditions at t=0.
         z0 = self.amp * np.sin(-self.delta)
         v0 = self.amp * self.wd * np.cos(-self.delta)
-               
+
         self.Z0 = np.array([z0, v0])
 
         return

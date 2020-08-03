@@ -9,18 +9,18 @@ Note: A 'str is not callable' bug is often due to not running set_mpeg
 
 '''
 
+
 def set_mpeg(path=None):
     if not any(path):
         plt.rcParams[
             'animation.ffmpeg_path'] = r'C:/Users/Raj/Downloads/ffmpeg/ffmpeg/bin/ffmpeg.exe'
-    
+
     else:
         plt.rcParams['animation.ffmpeg_path'] = path
     return
 
 
-def setup_movie(h5_ds, size=(10,6), vscale=[None, None], cmap='inferno'):
-    
+def setup_movie(h5_ds, size=(10, 6), vscale=[None, None], cmap='inferno'):
     fig, ax = plt.subplots(nrows=1, figsize=size, facecolor='white')
 
     if 'USID' not in str(type(h5_ds)):
@@ -54,7 +54,7 @@ def setup_movie(h5_ds, size=(10,6), vscale=[None, None], cmap='inferno'):
 
 
 def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
-                      idx_start=500, idx_stop=100, smooth=None, size=(10,6),
+                      idx_start=500, idx_stop=100, smooth=None, size=(10, 6),
                       vscale=[None, None], cmap='inferno', interval=60, repeat_delay=100, crop=None):
     '''
     Creates an animation that goes through all the instantaneous frequency data.
@@ -92,10 +92,10 @@ def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
         h5_ds = usid.USIDataset(h5_ds)
 
     if any(vscale):
-        fig, ax, cbar, _,_ = setup_movie(h5_ds, size, vscale, cmap=cmap)
+        fig, ax, cbar, _, _ = setup_movie(h5_ds, size, vscale, cmap=cmap)
         [vmin, vmax] = vscale
     else:
-        fig, ax, cbar, vmin, vmax = setup_movie(h5_ds, size ,cmap=cmap)
+        fig, ax, cbar, vmin, vmax = setup_movie(h5_ds, size, cmap=cmap)
 
     _orig = np.copy(h5_ds[()])
     length = h5_ds.get_pos_values('X')
@@ -108,9 +108,9 @@ def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
         params = usid.hdf_utils.get_attributes(h5_ds.parent)
 
     if isinstance(smooth, int):
-        kernel = np.ones(smooth)/smooth
+        kernel = np.ones(smooth) / smooth
         for i in np.arange(h5_ds.shape[0]):
-            h5_ds[i,:] = sps.fftconvolve(h5_ds[i,:], kernel, mode='same')
+            h5_ds[i, :] = sps.fftconvolve(h5_ds[i, :], kernel, mode='same')
 
     cbar.set_label('Frequency (Hz)', rotation=270, labelpad=20, fontsize=16)
 
@@ -118,7 +118,7 @@ def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
 
     # Loop through time segments
     ims = []
-    for k, t in zip(np.arange(idx_start, len(tx)-idx_stop, time_step),
+    for k, t in zip(np.arange(idx_start, len(tx) - idx_stop, time_step),
                     tx[idx_start:-idx_stop:time_step]):
 
         _if = h5_ds.get_n_dim_form()[:, :, k]
@@ -144,7 +144,7 @@ def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
 
     ani = animation.ArtistAnimation(fig, ims, interval=interval, repeat_delay=repeat_delay)
 
-    try:    
+    try:
         ani.save(filename + '.mp4')
     except TypeError as e:
         print(e)
@@ -152,7 +152,7 @@ def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
 
     # restore data
     for i in np.arange(h5_ds.shape[0]):
-        h5_ds[i,:] = _orig[i,:]
+        h5_ds[i, :] = _orig[i, :]
 
     return
 
@@ -170,10 +170,10 @@ def create_cpd_movie(h5_ds, filename='cpd', size=(10, 6),
     :param repeat_delay:
     :return:
     '''
-    
+
     if not isinstance(h5_ds, usid.USIDataset):
         h5_ds = usid.USIDataset(h5_ds)
-        
+
     if any(vscale):
         fig, ax, cbar, _, _ = setup_movie(h5_ds, size, vscale, cmap=cmap)
         [vmin, vmax] = vscale
@@ -217,7 +217,7 @@ def create_cpd_movie(h5_ds, filename='cpd', size=(10, 6),
 
     ani = animation.ArtistAnimation(fig, ims, interval=interval, repeat_delay=repeat_delay)
 
-    try:    
+    try:
         ani.save(filename + '.mp4')
     except TypeError:
         print('A "str is not callable" message is often due to not running set_mpeg function')

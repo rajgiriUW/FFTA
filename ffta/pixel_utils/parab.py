@@ -2,6 +2,7 @@
 
 import numpy as np
 
+
 def fit_peak(f, x):
     '''
     Uses solution to parabola to fit peak and two surrounding points
@@ -22,20 +23,21 @@ def fit_peak(f, x):
     '''
 
     pk = np.argmax(f)
-    
-    y1 = f[pk-1]
+
+    y1 = f[pk - 1]
     y2 = f[pk]
-    y3 = f[pk+1]
-    
+    y3 = f[pk + 1]
+
     a = 0.5 * y1 - y2 + 0.5 * y3
     b = -0.5 * y1 + 0.5 * y3
     c = y2
-    
-    xindex = -b/(2*a)
-    findex = xindex * (x[1] - x[0])  + x[1]
-    yindex = a*xindex**2 + b*xindex + c
-    
+
+    xindex = -b / (2 * a)
+    findex = xindex * (x[1] - x[0]) + x[1]
+    yindex = a * xindex ** 2 + b * xindex + c
+
     return findex, yindex, xindex
+
 
 def ridge_finder(spectrogram, freq_bin):
     '''
@@ -60,14 +62,15 @@ def ridge_finder(spectrogram, freq_bin):
     '''
     _argmax = np.argmax(np.abs(spectrogram), axis=0)
     cols = spectrogram.shape[1]
-    
+
     # generate a (3, cols) matrix of the spectrogram values
-    maxspec = np.array([spectrogram[(_argmax-1, range(cols))], 
+    maxspec = np.array([spectrogram[(_argmax - 1, range(cols))],
                         spectrogram[(_argmax, range(cols))],
-                        spectrogram[(_argmax+1, range(cols))]])
-    
+                        spectrogram[(_argmax + 1, range(cols))]])
+
     return fit_2d(maxspec, _argmax, freq_bin)
-    
+
+
 def fit_2d(f, p, dx):
     '''
     Uses solution to parabola to fit peak and two surrounding points
@@ -85,16 +88,16 @@ def fit_2d(f, p, dx):
     if f.shape[0] != 3:
         raise ValueError('Must be exactly 3 rows')
 
-    
-    a = 0.5 * f[0,:] - f[1,:] + 0.5 * f[2,:]
-    b = -0.5 * f[0,:] + 0.5 * f[2,:]
-    c = f[1,:]
-    
-    xindex = -b / (2*a)
-    findex = xindex * (dx[1]-dx[0]) + dx[p]
-    yindex = a*(xindex**2) + b*xindex + c 
-    
+    a = 0.5 * f[0, :] - f[1, :] + 0.5 * f[2, :]
+    b = -0.5 * f[0, :] + 0.5 * f[2, :]
+    c = f[1, :]
+
+    xindex = -b / (2 * a)
+    findex = xindex * (dx[1] - dx[0]) + dx[p]
+    yindex = a * (xindex ** 2) + b * xindex + c
+
     return findex, yindex, xindex
+
 
 def fit_peak_old(f, x):
     """

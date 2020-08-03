@@ -11,27 +11,28 @@ import numpy as np  # For array operations
 
 from igor import binarywave as bw
 
-#from .translator import Translator  # Because this class extends the abstract Translator class
-#from .utils import generate_dummy_main_parms, build_ind_val_dsets
-#from ..hdf_utils import getH5DsetRefs, linkRefs
-#from ..io_hdf5 import ioHDF5  # Now the translator is responsible for writing the data.
-#from ..microdata import MicroDataGroup, \
+# from .translator import Translator  # Because this class extends the abstract Translator class
+# from .utils import generate_dummy_main_parms, build_ind_val_dsets
+# from ..hdf_utils import getH5DsetRefs, linkRefs
+# from ..io_hdf5 import ioHDF5  # Now the translator is responsible for writing the data.
+# from ..microdata import MicroDataGroup, \
 #    MicroDataset  # The building blocks for defining hierarchical storage in the H5 file
 
-from pyUSID.io.translator import Translator#, generate_dummy_main_parms
+from pyUSID.io.translator import Translator  # , generate_dummy_main_parms
 
 from pycroscopy.io.write_utils import Dimension
 from pyUSID.io.hdf_utils import write_ind_val_dsets
 from pyUSID.io.hdf_utils import write_main_dataset, create_indexed_group
-import h5py 
+import h5py
+
 
 class GLIBWTranslator(Translator):
     """
     Translates Ginger Lab Igor Binary Wave (.ibw) files containing images or force curves to .h5
     """
 
-    def translate(self, file_path, verbose=False, parm_encoding='utf-8', ftype='FF', 
-                  subfolder='Measurement_000', h5_path = '', channel_label_name = True):
+    def translate(self, file_path, verbose=False, parm_encoding='utf-8', ftype='FF',
+                  subfolder='Measurement_000', h5_path='', channel_label_name=True):
         """
         Translates the provided file to .h5
         Adapted heavily from pycroscopy IBW file, modified to work with Ginger format
@@ -88,32 +89,32 @@ class GLIBWTranslator(Translator):
             print('Channels and units found:')
             print(chan_labels)
             print(chan_units)
-        
+
         # Get the data to figure out if this is an image or a force curve
         images = ibw_wave.get('wData')
 
         if images.shape[2] != len(chan_labels):
-            chan_labels = chan_labels[1:] # for weird null set errors in older AR software
+            chan_labels = chan_labels[1:]  # for weird null set errors in older AR software
 
         # Check if a Ginger Lab format ibw (has 'UserIn' in channel labels)
         _is_gl_type = any(['UserIn0' in str(s) for s in chan_labels])
         if _is_gl_type == True:
-            chan_labels = self._get_image_type(chan_labels, ftype)   
-            
+            chan_labels = self._get_image_type(chan_labels, ftype)
+
         if verbose:
             print('Processing image type', ftype, 'with channels', chan_labels)
-        
+
         type_suffix = 'Image'
-        
-        num_rows = ibw_wave['wave_header']['nDim'][1] # lines
-        num_cols = ibw_wave['wave_header']['nDim'][0] # points
-        num_imgs = ibw_wave['wave_header']['nDim'][2] # layers
+
+        num_rows = ibw_wave['wave_header']['nDim'][1]  # lines
+        num_cols = ibw_wave['wave_header']['nDim'][0]  # points
+        num_imgs = ibw_wave['wave_header']['nDim'][2]  # layers
         unit_scale = self._get_unit_factor(''.join([str(s)[-2] for s in ibw_wave['wave_header']['dimUnits'][0][0:2]]))
         data_scale = self._get_unit_factor(str(ibw_wave['wave_header']['dataUnits'][0])[-2])
-        
+
         parm_dict['FastScanSize'] = unit_scale * num_cols * ibw_wave['wave_header']['sfA'][0]
         parm_dict['SlowScanSize'] = unit_scale * num_rows * ibw_wave['wave_header']['sfA'][1]
-        
+
         images = images.transpose(2, 0, 1)  # now ordered as [chan, Y, X] image
         images = np.reshape(images, (images.shape[0], -1, 1))  # 3D [chan, Y*X points,1]
 
@@ -124,10 +125,9 @@ class GLIBWTranslator(Translator):
         # Create Position and spectroscopic datasets
         h5_pos_inds, h5_pos_vals = write_ind_val_dsets(h5_file['/'], pos_desc, is_spectral=False)
         h5_spec_inds, h5_spec_vals = write_ind_val_dsets(h5_file['/'], spec_desc, is_spectral=True)
-        
+
         # Prepare the list of raw_data datasets
         for chan_data, chan_name, chan_unit in zip(images, chan_labels, chan_units):
-            
             chan_grp = create_indexed_group(h5_file['/'], chan_name)
             write_main_dataset(chan_grp, np.atleast_2d(chan_data), 'Raw_Data',
                                chan_name, chan_unit,
@@ -243,58 +243,56 @@ class GLIBWTranslator(Translator):
     def _read_data(self):
         pass
 
-
-    def _get_image_type(self, ibw_wave,ftype):
+    def _get_image_type(self, ibw_wave, ftype):
         """
         Generates correct channel labels based on the passed filetype
         """
-        
+
         if ftype.lower() == 'ff':
-            
+
             del ibw_wave[0:3]
             ibw_wave = ['height', 'charging', 'shift'] + ibw_wave
-            
+
         elif ftype.lower() == 'trefm':
-            
+
             del ibw_wave[0:4]
             ibw_wave = ['height', 'charging', 'shift', 'error'] + ibw_wave
-            
+
         elif ftype.lower() == 'skpm':
-            
+
             del ibw_wave[0:2]
             ibw_wave = ['height', 'CPD'] + ibw_wave
-        
+
         elif ftype.lower() == 'ringdown':
-            
+
             del ibw_wave[0:4]
-            ibw_wave =  ['height', 'Q', 'shift', 'error'] + ibw_wave
-            
+            ibw_wave = ['height', 'Q', 'shift', 'error'] + ibw_wave
+
         elif ftype.lower() == 'pl':
-      
+
             del ibw_wave[0:2]
             ibw_wave = ['PL_volts', 'PL_current'] + ibw_wave
-        
+
         else:
             raise Exception('Improper File Type')
-        
+
         return ibw_wave
-    
+
     def _get_unit_factor(self, unit):
         """
         Returns numerical conversion of unit label
         Unit : str
         """
-        
+
         fc = {'um': 1e-6,
               'nm': 1e-9,
               'pm': 1e-12,
               'fm': 1e-15,
               'mm': 1e-3,
               'm': 1}
-        
+
         if unit.lower() in fc.keys():
             return fc[unit]
 
         elif unit[0] in fc.keys():
             return fc[unit[0]]
-        

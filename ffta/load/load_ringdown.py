@@ -5,7 +5,6 @@ Created on Tue Mar 31 11:16:36 2020
 @author: Raj
 """
 
-
 import numpy as np
 import h5py
 from scipy.optimize import minimize
@@ -20,6 +19,7 @@ from ffta.pixel_utils import badpixels
 
 from igor.binarywave import load as loadibw
 from matplotlib import pyplot as plt
+
 '''
 Loads Ringdown data from raw .ibw and with the associated *.ibw Image file.
 
@@ -38,8 +38,9 @@ or
 By default, this will average the ringdown data together per-pixel and mirror to match the topography 
 '''
 
-def wrapper(ibw_file_path='', rd_folder='', verbose=False, subfolder='/', 
-            loadverbose = True, mirror = True, average=True, AMPINVOLS = 100e-9):
+
+def wrapper(ibw_file_path='', rd_folder='', verbose=False, subfolder='/',
+            loadverbose=True, mirror=True, average=True, AMPINVOLS=100e-9):
     """
     Wrapper function for processing a .ibw file and associated ringdown data
     
@@ -83,31 +84,32 @@ def wrapper(ibw_file_path='', rd_folder='', verbose=False, subfolder='/',
     """
     if not any(ibw_file_path):
         ibw_file_path = usid.io_utils.file_dialog(caption='Select IBW Image ',
-                                                file_filter='IBW Files (*.ibw)')
-        
+                                                  file_filter='IBW Files (*.ibw)')
+
     if not any(rd_folder):
         rd_folder = usid.io_utils.file_dialog(caption='Select Ringdown config in folder',
-                                                file_filter='Config File (*.cfg)')
+                                              file_filter='Config File (*.cfg)')
         rd_folder = '/'.join(rd_folder.split('/')[:-1])
-        
+
     tran = gl_ibw.GLIBWTranslator()
     h5_path = tran.translate(ibw_file_path, ftype='ringdown',
                              verbose=verbose, subfolder=subfolder)
-    
-    h5_path, data_files, parm_dict = load_folder(folder_path=rd_folder, 
+
+    h5_path, data_files, parm_dict = load_folder(folder_path=rd_folder,
                                                  verbose=verbose,
                                                  file_name=h5_path)
-    
+
     if 'AMPINVOLS' not in parm_dict:
         parm_dict.update({'AMPINVOLS': AMPINVOLS})
-        
-    h5_rd = load_ringdown(data_files, parm_dict, h5_path, 
-                          verbose=verbose, loadverbose=loadverbose, 
+
+    h5_rd = load_ringdown(data_files, parm_dict, h5_path,
+                          verbose=verbose, loadverbose=loadverbose,
                           average=average, mirror=mirror)
-    
+
     return h5_rd
 
-def load_ringdown(data_files, parm_dict, h5_path, 
+
+def load_ringdown(data_files, parm_dict, h5_path,
                   verbose=False, loadverbose=True, average=True, mirror=False):
     """
     Generates the HDF5 file given path to files_list and parameters dictionary
@@ -145,17 +147,17 @@ def load_ringdown(data_files, parm_dict, h5_path,
     # parm_dict['pnts_per_pixel'] = 200 (# signals at each pixel)
     #           ['pnts_per_avg'] = 16000 (# pnts per signal, called an "average")
     #           ['pnts_per_line'] = 2000 (# signals in each line)
-    
+
     num_rows = parm_dict['num_rows']
     num_cols = parm_dict['num_cols']
 
     # The signals are hard-coded in the AFM software as 800 points long
     # Therefore, we can calculate pnts_per_pixel etc from the first file
     signal = loadibw(data_files[0])['wave']['wData']  # Load data.
-    parm_dict['pnts_per_pixel'] = int(signal.shape[0]/(800 * num_cols))
-    parm_dict['pnts_per_avg'] = 800 #hard-coded in our AFM software
-    parm_dict['total_time'] = 16e-3 #hard-coded in our AFM software
-    
+    parm_dict['pnts_per_pixel'] = int(signal.shape[0] / (800 * num_cols))
+    parm_dict['pnts_per_avg'] = 800  # hard-coded in our AFM software
+    parm_dict['total_time'] = 16e-3  # hard-coded in our AFM software
+
     if 'AMPINVOLS' not in parm_dict:
         parm_dict.update({'AMPINVOLS': 100e-9})
 
@@ -166,27 +168,28 @@ def load_ringdown(data_files, parm_dict, h5_path,
         parm_dict['pnts_per_line'] = num_cols
     pnts_per_pixel = parm_dict['pnts_per_pixel']
     pnts_per_line = parm_dict['pnts_per_line']
-        
+
     hdf = h5py.File(h5_path)
-    
+
     try:
         rd_group = hdf.file.create_group('RD_Group')
     except:
         rd_group = usid.hdf_utils.create_indexed_group(hdf.file['/'], 'RD_Group')
-        
+
     pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols * pnts_per_pixel)),
                 Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
     ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False, verbose=verbose)
 
-    spec_desc = [Dimension('Time', 's',np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
+    spec_desc = [Dimension('Time', 's', np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
     ds_spec_inds, ds_spec_vals = build_ind_val_dsets(spec_desc, is_spectral=True)
-    
+
     for p in parm_dict:
         rd_group.attrs[p] = parm_dict[p]
-    rd_group.attrs['pnts_per_line'] = num_cols # to change number of pnts in a line
+    rd_group.attrs['pnts_per_line'] = num_cols  # to change number of pnts in a line
 
     h5_rd = usid.hdf_utils.write_main_dataset(rd_group,  # parent HDF5 group
-                                              (num_rows * num_cols * pnts_per_pixel, pnts_per_avg),  # shape of Main dataset
+                                              (num_rows * num_cols * pnts_per_pixel, pnts_per_avg),
+                                              # shape of Main dataset
                                               'Ringdown',  # Name of main dataset
                                               'Amplitude',  # Physical quantity contained in Main dataset
                                               'nm',  # Units for the physical quantity
@@ -197,31 +200,32 @@ def load_ringdown(data_files, parm_dict, h5_path,
                                               main_dset_attrs=parm_dict)
 
     # Cycles through the remaining files. This takes a while (~few minutes)
-    for k, num in zip(data_files, np.arange(0,len(data_files))):
+    for k, num in zip(data_files, np.arange(0, len(data_files))):
 
         if loadverbose:
-            fname = k.replace('/','\\')
-            print('####',fname.split('\\')[-1],'####')
-            fname = str(num).rjust(4,'0')
+            fname = k.replace('/', '\\')
+            print('####', fname.split('\\')[-1], '####')
+            fname = str(num).rjust(4, '0')
 
-        signal = loadibw(k)['wave']['wData'] 
+        signal = loadibw(k)['wave']['wData']
         signal = np.reshape(signal.T, [num_cols * orig_pnts_per_pixel, pnts_per_avg])
-        
+
         if average:
             pixels = np.split(signal, num_cols, axis=0)
             signal = np.vstack([np.mean(p, axis=0) for p in pixels])
-        
+
         signal *= parm_dict['AMPINVOLS']
-        
+
         if mirror:
-            h5_rd[num_cols*pnts_per_pixel*num : num_cols*pnts_per_pixel*(num+1), :] = np.flipud(signal[:,:])
+            h5_rd[num_cols * pnts_per_pixel * num: num_cols * pnts_per_pixel * (num + 1), :] = np.flipud(signal[:, :])
         else:
-            h5_rd[num_cols*pnts_per_pixel*num : num_cols*pnts_per_pixel*(num+1), :] = signal[:,:]
-        
+            h5_rd[num_cols * pnts_per_pixel * num: num_cols * pnts_per_pixel * (num + 1), :] = signal[:, :]
+
     if verbose == True:
         usid.hdf_utils.print_tree(hdf.file, rel_paths=True)
 
     return h5_rd
+
 
 def reprocess_ringdown(h5_rd, fit_time=[1, 5]):
     '''
@@ -236,31 +240,31 @@ def reprocess_ringdown(h5_rd, fit_time=[1, 5]):
     '''
     h5_gp = h5_rd.parent
     drive_freq = h5_rd.attrs['drive_freq']
-    
+
     Q = np.zeros([h5_rd[()].shape[0]])
     A = np.zeros([h5_rd[()].shape[0]])
-    tx = np.arange(0, h5_rd.attrs['total_time'], h5_rd.attrs['total_time']/h5_rd.attrs['pnts_per_avg'])
-    [start, stop] = [np.searchsorted(tx, fit_time[0]*1e-3), np.searchsorted(tx, fit_time[1]*1e-3)]
-    
+    tx = np.arange(0, h5_rd.attrs['total_time'], h5_rd.attrs['total_time'] / h5_rd.attrs['pnts_per_avg'])
+    [start, stop] = [np.searchsorted(tx, fit_time[0] * 1e-3), np.searchsorted(tx, fit_time[1] * 1e-3)]
+
     for n, pxl in enumerate(h5_rd[()]):
-        
-        popt = fit_exp(tx[start:stop], pxl[start:stop]*1e9)
+        popt = fit_exp(tx[start:stop], pxl[start:stop] * 1e9)
         popt[0] *= 1e-9
         popt[1] *= 1e-9
         Q[n] = popt[2] * np.pi * drive_freq
         A[n] = popt[1]
-    
-    Q = np.reshape(Q, [ h5_rd.attrs['num_rows'], h5_rd.attrs['num_cols']])
-    A = np.reshape(A, [ h5_rd.attrs['num_rows'], h5_rd.attrs['num_cols']])
-    
-    h5_Q_gp = usid.hdf_utils.create_indexed_group(h5_gp, 'Reprocess') # creates a new group
+
+    Q = np.reshape(Q, [h5_rd.attrs['num_rows'], h5_rd.attrs['num_cols']])
+    A = np.reshape(A, [h5_rd.attrs['num_rows'], h5_rd.attrs['num_cols']])
+
+    h5_Q_gp = usid.hdf_utils.create_indexed_group(h5_gp, 'Reprocess')  # creates a new group
     h5_Q = h5_Q_gp.create_dataset('Q', data=Q, dtype=np.float32)
     h5_A = h5_Q_gp.create_dataset('Amplitude', data=A, dtype=np.float32)
-    h5_Q_gp.attrs['fit_times'] = [a*1e-3 for a in fit_time]
-    
+    h5_Q_gp.attrs['fit_times'] = [a * 1e-3 for a in fit_time]
+
     return h5_Q
 
-def test_fitting(h5_rd,  pixel=0, fit_time=[1, 5], plot=True):
+
+def test_fitting(h5_rd, pixel=0, fit_time=[1, 5], plot=True):
     '''
     Tests curve fitting on a particular pixel, then plots the result
     
@@ -275,26 +279,27 @@ def test_fitting(h5_rd,  pixel=0, fit_time=[1, 5], plot=True):
     
     '''
     drive_freq = h5_rd.attrs['drive_freq']
-    
-    tx = np.arange(0, h5_rd.attrs['total_time'], h5_rd.attrs['total_time']/h5_rd.attrs['pnts_per_avg'])
-    [start, stop] = [np.searchsorted(tx, fit_time[0]*1e-3), np.searchsorted(tx, fit_time[1]*1e-3)]
-    
+
+    tx = np.arange(0, h5_rd.attrs['total_time'], h5_rd.attrs['total_time'] / h5_rd.attrs['pnts_per_avg'])
+    [start, stop] = [np.searchsorted(tx, fit_time[0] * 1e-3), np.searchsorted(tx, fit_time[1] * 1e-3)]
+
     cut = h5_rd[()][pixel]
-    popt = fit_exp(tx[start:stop], cut[start:stop]*1e9) # 1e9 for amplitude for better curve-fitting
-    
+    popt = fit_exp(tx[start:stop], cut[start:stop] * 1e9)  # 1e9 for amplitude for better curve-fitting
+
     popt[0] *= 1e-9
     popt[1] *= 1e-9
-    
+
     if plot:
-        print ('Fit params:', popt, ' and Q=', popt[2] * drive_freq * np.pi)
-    
+        print('Fit params:', popt, ' and Q=', popt[2] * drive_freq * np.pi)
+
         fig, a = plt.subplots()
         a.plot(tx, cut, 'k')
-        a.plot(tx[start:stop], exp(tx[start:stop]-tx[start],*popt), 'g--')
+        a.plot(tx[start:stop], exp(tx[start:stop] - tx[start], *popt), 'g--')
         a.set_xlabel('Time (s)')
         a.set_ylabel('Amplitude (nm)')
-    
+
     return popt
+
 
 def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     """
@@ -334,20 +339,21 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
 
 def exp(t, A1, y0, tau):
     '''Uses a single exponential for the case of no drive'''
-    return y0 + A1 * np.exp(-t/tau)
+    return y0 + A1 * np.exp(-t / tau)
+
 
 def fit_exp(t, cut):
-           
     # Cost function to minimize. Faster than normal scipy optimize or lmfit
-    cost = lambda p: np.sum((exp(t-t[0], *p) - cut) ** 2)
-    
+    cost = lambda p: np.sum((exp(t - t[0], *p) - cut) ** 2)
+
     pinit = [cut.max() - cut.min(), cut.min(), 1e-4]
-    
-    bounds=[(0, 5*(cut.max() - cut.min())), (0, cut.min()), (1e-8, 1)]
-    popt = minimize(cost, pinit, method='TNC', bounds = bounds)
-        
+
+    bounds = [(0, 5 * (cut.max() - cut.min())), (0, cut.min()), (1e-8, 1)]
+    popt = minimize(cost, pinit, method='TNC', bounds=bounds)
+
     return popt.x
-    
+
+
 def plot_ringdown(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
     """
     Plots the relevant tfp, inst_freq, and shift values as separate image files
@@ -367,19 +373,19 @@ def plot_ringdown(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
         Number of standard deviations to display
     """
 
-    #h5_rd = usid.hdf_utils.find_dataset(h5_file[h5_path], 'Ringdown')[0]
-        
+    # h5_rd = usid.hdf_utils.find_dataset(h5_file[h5_path], 'Ringdown')[0]
+
     if 'Dataset' in str(type(h5_file[h5_path])):
         h5_path = h5_file[h5_path].parent.name
 
     Q = usid.hdf_utils.find_dataset(h5_file[h5_path], 'Q')[0][()]
     A = usid.hdf_utils.find_dataset(h5_file[h5_path], 'Amplitude')[0][()]
-    
+
     Q_fixed, _ = badpixels.fix_array(Q, threshold=2)
     A_fixed, _ = badpixels.fix_array(A, threshold=2)
 
     parm_dict = usid.hdf_utils.get_attributes(h5_file[h5_path])
-    
+
     if 'FastScanSize' not in parm_dict:
         parm_dict = usid.hdf_utils.get_attributes(h5_file[h5_path].parent)
 
@@ -393,7 +399,7 @@ def plot_ringdown(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
 
     _, cbar_t = usid.viz.plot_utils.plot_map(a[0], Q_fixed, x_vec=xs * 1e6, y_vec=ys * 1e6,
                                              aspect=asp, cmap='inferno', stdevs=stdevs)
-    _, cbar_s = usid.viz.plot_utils.plot_map(a[1], A_fixed*1e9, x_vec=xs * 1e6, y_vec=ys * 1e6,
+    _, cbar_s = usid.viz.plot_utils.plot_map(a[1], A_fixed * 1e9, x_vec=xs * 1e6, y_vec=ys * 1e6,
                                              aspect=asp, cmap='inferno', stdevs=stdevs)
 
     cbar_t.set_label('Q (a.u.)', rotation=270, labelpad=16)

@@ -12,6 +12,7 @@ import pyUSID as usid
 import numpy as np
 import os
 
+
 def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
     """
     Plots the relevant tfp, inst_freq, and shift values as separate image files
@@ -35,22 +36,22 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
         h5_if = usid.hdf_utils.find_dataset(h5_file[h5_path], 'Inst_Freq')[0]
     except:
         h5_if = usid.hdf_utils.find_dataset(h5_file[h5_path], 'inst_freq')[0]
-        
+
     parm_dict = get_utils.get_params(h5_if)
-  #  parm_dict = usid.hdf_utils.get_attributes(h5_file[h5_path])
+    #  parm_dict = usid.hdf_utils.get_attributes(h5_file[h5_path])
 
     if 'Dataset' in str(type(h5_file[h5_path])):
         h5_path = h5_file[h5_path].parent.name
 
     tfp = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp')[0][()]
     shift = usid.hdf_utils.find_dataset(h5_file[h5_path], 'shift')[0][()]
-    
+
     if tfp.shape[1] == 1:
         # Forgot to reconvert and/or needs to be converted
         [ysz, xsz] = h5_if.pos_dim_sizes
         tfp = np.reshape(tfp, [ysz, xsz])
         shift = np.reshape(shift, [ysz, xsz])
-    
+
     try:
         tfp_fixed = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp_fixed')[0][()]
     except:

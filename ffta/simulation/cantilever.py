@@ -9,7 +9,7 @@ __status__ = "Production"
 import numpy as np
 from scipy.integrate import odeint
 
-import ffta 
+import ffta
 
 # Set constant 2 * pi.
 PI2 = 2 * np.pi
@@ -105,14 +105,12 @@ class Cantilever:
 
         # Initialize cantilever parameters and calculate some others.
         for key, value in can_params.items():
-
             setattr(self, key, value)
 
         self.w0 = PI2 * self.res_freq  # Radial resonance frequency.
         self.wd = PI2 * self.drive_freq  # Radial drive frequency.
 
         if not np.allclose(self.w0, self.wd):
-            
             print('Resonance and Drive not equal. Make sure simulation is long enough!')
 
         self.beta = self.w0 / (2 * self.q_factor)  # Damping factor.
@@ -120,7 +118,7 @@ class Cantilever:
         self.amp = self.soft_amp * self.amp_invols  # Amplitude in meters.
 
         # Calculate reduced driving force and phase in equilibrium.
-        np.seterr(divide='ignore') # suprress divide-by-0 warning in arctan
+        np.seterr(divide='ignore')  # suprress divide-by-0 warning in arctan
         self.f0 = self.amp * np.sqrt((self.w0 ** 2 - self.wd ** 2) ** 2 +
                                      4 * self.beta ** 2 * self.wd ** 2)
         self.delta = np.abs(np.arctan(np.divide(2 * self.wd * self.beta,
@@ -128,7 +126,6 @@ class Cantilever:
 
         # Initialize force parameters and calculate some others.
         for key, value in force_params.items():
-
             setattr(self, key, value)
 
         self.delta_w = PI2 * self.delta_freq  # Frequency shift in radians.
@@ -136,15 +133,14 @@ class Cantilever:
 
         # Initialize simulation parameters.
         for key, value in sim_params.items():
-
             setattr(self, key, value)
 
         # Calculate time axis for simulated tip motion without extra cycles
-        num_pts = int(self.total_time*self.sampling_rate)
+        num_pts = int(self.total_time * self.sampling_rate)
         self.t_Z = np.linspace(0, self.total_time, num=num_pts)
 
         # Calculate frequency axis for simulated tip_motion without extra cycles.
-        self.freq_Z = np.linspace(0, int(self.sampling_rate/2), num=int(num_pts/2 + 1))
+        self.freq_Z = np.linspace(0, int(self.sampling_rate / 2), num=int(num_pts / 2 + 1))
 
         # Create a Pixel class-compatible params file
         self.fit_params = {}
@@ -152,7 +148,7 @@ class Cantilever:
         self.parameters.update(**sim_params)
         self.can_params = can_params
         self.create_parameters(self.parameters, self.can_params)
-        
+
         return
 
     def set_conditions(self, trigger_phase=180):
@@ -185,7 +181,7 @@ class Cantilever:
         # Set the initial conditions at t=0.
         z0 = self.amp * np.sin(-self.delta)
         v0 = self.amp * self.wd * np.cos(-self.delta)
-               
+
         self.Z0 = np.array([z0, v0])
 
         return
@@ -205,9 +201,9 @@ class Cantilever:
             Force on the cantilever at a given time, in N/kg.
 
         """
-            
+
         driving_force = self.f0 * np.sin(self.wd * t)
-            
+
         return driving_force
 
     def omega(self, t, t0=0, tau=0):
@@ -278,22 +274,22 @@ class Cantilever:
             Information about the ODE solver.
 
         """
-        
+
         if Z0:
-            
+
             if not isinstance(Z0, (np.ndarray, list)):
                 raise TypeError('Must be 2-size array or list')
             if len(Z0) != 2:
                 raise ValueError('Must specify exactly [z0, v0]')
-            
+
             self.n_points = int(self.total_time * self.sampling_rate)
             self.t = np.arange(self.n_points) / self.sampling_rate
-            self.t0 = self.trigger 
+            self.t0 = self.trigger
             self.Z0 = Z0
-        
+
         else:
-            self.set_conditions(trigger_phase) 
-        
+            self.set_conditions(trigger_phase)
+
         Z, infodict = odeint(self.dZ_dt, self.Z0, self.t, full_output=True)
 
         t0_idx = int(self.t0 * self.sampling_rate)
@@ -314,7 +310,7 @@ class Cantilever:
         target_rate : int
             The sampling rate for the signal to be converted to. 1e7 = 10 MHz
         '''
-        
+
         if target_rate > self.sampling_rate:
             raise ValueError('Target should be less than the initial sampling rate')
         step = int(self.sampling_rate / target_rate)
@@ -322,7 +318,7 @@ class Cantilever:
 
         self.Z = self.Z[0::step].reshape(n_points, 1) / self.def_invols
 
-        return 
+        return
 
     def create_parameters(self, params={}, can_params={}, fit_params={}):
         '''
@@ -340,7 +336,7 @@ class Cantilever:
         fit_params : dict, optional
             Contains various parameters for fitting and analysis. See Pixel class.
         '''
-        
+
         # default seeding of parameters
         _parameters = {'bandpass_filter': 1.0,
                        'drive_freq': 277261,
@@ -352,45 +348,45 @@ class Cantilever:
                        'trigger': 0.0005,
                        'window': 'blackman',
                        'wavelet_analysis': 0}
-        
-        _can_params = {'amp_invols' : 5.52e-08,
-                       'def_invols' : 5.06e-08, 
-                       'k' : 26.2,
-                       'q_factor' : 432}     
-     
+
+        _can_params = {'amp_invols': 5.52e-08,
+                       'def_invols': 5.06e-08,
+                       'k': 26.2,
+                       'q_factor': 432}
+
         _fit_params = {'filter_amplitude': True,
                        'method': 'hilbert',
                        'fit': True,
                        'fit_form': 'product'}
-     
+
         for key, val in _parameters.items():
             if key not in params:
                 if hasattr(self, key):
                     params[key] = self.__dict__[key]
                 else:
                     params[key] = val
-        
+
         for key, val in _can_params.items():
             if key not in can_params:
                 if hasattr(self, key):
                     can_params[key] = self.__dict__[key]
                 else:
                     can_params[key] = val
-        
+
         for key, val in _fit_params.items():
             if key not in fit_params:
                 if hasattr(self, key):
                     fit_params[key] = self.__dict__[key]
                 else:
                     fit_params[key] = val
-        
+
         # then write to the Class
         self.parameters.update(**params)
         self.can_params.update(**can_params)
         self.fit_params.update(**fit_params)
-        
-        return 
-    
+
+        return
+
     def analyze(self, plot=True, **kwargs):
         '''
         Converts output to a Pixel class and analyzes
@@ -407,16 +403,16 @@ class Cantilever:
 
         '''
         param_keys = ['bandpass_filter', 'drive_freq', 'filter_bandwidth', 'n_taps',
-                       'roi', 'sampling_rate', 'total_time', 'trigger', 'window', 'wavelet_analysis']
-        
-        can_param_keys = ['amp_invols','def_invols', 'k', 'q_factor']
-        
+                      'roi', 'sampling_rate', 'total_time', 'trigger', 'window', 'wavelet_analysis']
+
+        can_param_keys = ['amp_invols', 'def_invols', 'k', 'q_factor']
+
         fit_param_keys = ['filter_amplitude', 'method', 'fit', 'fit_form']
-        
+
         params = {}
         can_params = {}
         fit_params = {}
-        
+
         for k, v in kwargs.items():
             if k in param_keys:
                 params[k] = v
@@ -424,16 +420,14 @@ class Cantilever:
                 can_params[k] = v
             elif k in fit_param_keys:
                 fit_params[k] = v
-        
+
         self.create_parameters(params, can_params, fit_params)
-        
+
         pix = ffta.pixel.Pixel(self.Z, self.parameters, self.can_params, **self.fit_params)
 
-        pix.analyze()        
-        
+        pix.analyze()
+
         if plot:
-            
             pix.plot()
-        
+
         return pix
-        
