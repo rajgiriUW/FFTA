@@ -127,7 +127,7 @@ class GKPFM(FFtrEFM):
 
         return
 
-    def test(self, pixel_ind=[0, 0]):
+    def test(self, pixel_ind=[0, 0], phases_to_test=[2.0708, 2.1208, 2.1708]):
         """
         Test the Pixel analysis of a single pixel
 
@@ -136,7 +136,10 @@ class GKPFM(FFtrEFM):
         pixel_ind : uint or list
             Index of the pixel in the dataset that the process needs to be tested on.
             If a list it is read as [row, column]
-
+        phases_to_test : list, optional
+            Which phases to shift the signal with. The default is [2.0708, 2.1208, 2.1708],
+            which is 0.5, 0.55, 0.5 + pi/2
+            
         Returns
         -------
         [inst_freq, tfp, shift] : List
@@ -160,8 +163,9 @@ class GKPFM(FFtrEFM):
 
         _gk = GKPixel(defl, self.parm_dict, exc_wfm=self.exc_wfm,
                       TF_norm=self.TF_norm)
+
+        _gk.min_phase(phases_to_test=phases_to_test)
         _gk.force_out(plot=True, noise_tolerance=self.parm_dict['noise_tolerance'])
-        _gk.min_phase()
 
         if self.parm_dict['denoise']:
             print('aa')
@@ -173,14 +177,13 @@ class GKPFM(FFtrEFM):
             print('bb')
             _gk.CPD = gaussian_filter1d(_gk.CPD, 1)[:_gk.num_CPD]
 
-        plt.figure()
-        plt.plot(_gk.CPD)
+        _gk.plot_cpd()
 
         self.cpd_dict = _gk._calc_cpd_params(return_dict=True, periods=self.parm_dict['periods'])
 
         _, _, _, = self._map_function(defl, self.parm_dict, self.TF_norm, self.exc_wfm)
 
-        return
+        return _gk
 
     def _create_results_datasets(self):
         '''

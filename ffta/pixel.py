@@ -110,12 +110,6 @@ class Pixel:
     analyze()
         Analyzes signals and returns tfp, shift and inst_freq.
 
-    See Also
-    --------
-    line: Line processing for FF-trEFM data.
-    simulate: Simulation for synthetic FF-trEFM data.
-    scipy.signal.get_window: Windows for signal processing.
-
     Notes
     -----
     Frequency shift from wavelet analysis is not in Hertz. It should be used
@@ -151,7 +145,7 @@ class Pixel:
 
     """
 
-    def __init__(self, signal_array, params, can_params={},
+    def __init__(self, signal_array, params, can_params=None,
                  fit=True, pycroscopy=False,
                  method='hilbert', fit_form='product', filter_amplitude=False,
                  filter_frequency=False):
@@ -160,6 +154,8 @@ class Pixel:
         # These defaults are overwritten by values in 'params'
 
         # FIR (Hilbert) filtering parameters
+        if can_params is None:
+            can_params = {}
         self.n_taps = 1499
         self.filter_bandwidth = 5000
         self.filter_frequency = filter_frequency
@@ -693,7 +689,7 @@ class Pixel:
 
         return
 
-    def calculate_stft(self, time_res=20e-6, fit=False, nfft=200):
+    def calculate_stft(self, time_res=20e-6, nfft=200):
         '''
         Sliding FFT approach
         
@@ -725,20 +721,7 @@ class Pixel:
                                                    mode='magnitude')
 
         # Parabolic ridge finder
-        if not fit:
-            inst_freq, amplitude, _ = parab.ridge_finder(spectrogram, freq)
-
-        # slow serial curve fitting
-        else:
-
-            for c in range(spectrogram.shape[1]):
-
-                SIG = spectrogram[:, c]
-                if fit:
-                    pk = np.argmax(np.abs(SIG))
-                    popt = np.polyfit(freq[pk - 2:pk + 2], np.abs(SIG[pk - 2:pk + 2]), 2)
-                    inst_freq[c] = -0.5 * popt[1] / popt[0]
-                    amplitude[c] = np.abs(SIG)[pk]
+        inst_freq, amplitude, _ = parab.ridge_finder(spectrogram, freq)
 
         # Correctly pad the signals
         _pts = self.n_points - len(inst_freq)

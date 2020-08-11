@@ -158,7 +158,7 @@ class GKPixel(Pixel):
             Number of resonances to fit SHO to. The default is 2.
         width : int, optional
             Width of resonance peaks to fit against. The default is 20e3.
-        exc_floot : float, optional
+        exc_floor : float, optional
             Sets the floor for the transfer function, below that is ignored. 
             The default is 10
         plot : bool, optional

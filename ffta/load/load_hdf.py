@@ -119,6 +119,11 @@ def load_wrapper(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False,
     h5_ff = load_FF(data_files, parm_dict, h5_path, average=average,
                     verbose=verbose, loadverbose=loadverbose, mirror=mirror)
 
+    if loadverbose:
+        print('*** Copy-Paste below code ***')
+        print('import h5py')
+        print('h5_file = h5py.File("',h5_path,'")')
+
     return h5_path, parm_dict, h5_ff
 
 
