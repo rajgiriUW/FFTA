@@ -34,6 +34,8 @@ class MyHandler(FileSystemEventHandler):
     
     Every time a new file is created, this processes that .ibw as a Line
     
+    Parameters
+    ----------
     parameters : dict
         Dictionary of the processing parameters. Found in parameters.cfg
     

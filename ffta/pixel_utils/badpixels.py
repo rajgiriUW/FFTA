@@ -18,68 +18,68 @@ import sys
 from os.path import splitext
 
 def load_csv(path):
-    
-    # Get the path and check what the extension is.
-    ext = splitext(path)[1]
+	
+	# Get the path and check what the extension is.
+	ext = splitext(path)[1]
 
-    if ext.lower() == '.csv':
+	if ext.lower() == '.csv':
 
-        signal_array = np.genfromtxt(path, delimiter=',')
+		signal_array = np.genfromtxt(path, delimiter=',')
 
-    else:
+	else:
 
-        print("Unrecognized file type!")
-        sys.exit(0)    
-      
-    return signal_array
-    
+		print("Unrecognized file type!")
+		sys.exit(0)    
+	  
+	return signal_array
+	
 def find_bad_pixels(signal_array, threshold=2, iterations=1):
-    """ Uses Median filter to find 'hot' pixels """          
-    
-    fixed_array = np.copy(signal_array)
+	""" Uses Median filter to find 'hot' pixels """          
+	
+	fixed_array = np.copy(signal_array)
    
-    for i in range(iterations):
-    
-        filtered_array = ndimage.median_filter(fixed_array, size=3)
-        diff = np.abs(fixed_array - filtered_array)
-        limit = threshold * np.std(fixed_array)    
+	for i in range(iterations):
+	
+		filtered_array = ndimage.median_filter(fixed_array, size=3)
+		diff = np.abs(fixed_array - filtered_array)
+		limit = threshold * np.std(fixed_array)    
 
-        bad_pixel_list = np.nonzero(diff > limit)
-        if i == 0:
-            bad_pixels_total = np.vstack((bad_pixel_list[0], bad_pixel_list[1]))
-        else:
-            bad_pixels_total = np.hstack((bad_pixels_total, bad_pixel_list))
-            
-        fixed_array = remove_bad_pixels(fixed_array, filtered_array, bad_pixel_list)
-        
-    return fixed_array, bad_pixels_total
+		bad_pixel_list = np.nonzero(diff > limit)
+		if i == 0:
+			bad_pixels_total = np.vstack((bad_pixel_list[0], bad_pixel_list[1]))
+		else:
+			bad_pixels_total = np.hstack((bad_pixels_total, bad_pixel_list))
+			
+		fixed_array = remove_bad_pixels(fixed_array, filtered_array, bad_pixel_list)
+		
+	return fixed_array, bad_pixels_total
 
 def remove_bad_pixels(signal_array, filtered_array, bad_pixel_list):
-    """ Removes bad pixels from the array"""
-    
-    fixed_array = np.copy(signal_array)    
-    
-    for y,x in zip(bad_pixel_list[0], bad_pixel_list[1]):
-        fixed_array[y, x] = filtered_array[y,x]
-    
-    return fixed_array
-    
+	""" Removes bad pixels from the array"""
+	
+	fixed_array = np.copy(signal_array)    
+	
+	for y,x in zip(bad_pixel_list[0], bad_pixel_list[1]):
+		fixed_array[y, x] = filtered_array[y,x]
+	
+	return fixed_array
+	
 def fix_array(path, threshold = 10, israte = False):
-    """ Wrapper function to find and remove 'hot' pixels.
-        This version uses a path to specify a file    
-    """
-    if type(path) is str:
-        signal_array = load_csv(path)    
-    else:
-        signal_array = path
-    
-    if not israte:
-        signal_array = 1/signal_array
-    
-    filtered_array, bad_pixel_list = find_bad_pixels(signal_array, threshold)      
-    fixed_array = remove_bad_pixels(signal_array, filtered_array, bad_pixel_list)    
-    
-    if not israte:
-        fixed_array = 1/fixed_array
-    
-    return fixed_array, bad_pixel_list
+	""" Wrapper function to find and remove 'hot' pixels.
+		This version uses a path to specify a file    
+	"""
+	if type(path) is str:
+		signal_array = load_csv(path)    
+	else:
+		signal_array = path
+	
+	if not israte:
+		signal_array = 1/signal_array
+	
+	filtered_array, bad_pixel_list = find_bad_pixels(signal_array, threshold)      
+	fixed_array = remove_bad_pixels(signal_array, filtered_array, bad_pixel_list)    
+	
+	if not israte:
+		fixed_array = 1/fixed_array
+	
+	return fixed_array, bad_pixel_list

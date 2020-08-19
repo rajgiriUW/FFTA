@@ -19,6 +19,8 @@ def GenChirp(f_center, f_width=100e3, length=1e-2, sampling_rate=1e8, name='chir
         this signal. There is a limit of 250 MHz on the 33200 Agilent wave generator,
         but obviously that varies.
     
+    Parameters
+    ----------
     f_center : float
         Central frequency for the signal
         

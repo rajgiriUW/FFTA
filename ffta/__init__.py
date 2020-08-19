@@ -1,3 +1,4 @@
+from . import acquisition
 from . import hdf_utils
 from . import pixel_utils
 from . import analysis
