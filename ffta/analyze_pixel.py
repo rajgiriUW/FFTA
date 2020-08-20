@@ -16,15 +16,15 @@ def analyze_pixel(ibw_file, param_file):
     '''
     Analyzes a single pixel
     
-    Params
-    ----
+    Parameters
+    ----------
     ibw_file : str
-        path to *.ibw file
+        path to \*.ibw file
     param_file : str
         path to parameters.cfg file
         
     Returns
-    ----
+    -------
     pixel : Pixel
         The pixel object read and analyzed
     '''
