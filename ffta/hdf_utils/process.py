@@ -12,7 +12,7 @@ from ffta.pixel_utils import badpixels
 import os
 import numpy as np
 from ffta.load import get_utils
-from pyUSID.processing.comp_utils import parallel_compute
+from sidpy.proc.comp_utils import parallel_compute
 from pyUSID.io.write_utils import Dimension
 import h5py
 

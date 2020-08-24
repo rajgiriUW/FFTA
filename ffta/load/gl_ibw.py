@@ -18,7 +18,7 @@ from igor import binarywave as bw
 # from ..microdata import MicroDataGroup, \
 #    MicroDataset  # The building blocks for defining hierarchical storage in the H5 file
 
-from pyUSID.io.translator import Translator  # , generate_dummy_main_parms
+from sidpy.sid import Translator # , generate_dummy_main_parms
 
 from pycroscopy.io.write_utils import Dimension
 from pyUSID.io.hdf_utils import write_ind_val_dsets
