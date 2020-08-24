@@ -546,15 +546,21 @@ class GKPixel(Pixel):
 		df = self.sampling_rate / len(self.CPD)
 		bin_width = int(self.filter_bandwidth / df)
 
-		_CPD = np.fft.fftshift(np.fft.fft(self.CPD))
-		_CPD[:center - bin_width] = 0
-		_CPD[center + bin_width:] = 0
-		self.CPD = np.real(np.fft.ifft(np.fft.ifftshift(_CPD)))
-
-		_CPD = np.fft.fftshift(np.fft.fft(self.capacitance))
-		_CPD[:center - bin_width] = 0
-		_CPD[center + bin_width:] = 0
-		self.capacitance = np.real(np.fft.ifft(np.fft.ifftshift(_CPD)))
+    def min_phase(self, phases_to_test=[2.0708, 2.1208, 2.1708], 
+                  noise_tolerance=1e-6):
+        """
+        Determine the optimal phase shift due to cable lag
+        
+        Parameters
+        ----------
+        phases_to_test : list, optional
+            Which phases to shift the signal with. The default is [2.0708, 2.1208, 2.1708],
+            which is 0.5, 0.55, 0.5 + pi/2
+        noise_tolerance : float, optional
+            Use to determine noise_floor, The default is 1e-6
+        Returns
+        -------
+        None.
 
 		return
 
@@ -576,8 +582,13 @@ class GKPixel(Pixel):
 		# have to iterate this cell many times to find the right phase
 		phases_to_test = np.array(phases_to_test)
 
-		start = int(0.5 * self.trigger * self.sampling_rate)
-		stop = int(1.5 * self.trigger * self.sampling_rate)
+        for x, ph in enumerate(phases_to_test):
+
+            self.phase_shift = ph
+            self.force_out(plot=False, noise_tolerance=noise_tolerance)
+
+            usid.plot_utils.rainbow_plot(ax[x], self.exc_wfm, self.force)
+            ax[x].set_title('Phase=' + str(ph))
 
 		mid = int(len(self.f_ax) / 2)
 		drive_bin = int(self.drive_freq / (self.sampling_rate / len(self.SIG))) + mid

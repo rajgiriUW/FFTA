@@ -164,8 +164,8 @@ class GKPFM(FFtrEFM):
 		_gk = GKPixel(defl, self.parm_dict, exc_wfm=self.exc_wfm,
 					  TF_norm=self.TF_norm)
 
-		_gk.min_phase(phases_to_test=phases_to_test)
-		_gk.force_out(plot=True, noise_tolerance=self.parm_dict['noise_tolerance'])
+        _gk.min_phase(phases_to_test=phases_to_test, noise_tolerance=self.parm_dict['noise_tolerance'])
+        _gk.force_out(plot=True, noise_tolerance=self.parm_dict['noise_tolerance'])
 
 		if self.parm_dict['denoise']:
 			print('aa')
