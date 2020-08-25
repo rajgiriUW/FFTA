@@ -4,5 +4,3 @@ sphinx:
 formats: all
 python:
   version: 3.8
-  install:
-    - path: .
