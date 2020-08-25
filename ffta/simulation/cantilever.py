@@ -12,7 +12,7 @@ from scipy.integrate import odeint
 import ffta
 
 # Set constant 2 * pi.
-PI2 = 2 * np.pi
+PI2 = 2 * float(np.pi)
 
 
 class Cantilever:
