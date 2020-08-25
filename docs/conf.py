@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.abspath('../ffta/load'))
 sys.path.insert(0, os.path.abspath('../ffta/pixel_utils'))
 sys.path.insert(0, os.path.abspath('../ffta/simulation'))
 
-autodoc_mock_imports = ['scipy', 'numpy', 'watchdog', 'igor', 'pandas']
+autodoc_mock_imports = ['scipy', 'numpy', 'watchdog', 'igor', 'pandas', 'pywt']
 
 # -- Project information -----------------------------------------------------
 
