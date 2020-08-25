@@ -27,7 +27,7 @@ sys.path.insert(0, os.path.abspath('../ffta/simulation'))
 
 autodoc_mock_imports = ['scipy', 'numpy', 'watchdog', 'igor', 'pandas', 'pywt',
 	'matplotlib', 'pyUSID', 'numexpr', 'pycroscopy', 'pywavelets',
-	'h5py']
+	'h5py', 'sklearn']
 
 # -- Project information -----------------------------------------------------
 
