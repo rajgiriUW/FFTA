@@ -347,7 +347,8 @@ class Cantilever:
 					   'total_time': 0.002,
 					   'trigger': 0.0005,
 					   'window': 'blackman',
-					   'wavelet_analysis': 0}
+					   'wavelet_analysis': 0,
+                       'fft_params': {}}
 
 		_can_params = {'amp_invols': 5.52e-08,
 					   'def_invols': 5.06e-08,
@@ -357,7 +358,8 @@ class Cantilever:
 		_fit_params = {'filter_amplitude': True,
 					   'method': 'hilbert',
 					   'fit': True,
-					   'fit_form': 'product'}
+					   'fit_form': 'product'
+                       }
 
 		for key, val in _parameters.items():
 			if key not in params:
@@ -403,7 +405,8 @@ class Cantilever:
 
 		'''
 		param_keys = ['bandpass_filter', 'drive_freq', 'filter_bandwidth', 'n_taps',
-					  'roi', 'sampling_rate', 'total_time', 'trigger', 'window', 'wavelet_analysis']
+					  'roi', 'sampling_rate', 'total_time', 'trigger', 'window', 'wavelet_analysis',
+                      'fft_params']
 
 		can_param_keys = ['amp_invols', 'def_invols', 'k', 'q_factor']
 
