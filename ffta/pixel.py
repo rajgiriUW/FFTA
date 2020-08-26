@@ -183,6 +183,8 @@ class Pixel:
         self.recombination = False
         self.phase_fitting = False
         self.check_drive = True
+        self.window = 'blackman'
+        self.bandpass_filter = 1
 
         # Assign the fit parameter.
         self.fit = fit
@@ -200,6 +202,9 @@ class Pixel:
         self.Q = 360
 
         # Set up the array
+        self.signal_array = signal_array
+        self.signal_orig = None  # used in amplitude calc to undo any Windowing beforehand
+
         if len(signal_array.shape) == 2 and 1 not in signal_array.shape:
 
             self.n_points, self.n_signals = self.signal_array.shape
@@ -211,11 +216,13 @@ class Pixel:
             self.n_points = self.signal_array.shape[0]
         
         self._n_points_orig = self.signal_array.shape[0]
-        self.signal_array = signal_array
-        self.signal_orig = None  # used in amplitude calc to undo any Windowing beforehand
         
         if pycroscopy:
             self.signal_array = signal_array.T
+        
+        setattr(self, 'trigger', trigger)
+        setattr(self, 'total_time', total_time)
+        setattr(self, 'sampling_rate', sampling_rate)
         
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
@@ -225,17 +232,19 @@ class Pixel:
             setattr(self, key, float(value))
 
         # Check for missing required parameters
-        if not hasattr(self, 'trigger'):
+        if not self.trigger:
             raise KeyError('Trigger must be supplied')
             
-        if not hasattr(self, 'total_time'):
-            if not hasattr(self, 'sampling_rate'):
+        if not self.total_time:
+            if not self.sampling_rate:
                 raise KeyError('total_time or sampling_rate must be supplied')
             else:
                 self.total_time = self.sampling_rate * self.n_points
-        elif not hasattr(self, 'sampling_rate'):
+        elif not self.sampling_rate:
             self.sampling_rate = int(self.n_points / self.total_time)
-        elif self.total_time != self.sampling_rate * self.n_points:
+        elif self.total_time != self.n_points / self.sampling_rate  :
+            print(self.n_points / self.sampling_rate )
+            print(self.total_time)
             raise ValueError('total_time and sampling_rate mismatch')
         
         if not hasattr(self, 'roi'):
@@ -245,6 +254,10 @@ class Pixel:
         self.tidx = int(self.trigger * self.sampling_rate)    
         self._tidx_orig = self.tidx
         self.tidx_orig = self.tidx
+        
+        if not hasattr(self, 'drive_freq'):
+            self.average()
+            self.set_drive()
         
         # Processing parameters    
         if self.filter_frequency:
@@ -309,6 +322,20 @@ class Pixel:
         else:
             self.signal = np.copy(self.signal_array)
 
+        return
+
+    def set_drive(self):
+        """Calculates drive frequency of averaged signals"""
+        n_fft = 2 ** int(np.log2(self.tidx))  # For FFT, power of 2.
+        dfreq = self.sampling_rate / n_fft  # Frequency separation.
+
+        # Calculate drive frequency from maximum power of the FFT spectrum.
+        signal = self.signal[:n_fft]
+        fft_amplitude = np.abs(np.fft.rfft(signal))
+        drive_freq = fft_amplitude.argmax() * dfreq
+        
+        self.drive_freq = drive_freq
+        
         return
 
     def check_drive_freq(self):
