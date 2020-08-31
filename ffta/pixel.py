@@ -611,7 +611,7 @@ class Pixel:
         elif self.fit_form == 'ringdown':
 
             cut = self.amplitude[self.tidx:(self.tidx + ridx)]
-            tfp_calc.fit_ringdown(self, ridx, cut, t)
+            tfp_calc.fit_ringdown(self, cut, t)
 
         elif self.fit_form == 'product':
 
