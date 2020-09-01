@@ -92,7 +92,9 @@ def fit_exp(t, inst_freq):
 	popt = minimize(cost, pinit, method='TNC', options={'disp': False},
 					bounds=[(1e-5, 1000),
 							(np.abs(inst_freq.min()) * -2, np.abs(inst_freq.max()) * 2),
-							(1e-6, 0.1)])
+ 							(1e-6, 0.1)])
+
+# 	popt = minimize(cost, pinit, method='TNC', options={'disp': False})
 
 	return popt.x
 

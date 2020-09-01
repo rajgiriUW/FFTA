@@ -606,7 +606,11 @@ class Pixel:
 
         elif self.fit_form == 'exp':
 
-            tfp_calc.fit_freq_exp(self, cut, t)
+            try:
+                tfp_calc.fit_freq_exp(self, cut, t)
+            except:
+                self.tfp = 1e-7
+                self.shift = 1e-5
 
         elif self.fit_form == 'ringdown':
 
