@@ -176,7 +176,7 @@ def load_folder(folder_path='', xy_scansize=[0, 0], file_name='FF_H5',
 	if textload == False:
 
 		data_files = [os.path.join(folder_path, name)
-					  for name in filelist if name[-3:] == 'ibw']
+					  for name in filelist if (name[-3:] == 'ibw' and 'FFtrEFM' in name)]
 
 	else:
 

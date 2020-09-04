@@ -595,36 +595,39 @@ class Pixel:
         cut -= self.inst_freq[self.tidx]
         self.cut = cut
         t = np.arange(cut.shape[0]) / self.sampling_rate
-
-        if not self.fit:
-
-            tfp_calc.find_minimum(self, cut)
-
-        elif self.fit_form == 'sum':
-
-            tfp_calc.fit_freq_sum(self, cut, t)
-
-        elif self.fit_form == 'exp':
-
-            try:
+        
+        try:
+            
+            if not self.fit:
+    
+                tfp_calc.find_minimum(self, cut)
+    
+            elif self.fit_form == 'sum':
+    
+                tfp_calc.fit_freq_sum(self, cut, t)
+    
+            elif self.fit_form == 'exp':
+    
                 tfp_calc.fit_freq_exp(self, cut, t)
-            except:
-                self.tfp = 1e-7
-                self.shift = 1e-5
+    
+            elif self.fit_form == 'ringdown':
+    
+                cut = self.amplitude[self.tidx:(self.tidx + ridx)]
+                tfp_calc.fit_ringdown(self, cut, t)
+    
+            elif self.fit_form == 'product':
+    
+                tfp_calc.fit_freq_product(self, cut, t)
+    
+            elif self.fit_form == 'phase':
+    
+                cut = -1 * (self.phase[self.tidx:(self.tidx + ridx)] - self.phase[self.tidx])
+                tfp_calc.fit_phase(self, cut, t)
 
-        elif self.fit_form == 'ringdown':
-
-            cut = self.amplitude[self.tidx:(self.tidx + ridx)]
-            tfp_calc.fit_ringdown(self, cut, t)
-
-        elif self.fit_form == 'product':
-
-            tfp_calc.fit_freq_product(self, cut, t)
-
-        elif self.fit_form == 'phase':
-
-            cut = -1 * (self.phase[self.tidx:(self.tidx + ridx)] - self.phase[self.tidx])
-            tfp_calc.fit_phase(self, cut, t)
+        except:
+                
+            self.tfp = np.nan
+            self.shift = np.nan
 
         return
 
