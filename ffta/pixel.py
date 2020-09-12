@@ -232,7 +232,7 @@ class Pixel:
             setattr(self, key, float(value))
 
         # Check for missing required parameters
-        if not self.trigger:
+        if self.trigger == None: # trigger can be 0
             raise KeyError('Trigger must be supplied')
             
         if not self.total_time:
