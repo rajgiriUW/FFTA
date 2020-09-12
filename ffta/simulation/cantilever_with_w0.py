@@ -100,7 +100,7 @@ class MechanicalDrive_Simple(Cantilever):
 
         # Did user supply a voltage pulse themselves 
         if len(w_array) != int(self.total_time * self.sampling_rate):
-            
+            print(int(self.total_time * self.sampling_rate))
             raise ValueError('v_array must match sampling rate/length of parameters')
 
         self.w_array = w_array
@@ -130,7 +130,7 @@ class MechanicalDrive_Simple(Cantilever):
 
 
         w = self.w_array[p] if p < n_points else self.w_array[-1]
-
+        
         return w
 
     def force(self, t, t0, tau):
@@ -159,3 +159,33 @@ class MechanicalDrive_Simple(Cantilever):
         electro_force = self.fe 
 
         return driving_force - electro_force
+    
+    def dZ_dt(self, Z, t=0):
+        """
+        Takes the derivative of the given Z with respect to time.
+
+        Parameters
+        ----------
+        Z : (2, ) array_like
+            Z[0] is the cantilever position, and Z[1] is the cantilever
+            velocity.
+        t : float
+            Time.
+
+        Returns
+        -------
+        Zdot : (2, ) array_like
+            Zdot[0] is the cantilever velocity, and Zdot[1] is the cantilever
+            acceleration.
+
+        """
+
+        t0 = self.t0
+        tau = self.tau
+
+        v = Z[1]
+        vdot = (self.force(t, t0, tau) -
+                self.omega(t) * Z[1] / self.q_factor -
+                self.omega(t) ** 2 * Z[0])
+
+        return np.array([v, vdot])

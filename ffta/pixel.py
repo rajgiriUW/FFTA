@@ -226,7 +226,8 @@ class Pixel:
         
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
-            setattr(self, key, value)
+            if not hasattr(self, key):
+                setattr(self, key, value)
 
         for key, value in can_params.items():
             setattr(self, key, float(value))
@@ -628,6 +629,7 @@ class Pixel:
                 
             self.tfp = np.nan
             self.shift = np.nan
+            self.best_fit = np.zeros(cut.shape[0])
 
         return
 
