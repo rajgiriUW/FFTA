@@ -75,7 +75,7 @@ class MechanicalDrive(Cantilever):
 
 	Examples
 	--------
-	>>> from ffta.simulation import mechanical_dirve, load
+	>>> from ffta.simulation import mechanical_drive, load
 	>>>
 	>>> params_file = '../examples/sim_params.cfg'
 	>>> params = load.simulation_configuration(params_file)
@@ -107,7 +107,7 @@ class MechanicalDrive(Cantilever):
 		parms = [can_params, force_params, sim_params]
 		super(MechanicalDrive, self).__init__(*parms)
 
-		# Did user supply a voltage pulse themselves (Electrical drive only)
+		# Did user supply a voltage pulse themselves 
 		self.use_varray = False
 		if any(v_array):
 

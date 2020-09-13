@@ -107,7 +107,7 @@ def fit_freq_product(pix, cut, t):
 	return
 
 
-def fit_freq_sum(pix, ridx, cut, t):
+def fit_freq_sum(pix, cut, t):
 	'''
 	Fits the frequency shift to an approximate functional form using
 	an analytical fit with bounded values.
@@ -147,7 +147,7 @@ def fit_freq_sum(pix, ridx, cut, t):
 	return
 
 
-def fit_freq_exp(pix, ridx, cut, t):
+def fit_freq_exp(pix, cut, t):
 	'''
 	Fits the frequency shift to a single exponential in the case where
 	there is no return to 0 Hz offset (if drive is cut).
@@ -186,7 +186,7 @@ def fit_freq_exp(pix, ridx, cut, t):
 	return
 
 
-def fit_ringdown(pix, ridx, cut, t):
+def fit_ringdown(pix, cut, t):
 	'''
 	Fits the amplitude to determine Q from single exponential fit.
 	
@@ -229,7 +229,7 @@ def fit_ringdown(pix, ridx, cut, t):
 	return
 
 
-def fit_phase(pix, ridx, cut, t):
+def fit_phase(pix, cut, t):
 	'''
 	Fits the phase to an approximate functional form using an
 	analytical fit with bounded values.

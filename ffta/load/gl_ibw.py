@@ -11,14 +11,7 @@ import numpy as np  # For array operations
 
 from igor import binarywave as bw
 
-# from .translator import Translator  # Because this class extends the abstract Translator class
-# from .utils import generate_dummy_main_parms, build_ind_val_dsets
-# from ..hdf_utils import getH5DsetRefs, linkRefs
-# from ..io_hdf5 import ioHDF5  # Now the translator is responsible for writing the data.
-# from ..microdata import MicroDataGroup, \
-#    MicroDataset  # The building blocks for defining hierarchical storage in the H5 file
-
-from pyUSID.io.translator import Translator  # , generate_dummy_main_parms
+from sidpy.sid import Translator # , generate_dummy_main_parms
 
 from pycroscopy.io.write_utils import Dimension
 from pyUSID.io.hdf_utils import write_ind_val_dsets

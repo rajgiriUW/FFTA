@@ -7,7 +7,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='FFTA',
-    version='0.3.0',
+    version='0.3.1',
     description='Fast Free Transient Analysis',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -26,7 +26,8 @@ setup(
                       'watchdog>=0.10.2',
                       'pyUSID>=0.0.8',
                       'pycroscopy>=0.60',
-                      'pywavelets>=1.1.1'],
+                      'pywavelets>=1.1.1',
+                      'sidpy>=0.0.2'],
 
     # entry_points={
     #      'console_scripts': [
