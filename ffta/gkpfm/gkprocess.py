@@ -22,7 +22,8 @@ from scipy.ndimage import gaussian_filter1d
 from ffta.hdf_utils.process import FFtrEFM
 
 from matplotlib import pyplot as plt
-
+from numpy.linalg import LinAlgError
+import warnings
 '''
 To do:
     Separate the instantaneous frequency and tFP/shift calculations
@@ -53,29 +54,40 @@ class GKPFM(FFtrEFM):
     def __init__(self, h5_main, parm_dict={}, can_params={},
                  pixel_params={}, TF_norm=[], exc_wfm=[], periods=2,
                  tip_response='', tip_excitation='', exc_wfm_file='',
-                 override=False, noise_tolerance=1e-4, **kwargs):
+                 override=False, exc_floor=10, noise_tolerance=1e-4, **kwargs):
         """
         Parameters
         ----------
         h5_main : h5py.Dataset object
             Dataset to process
-
         parm_dict : dict, optional
             Additional updates to the parameters dictionary. e.g. changing the trigger.
             You can also explicitly update self.parm_dict.update({'key': value})
-        
+            The default is {}.
         can_params : dict, optional
             Cantilever parameters describing the behavior
             Can be loaded from ffta.pixel_utils.load.cantilever_params
-        
+            The default is {}.
         pixel_params : dict, optional
-
-    
+            Currently unimplemented. The default is {}.
+        TF_norm : numpy array, optional
+            Transfer function (normalized). Can use GKPixel to generate, or supply explicitly
+        exc_wfm : numpy array, optional
+            The excitation used to generated Transfer Function. Unneeded if supplying a TF explicitly
+        periods : int, optional
+            Num of cantilever cycles to process in CPD calc. The default is 2.
+        tip_response : string, optional
+            File path to tip_response .ibw. Only needed if calculating TF_norm here
+        tip_excitation : string, optional
+            File path to tip excitation .ibw. Only needed if calculating TF_norm here
+        exc_wfm_file : string, optional
+            File path to .ibw for excitation during actual measurement (not TF).
         override : bool, optional
             If True, forces creation of new results group. Use in _get_existing_datasets
-    
-        kwargs : dictionary or variable
-            Keyword pairs to pass to Process constructor
+        exc_floor : float, optional
+            The noise floor for calculating Transfer Function. The default is 10.
+        noise_tolerance : float, optional
+            Use to determine noise_floor in reconstructing force. The default is 1e-4.
         """
 
         self.parm_dict = parm_dict
@@ -105,13 +117,14 @@ class GKPFM(FFtrEFM):
                          **kwargs)
 
         # save Transfer Function
-        defl = get_utils.get_pixel(self.h5_main, [0, 0], array_form=True).flatten()
-        _gk = GKPixel(defl, self.parm_dict, exc_wfm=exc_wfm)
-        _gk.load_tf(self.parm_dict['tip_response'], self.parm_dict['tip_excitation'])
-        _gk.process_tf()
+        self.process_tf(exc_floor)
+        # defl = get_utils.get_pixel(self.h5_main, [0, 0], array_form=True).flatten()
+        # _gk = GKPixel(defl, self.parm_dict, exc_wfm=exc_wfm)
+        # _gk.load_tf(self.parm_dict['tip_response'], self.parm_dict['tip_excitation'])
+        # _gk.process_tf()
 
-        self.TF_norm = _gk.TF_norm
-        del _gk
+        # self.TF_norm = _gk.TF_norm
+        # del _gk
 
         self.parm_dict['denoise'] = False
         self.parm_dict['filter_cpd'] = False
@@ -125,6 +138,29 @@ class GKPFM(FFtrEFM):
         """
         self.parm_dict.update(kwargs)
 
+        return
+    
+    def process_tf(self, exc_floor=10):
+        """
+        Generates a Transfer Function using GKPixel function
+        
+        Parameters
+        ----------
+        exc_floor : float
+            DESCRIPTION.
+        """
+        
+        defl = get_utils.get_pixel(self.h5_main, [0, 0], array_form=True).flatten()
+        _gk = GKPixel(defl, self.parm_dict)
+        _gk.load_tf(self.parm_dict['tip_response'], self.parm_dict['tip_excitation'])
+        _gk.process_tf(exc_floor=exc_floor)
+
+        self.TF_norm = _gk.TF_norm
+        del _gk
+        
+        if any(np.isnan(self.TF_norm)):
+            warnings.warn('TF is NaN! Lower exc_floor value to lower threshold of pass TF_norm explicitly')
+        
         return
 
     def test(self, pixel_ind=[0, 0], phases_to_test=[2.0708, 2.1208, 2.1708]):
@@ -165,13 +201,23 @@ class GKPFM(FFtrEFM):
                       TF_norm=self.TF_norm)
 
         _gk.min_phase(phases_to_test=phases_to_test, noise_tolerance=self.parm_dict['noise_tolerance'])
-        _gk.force_out(plot=True, noise_tolerance=self.parm_dict['noise_tolerance'])
+        
+        # If User supplies a phase shift
+        if 'phase_shift' in self.parm_dict:
+            _gk.force_out(plot=True, noise_tolerance=self.parm_dict['noise_tolerance'],
+                          phase_shift = self.parm_dict['phase_shift'])
+        else:
+            _gk.force_out(plot=True, noise_tolerance=self.parm_dict['noise_tolerance'])
 
         if self.parm_dict['denoise']:
             print('aa')
             _gk.noise_filter()
 
-        _gk.analyze_cpd(use_raw=False, periods=self.parm_dict['periods'])
+        try:
+            _gk.analyze_cpd(use_raw=False, periods=self.parm_dict['periods'])
+        except LinAlgError:
+            print('Make sure TF_norm is set correctly. Pass TF_norm explicitly.')
+            return _gk
 
         if self.parm_dict['filter_cpd']:
             print('bb')

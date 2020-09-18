@@ -124,7 +124,7 @@ def load_wrapper(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False,
                     verbose=verbose, loadverbose=loadverbose, mirror=mirror)
 
     if loadverbose:
-        print('*** Copy-Paste below code for IDE access h5***')
+        print('*** Copy-Paste below code for IDE access to h5***')
         print('import h5py')
         print("h5_file = h5py.File(r'"+h5_path+"')")
         print("h5_avg = h5_file['FF_Group/FF_Avg']")

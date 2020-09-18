@@ -226,7 +226,7 @@ class Pixel:
         
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
-            if not hasattr(self, key):
+            if not hasattr(self, key) or getattr(self, key) == None:
                 setattr(self, key, value)
 
         for key, value in can_params.items():

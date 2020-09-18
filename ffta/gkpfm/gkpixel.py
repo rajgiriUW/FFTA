@@ -15,7 +15,7 @@ from ffta.pixel import Pixel
 import warnings
 
 from pycroscopy.processing.fft import get_noise_floor
-from pycroscopy.analysis.utils.be_sho import SHOfunc, SHOestimateGuess
+from pycroscopy.analysis.utils.be_sho import SHOfunc, SHOfit
 import pycroscopy as px
 from igor.binarywave import load as loadibw
 import pyUSID as usid
@@ -57,6 +57,10 @@ class GKPixel(Pixel):
             CPD_mean : float
                 Simple average of the CPD trace, useful for plotting
         '''
+        
+        if len(signal_array.shape) > 1:
+            warnings.warn('Be sure you are only sending one pixel of data, not an image')
+        
         self.periods = periods
         self.phase_shift = phase_shift
 
@@ -92,12 +96,12 @@ class GKPixel(Pixel):
 
         Parameters
         ----------
-            exc_params: dict, optional
+        exc_params: dict, optional
                 Specifies parameters for excitation waveform. Relevant keys are ac (in V), dc (in V),
                 phase (in radians), and frequency (in Hz). The default is None, implying an excitation waveform of
                 magnitude 1V, with period 1/drive_freq, and 0 DC offset.
             
-            phase: float, optional
+        phase: float, optional
                 Offset of the excitation waveform in radians. Default is pi.
         """
         self.exc_params = {'ac': 1, 'dc': 0, 'phase': phase, 'frequency': self.drive_freq}
@@ -112,6 +116,54 @@ class GKPixel(Pixel):
 
         self.exc_wfm = (ac * np.sin(self.t_ax * 2 * np.pi * fr + ph) + dc)
 
+        return
+
+    def excitation_phase(self, exc_path, exc_params={}, phase_range = [-np.pi, np.pi]):
+        """
+        Generates the excitation waveform based on the input ibw.
+        
+        Calculates phase and runs self.excitation until they match.
+        This process is to compensate for the Gage card having a limited input voltage range.
+        
+        Parameters
+        ----------
+        exc_path : string
+            .ibw path containing the applied DDS excitation to the cantilever from the experiment
+        exc_params: dict, optional
+                Specifies parameters for excitation waveform. Relevant keys are ac (in V), dc (in V),
+                phase (in radians), and frequency (in Hz). The default is None, implying an excitation waveform of
+                magnitude 1V, with period 1/drive_freq, and 0 DC offset.
+            
+        phase_range: list, shape 2, optional
+                The start and stop phases to check
+
+        Returns
+        -------
+        self.exc_wfm
+
+        """
+        
+        phase_test = np.arange(phase_range[0], phase_range[1], 0.1)
+        
+        exc_raw = loadibw(exc_path)['wave']['wData']
+        exc_raw = exc_raw[:,10] # pick a random slice
+        
+        for p in phase_test:
+            
+            self.excitation(exc_params, p)
+            
+            _pke = np.argmax(self.exc_wfm[:50:1])
+            _pki = np.argmax(exc_raw[:50:1])
+            
+            if _pke == _pki:
+                print('Done matching phase', p)
+                plt.figure()
+                plt.plot(self.exc_wfm[:50], 'r')
+                plt.plot(exc_raw[:50]*100, 'b')
+                
+                break
+            
+        
         return
 
     def dc_response(self, plot=True):
@@ -132,7 +184,7 @@ class GKPixel(Pixel):
 
         if plot:
             plt.figure()
-            plt.plot(self.t_ax, sig_dc)
+            plt.plot(self.t_ax, sig_dc, 'b')
             plt.title('DC Offset')
 
         self.sig_dc = sig_dc
@@ -152,8 +204,8 @@ class GKPixel(Pixel):
         if remove_dc:
             self.TF[int(len(tf) / 2)] = 0
 
-        self.exc = np.mean(exc, axis=1)
-        self.EXC = np.fft.fftshift(np.fft.fft(self.exc))
+        self.tf_exc = np.mean(exc, axis=1)
+        self.TF_EXC = np.fft.fftshift(np.fft.fft(self.tf_exc))
 
     def process_tf(self, resonances=2, width=20e3, exc_floor=10, plot=False):
         '''
@@ -182,7 +234,7 @@ class GKPixel(Pixel):
         # drive_bin = int(np.ceil(self.drive_freq / df)) 
 
         # Reconstruct from SHO
-        excited_bins = np.where(np.abs(self.EXC) > exc_floor)[0]
+        excited_bins = np.where(np.abs(self.TF_EXC) > exc_floor)[0]
         band_edges = tf_fit_mat(self.drive_freq, resonances, width)
 
         Q_guesses = [self.Q, 3 * self.Q, 6 * self.Q, 9 * self.Q]
@@ -342,7 +394,7 @@ class GKPixel(Pixel):
 
         return
 
-    def force_out(self, plot=False, noise_tolerance=1e-6):
+    def force_out(self, plot=False, noise_tolerance=1e-6, phase_shift=0):
         """
         Reconstructs force by dividing by transfer function
 
@@ -366,6 +418,9 @@ class GKPixel(Pixel):
 
         SIG = self.SIG
 
+        if phase_shift != 0:
+            self.phase_shift = phase_shift
+            
         if self.phase_shift != 0:
             SIG = self.SIG * np.exp(-1j * self.f_ax[drive_bin] * self.phase_shift)
 
@@ -388,7 +443,7 @@ class GKPixel(Pixel):
             stop = int(1.5 * self.trigger * self.sampling_rate)
             plt.figure()
             plt.plot(self.t_ax[start:stop], self.force[start:stop])
-            plt.title('Force (output/TF_norm) vs time')
+            plt.title('Force (output/TF_norm) vs time, near trigger')
             plt.xlabel('Time (s)')
             plt.ylabel('Force (N)')
 
@@ -417,7 +472,7 @@ class GKPixel(Pixel):
 
     def plot_response(self):
         """
-        Plots the transfer function and calculated force
+        Plots the transfer function and calculated force in frequency space
 
         """
         plt.figure()
@@ -450,7 +505,7 @@ class GKPixel(Pixel):
         self.num_periods = int(self.pxl_time / self.time_per_osc)  # number of periods in each pixel
 
         self.num_CPD = int(np.floor(
-            self.num_periods / self.periods))  # number of CPD samples, since each CPD takes some number of periods
+            self.num_periods / self.periods))  # length of CPD array since each CPD takes some number of periods
         self.pnts_per_CPD = int(np.floor(self.pnts_per_period * self.periods))  # points used to calculate CPD
         self.remainder = int(self.n_points % self.pnts_per_CPD)
 
@@ -625,27 +680,8 @@ class GKPixel(Pixel):
 
         return ph
 
-#hack fix for SHOfit import error
-def SHOfit(parms, w_vec, resp_vec):
-    """
-    Cost function minimization of SHO fitting
-    Parameters
-    -----------
-    parms : list or tuple
-        SHO parameters=(A,w0,Q,phi)
-    w_vec : 1D numpy array
-        Vector of frequency values
-    resp_vec : 1D complex numpy array or list
-        Cantilever response vector as a function of frequency
-    """
-    # Cost function to minimize.
-    cost = lambda p: np.sum((SHOfunc(parms, w_vec) - resp_vec) ** 2)
 
-    popt = minimize(cost, parms, method='TNC', options={'disp':False})
-
-    return popt.x
-
-# Support
+# Support functions
 def poly2(t, a, b, c):
     return a * t ** 2 + b * t + c
 
