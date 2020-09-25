@@ -63,6 +63,22 @@ def fit_product(Q, drive_freq, t, inst_freq):
 
 	return popt.x
 
+def fit_product_unbound(Q, drive_freq, t, inst_freq):
+	"""Fit without any bound constraints"""
+    
+    # Initial guess for relaxation constant.
+	inv_beta = Q / (np.pi * drive_freq)
+
+	# Cost function to minimize.
+	cost = lambda p: np.sum((ddho_freq_product(t, *p) - inst_freq) ** 2)
+
+	# bounded optimization using scipy.minimize
+	pinit = [inst_freq.min(), 1e-4, inv_beta]
+
+	popt = minimize(cost, pinit, method='TNC', options={'disp': False})
+
+	return popt.x
+
 
 def fit_sum(Q, drive_freq, t, inst_freq):
 	# Initial guess for relaxation constant.

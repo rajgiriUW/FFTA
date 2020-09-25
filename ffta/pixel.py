@@ -626,10 +626,11 @@ class Pixel:
                 tfp_calc.fit_phase(self, cut, t)
 
         except:
-                
+            
             self.tfp = np.nan
             self.shift = np.nan
             self.best_fit = np.zeros(cut.shape[0])
+            print('error with fitting')
 
         return
 
@@ -878,7 +879,7 @@ class Pixel:
             t1 = time.time()
 
         # Remove DC component, first.
-        # self.remove_dc()
+        self.remove_dc()
 
         # Phase-lock signals.
         # self.phase_lock()

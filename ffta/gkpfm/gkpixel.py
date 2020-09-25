@@ -165,6 +165,35 @@ class GKPixel(Pixel):
             
         
         return
+    
+    def excitation_scale(self, exc_path, exc_params):
+        """
+        Generates the excitation waveform based on the input ibw. Scaled to exc_params
+        
+        This process is to compensate for the Gage card having a limited input voltage range.
+        
+        Parameters
+        ----------
+        exc_path : string
+            .ibw path containing the applied DDS excitation to the cantilever from the experiment
+        exc_params: dict
+                Specifies parameters for excitation waveform. Relevant keys are ac (in V), dc (in V),
+                phase (in radians), and frequency (in Hz). The default is None, implying an excitation waveform of
+                magnitude 1V, with period 1/drive_freq, and 0 DC offset.
+                
+                example : exc_params = {'ac': 3, 'dc': 3} for 3 Vdc and 3Vac excitation
+        """
+        
+        exc_raw = loadibw(exc_path)['wave']['wData'].mean(axis=1)
+        exc_raw *= 10 # resistor divider
+        exc_raw = (exc_raw - exc_raw.min()) / (exc_raw.max() - exc_raw.min())
+        exc_raw = (exc_raw - 0.5) * 2 #scaled -1 to 1
+        exc_raw *= exc_params['ac']
+        exc_raw += exc_params['dc']
+        
+        self.exc_wfm = exc_raw 
+        
+        return
 
     def dc_response(self, plot=True):
         """
@@ -416,7 +445,7 @@ class GKPixel(Pixel):
         center = int(len(self.SIG) / 2)
         drive_bin = int(self.drive_freq / (self.sampling_rate / len(self.SIG)))
 
-        SIG = self.SIG
+        SIG = np.copy(self.SIG)
 
         if phase_shift != 0:
             self.phase_shift = phase_shift
@@ -437,6 +466,8 @@ class GKPixel(Pixel):
         self.FORCE[signal_pass] = SIG[signal_pass]
         self.FORCE = self.FORCE / self.TF_norm
         self.force = np.real(np.fft.ifft(np.fft.ifftshift(self.FORCE)))
+        
+        del SIG
 
         if plot:
             start = int(0.5 * self.trigger * self.sampling_rate)
