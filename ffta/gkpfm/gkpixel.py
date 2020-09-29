@@ -23,10 +23,22 @@ import pyUSID as usid
 
 class GKPixel(Pixel):
 
-    def __init__(self, signal_array, params, can_params={},
-                 fit=True, pycroscopy=False, method='hilbert', fit_form='product',
-                 filter_amplitude=False, filter_frequency=False,
-                 TF_norm=[], exc_wfm=[], periods=2, phase_shift=0):
+    def __init__(self, signal_array, 
+                 params, 
+                 can_params={},
+                 fit=True, 
+                 pycroscopy=False, 
+                 method='hilbert', 
+                 fit_form='product',
+                 filter_amplitude=False, 
+                 filter_frequency=False,
+                 trigger=None,
+                 total_time=None,
+                 sampling_rate=None,
+                 TF_norm=[], 
+                 exc_wfm=[], 
+                 periods=2, 
+                 phase_shift=0):
         '''
         Class for processing G-KPFM data
 
@@ -66,7 +78,8 @@ class GKPixel(Pixel):
 
         super().__init__(signal_array, params, can_params,
                          fit, False, method, fit_form,
-                         filter_amplitude, filter_frequency)
+                         filter_amplitude, filter_frequency, 
+                         trigger, total_time, sampling_rate)
 
         # This functionality is for single lines
         if len(self.signal_array.shape) > 1:
@@ -433,6 +446,8 @@ class GKPixel(Pixel):
             Generates plot of reconstructed force. The default is False.
         noise_tolerance : float, optional
             Use to determine noise_floor, The default is 1e-6
+        phase_shift : float, optional
+            Desired phase shift in radians
 
         Returns
         -------
@@ -448,10 +463,14 @@ class GKPixel(Pixel):
         SIG = np.copy(self.SIG)
 
         if phase_shift != 0:
+
             self.phase_shift = phase_shift
             
         if self.phase_shift != 0:
-            SIG = self.SIG * np.exp(-1j * self.f_ax[drive_bin] * self.phase_shift)
+            # DFT shift theorem
+            period = self.sampling_rate / self.drive_freq
+            ph = self.phase_shift * period / (2*np.pi)
+            SIG = self.SIG * np.exp(-1j * ph * self.f_ax / (0.5*len(self.f_ax)) )
 
         self.FORCE = np.zeros(len(SIG), dtype=complex)
 
@@ -666,8 +685,12 @@ class GKPixel(Pixel):
             self.phase_shift = ph
             self.force_out(plot=False, noise_tolerance=noise_tolerance)
 
-            usid.plot_utils.rainbow_plot(ax[x], self.exc_wfm, self.force)
-            ax[x].set_title('Phase=' + str(ph))
+            if len(phases_to_test) > 1:
+                usid.plot_utils.rainbow_plot(ax[x], self.exc_wfm, self.force)
+                ax[x].set_title('Phase=' + str(ph))
+            else:
+                usid.plot_utils.rainbow_plot(ax, self.exc_wfm, self.force)
+                ax.set_title('Phase=' + str(ph))
 
         print('Set self.phase_shift to match desired phase offset (radians)')
 
