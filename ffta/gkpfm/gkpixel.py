@@ -8,6 +8,7 @@ Created on Tue Sep  3 11:55:14 2019
 import numpy as np
 import numpy.polynomial.polynomial as npPoly
 from scipy.optimize import fmin_tnc
+from scipy.signal import fftconvolve
 from matplotlib import pyplot as plt
 from ffta.simulation.cantilever import Cantilever
 from ffta.pixel_utils.load import cantilever_params
@@ -238,15 +239,29 @@ class GKPixel(Pixel):
         Process transfer function and broadband excitation from supplied file
         This function does not check shape or length
         '''
-        tf = loadibw(tf_path)['wave']['wData']
-        exc = loadibw(excitation_path)['wave']['wData']
-        self.tf = np.mean(tf, axis=1)
+        
+        if isinstance(tf_path, str):
+            tf = loadibw(tf_path)['wave']['wData']
+        else:
+            tf = tf_path
+            
+        if isinstance(excitation_path, str):
+            exc = loadibw(excitation_path)['wave']['wData']
+        else:
+            exc = excitation_path
+            
+        self.tf = tf
+        if len(tf.shape ) > 1:
+            self.tf = np.mean(tf, axis=1)
         self.TF = np.fft.fftshift(np.fft.fft(self.tf))
 
         if remove_dc:
             self.TF[int(len(tf) / 2)] = 0
 
-        self.tf_exc = np.mean(exc, axis=1)
+        self.tf_exc = exc
+        if len(exc.shape) > 1:
+            self.tf_exc = np.mean(exc, axis=1)
+            
         self.TF_EXC = np.fft.fftshift(np.fft.fft(self.tf_exc))
 
     def process_tf(self, resonances=2, width=20e3, exc_floor=10, plot=False):
@@ -632,13 +647,30 @@ class GKPixel(Pixel):
             self.CPD[-1] = self.CPD[-2]
             self.capacitance[-1] = self.capacitance[-2]
 
-    def plot_cpd(self):
+    def plot_cpd(self, smooth=None):
+        '''
+        Plots the CPD response
 
+        Parameters
+        ----------
+        smooth : int, optional
+            Boxcar smoothign kernel. Value of 3 is reasonable
+
+        Returns
+        -------
+        ax : matplotlib figure axis object
+
+        '''
         fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
         tx = np.linspace(0, self.total_time, self.num_CPD)
-        ax.plot(tx * 1e3, self.CPD[:self.num_CPD], 'b')
+        
+        if smooth:
+            ax.plot(tx * 1e3, fftconvolve(self.CPD[:self.num_CPD], np.ones(smooth)/3), 'b')
+        else:
+            ax.plot(tx * 1e3, self.CPD[:self.num_CPD], 'b')
         ax.set_xlabel('Time (ms)')
         ax.set_ylabel('CPD (V)')
+        ax.set_title('CPD response')
 
         return ax
 

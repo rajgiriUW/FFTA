@@ -38,7 +38,7 @@ class GKPFM(FFtrEFM):
     Example usage:
 
         >> from ffta.hdf_utils import process
-        >> data = process.FFtrEFM(h5_main)
+        >> data = process.GKPFM(h5_main)
         >> data.test([1,2]) # tests on pixel 1,2 in row, column
         >> data.compute()
         >> data.reshape() # reshapes the tFP, shift data

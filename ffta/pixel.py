@@ -78,6 +78,7 @@ class Pixel:
             hilbert: Hilbert transform method (default)
             wavelet: Morlet CWT approach
             stft: short time Fourier transform (sliding FFT)
+            fv: Feldman Force-Vib method
     
     filter_amplitude : bool, optional
         The Hilbert Transform amplitude can sometimes have drive frequency artifact.
@@ -179,6 +180,7 @@ class Pixel:
         self.fft_analysis = False
         self.fft_cycles = 2
         self.fft_params = {}  # for STFT
+        self.fft_time_res = 20e-6
 
         self.recombination = False
         self.phase_fitting = False
@@ -588,90 +590,7 @@ class Pixel:
         self.inst_freq = self.inst_freq_raw - self.inst_freq_raw[self.tidx]
 
         return
-
-    def find_tfp(self):
-        """Calculate tfp and shift based self.fit_form and self.fit selection"""
-        ridx = int(self.roi * self.sampling_rate)
-        cut = self.inst_freq[self.tidx:(self.tidx + ridx)]
-        cut -= self.inst_freq[self.tidx]
-        self.cut = cut
-        t = np.arange(cut.shape[0]) / self.sampling_rate
-        
-        try:
-            
-            if not self.fit:
     
-                tfp_calc.find_minimum(self, cut)
-    
-            elif self.fit_form == 'sum':
-    
-                tfp_calc.fit_freq_sum(self, cut, t)
-    
-            elif self.fit_form == 'exp':
-    
-                tfp_calc.fit_freq_exp(self, cut, t)
-    
-            elif self.fit_form == 'ringdown':
-    
-                cut = self.amplitude[self.tidx:(self.tidx + ridx)]
-                tfp_calc.fit_ringdown(self, cut, t)
-    
-            elif self.fit_form == 'product':
-    
-                tfp_calc.fit_freq_product(self, cut, t)
-    
-            elif self.fit_form == 'phase':
-    
-                cut = -1 * (self.phase[self.tidx:(self.tidx + ridx)] - self.phase[self.tidx])
-                tfp_calc.fit_phase(self, cut, t)
-
-        except:
-            
-            self.tfp = np.nan
-            self.shift = np.nan
-            self.best_fit = np.zeros(cut.shape[0])
-            print('error with fitting')
-
-        return
-
-    def restore_signal(self):
-        """Restores the signal length and position of trigger to original
-        values."""
-
-        # Difference between current and original values.
-        d_trig = int(self._tidx_orig - self.tidx)
-        d_points = int(self._n_points_orig - self.n_points)
-
-        # Check if the signal length can accomodate the shift or not.
-        if d_trig >= d_points:
-
-            # Pad from left and set the original length.
-            self.inst_freq = np.pad(self.inst_freq, (d_trig, 0), 'edge')
-            self.inst_freq = self.inst_freq[:self._n_points_orig]
-
-            self.phase = np.pad(self.phase, (d_trig, 0), 'edge')
-            self.phase = self.phase[:self._n_points_orig]
-
-            self.amplitude = np.pad(self.amplitude, (d_trig, 0), 'edge')
-            self.amplitude = self.amplitude[:self._n_points_orig]
-
-        else:
-
-            # Calculate how many points is needed for padding from right.
-            pad_right = d_points - d_trig
-            self.inst_freq = np.pad(self.inst_freq, (d_trig, pad_right),
-                                    'edge')
-            self.phase = np.pad(self.phase, (d_trig, pad_right),
-                                'edge')
-            self.amplitude = np.pad(self.amplitude, (d_trig, pad_right),
-                                    'edge')
-
-        # Set the public variables back to original values.
-        self.tidx = self._tidx_orig
-        self.n_points = self._n_points_orig
-
-        return
-
     def calculate_cwt(self, f_center=None, verbose=False, optimize=False, fit=False):
         '''
         Calculate instantaneous frequency using continuous wavelet transfer
@@ -816,6 +735,96 @@ class Pixel:
         self.phase = phase
 
         return
+    
+    def forcevib(self):
+        """Calculate the resonance frequency directly via FORCE-VIB method.
+        See
+        """
+        
+        return
+    
+    def find_tfp(self):
+        """Calculate tfp and shift based self.fit_form and self.fit selection"""
+        ridx = int(self.roi * self.sampling_rate)
+        cut = self.inst_freq[self.tidx:(self.tidx + ridx)]
+        cut -= self.inst_freq[self.tidx]
+        self.cut = cut
+        t = np.arange(cut.shape[0]) / self.sampling_rate
+        
+        try:
+            
+            if not self.fit:
+    
+                tfp_calc.find_minimum(self, cut)
+    
+            elif self.fit_form == 'sum':
+    
+                tfp_calc.fit_freq_sum(self, cut, t)
+    
+            elif self.fit_form == 'exp':
+    
+                tfp_calc.fit_freq_exp(self, cut, t)
+    
+            elif self.fit_form == 'ringdown':
+    
+                cut = self.amplitude[self.tidx:(self.tidx + ridx)]
+                tfp_calc.fit_ringdown(self, cut, t)
+    
+            elif self.fit_form == 'product':
+    
+                tfp_calc.fit_freq_product(self, cut, t)
+    
+            elif self.fit_form == 'phase':
+    
+                cut = -1 * (self.phase[self.tidx:(self.tidx + ridx)] - self.phase[self.tidx])
+                tfp_calc.fit_phase(self, cut, t)
+
+        except:
+            
+            self.tfp = np.nan
+            self.shift = np.nan
+            self.best_fit = np.zeros(cut.shape[0])
+            print('error with fitting')
+
+        return
+
+    def restore_signal(self):
+        """Restores the signal length and position of trigger to original
+        values."""
+
+        # Difference between current and original values.
+        d_trig = int(self._tidx_orig - self.tidx)
+        d_points = int(self._n_points_orig - self.n_points)
+
+        # Check if the signal length can accomodate the shift or not.
+        if d_trig >= d_points:
+
+            # Pad from left and set the original length.
+            self.inst_freq = np.pad(self.inst_freq, (d_trig, 0), 'edge')
+            self.inst_freq = self.inst_freq[:self._n_points_orig]
+
+            self.phase = np.pad(self.phase, (d_trig, 0), 'edge')
+            self.phase = self.phase[:self._n_points_orig]
+
+            self.amplitude = np.pad(self.amplitude, (d_trig, 0), 'edge')
+            self.amplitude = self.amplitude[:self._n_points_orig]
+
+        else:
+
+            # Calculate how many points is needed for padding from right.
+            pad_right = d_points - d_trig
+            self.inst_freq = np.pad(self.inst_freq, (d_trig, pad_right),
+                                    'edge')
+            self.phase = np.pad(self.phase, (d_trig, pad_right),
+                                'edge')
+            self.amplitude = np.pad(self.amplitude, (d_trig, pad_right),
+                                    'edge')
+
+        # Set the public variables back to original values.
+        self.tidx = self._tidx_orig
+        self.n_points = self._n_points_orig
+
+        return
 
     def plot(self, newplot=True, raw=False):
         """ 
@@ -907,6 +916,10 @@ class Pixel:
             # Calculate instantenous frequency using sliding FFT
             self.calculate_stft(**self.fft_params)
 
+        elif self.method == 'fv':
+            
+            self.forcevib()
+
         elif self.method == 'hilbert':
             # Hilbert transform method
 
@@ -960,6 +973,7 @@ class Pixel:
 
         # If it's a recombination image invert it to find minimum.
         if self.recombination:
+            
             self.inst_freq = self.inst_freq * -1
 
         # Find where the minimum is.
@@ -967,10 +981,12 @@ class Pixel:
 
         # Restore the length due to FIR filter being causal
         if self.method == 'hilbert':
+            
             self.restore_signal()
 
         # If it's a recombination image invert it to find minimum.
         if self.recombination:
+            
             self.inst_freq = self.inst_freq * -1
             self.best_fit = self.best_fit * -1
             self.cut = self.cut * -1
