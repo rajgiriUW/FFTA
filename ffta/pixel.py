@@ -671,7 +671,7 @@ class Pixel:
 
         return
 
-    def calculate_stft(self, time_res=20e-6, nfft=200):
+    def calculate_stft(self, nfft=200):
         '''
         Sliding FFT approach
         
@@ -688,8 +688,8 @@ class Pixel:
             Length of FFT calculated in the spectrogram. More points gets much slower
             but the longer the FFT the finer the frequency bin spacing            
         '''
-
-        pts_per_ncycle = int(time_res * self.sampling_rate)
+        
+        pts_per_ncycle = int(self.fft_time_res * self.sampling_rate)
 
         if nfft < pts_per_ncycle:
             print('Error with nfft setting')
