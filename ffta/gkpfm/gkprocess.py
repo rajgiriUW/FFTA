@@ -117,7 +117,10 @@ class GKPFM(FFtrEFM):
                          **kwargs)
 
         # save Transfer Function
-        self.process_tf(exc_floor)
+        if not any(TF_norm):
+            self.process_tf(exc_floor)
+        else:
+            self.TF_norm = TF_norm
         # defl = get_utils.get_pixel(self.h5_main, [0, 0], array_form=True).flatten()
         # _gk = GKPixel(defl, self.parm_dict, exc_wfm=exc_wfm)
         # _gk.load_tf(self.parm_dict['tip_response'], self.parm_dict['tip_excitation'])
@@ -163,7 +166,7 @@ class GKPFM(FFtrEFM):
         
         return
 
-    def test(self, pixel_ind=[0, 0], phases_to_test=[2.0708, 2.1208, 2.1708]):
+    def test(self, pixel_ind=[0, 0], phases_to_test=[2.0708, 2.1208, 2.1708], smooth=None):
         """
         Test the Pixel analysis of a single pixel
 
@@ -200,7 +203,9 @@ class GKPFM(FFtrEFM):
         _gk = GKPixel(defl, self.parm_dict, exc_wfm=self.exc_wfm,
                       TF_norm=self.TF_norm)
 
-        _gk.min_phase(phases_to_test=phases_to_test, noise_tolerance=self.parm_dict['noise_tolerance'])
+        _gk.min_phase(phases_to_test=phases_to_test, noise_tolerance=self.parm_dict['noise_tolerance'],
+                      verbose=False)
+        print("Set self.parm_dict['phase_shift'] to desired value")
         
         # If User supplies a phase shift
         if 'phase_shift' in self.parm_dict:
@@ -208,6 +213,7 @@ class GKPFM(FFtrEFM):
                           phase_shift = self.parm_dict['phase_shift'])
         else:
             _gk.force_out(plot=True, noise_tolerance=self.parm_dict['noise_tolerance'])
+            self.parm_dict['phase_shift'] = phases_to_test[-1]
 
         if self.parm_dict['denoise']:
             print('aa')
@@ -223,7 +229,7 @@ class GKPFM(FFtrEFM):
             print('bb')
             _gk.CPD = gaussian_filter1d(_gk.CPD, 1)[:_gk.num_CPD]
 
-        _gk.plot_cpd()
+        _gk.plot_cpd(smooth)
 
         self.cpd_dict = _gk._calc_cpd_params(return_dict=True, periods=self.parm_dict['periods'])
 
@@ -316,23 +322,8 @@ class GKPFM(FFtrEFM):
 
     def reshape(self):
         '''
-        Reshapes the tFP and shift data to be a matrix, then saves that dataset instead of the 1D
+        Currently unimplemented. See ffta.hdf_utils.process.FFtrEFM for an example
         '''
-
-        h5_cpd = self.h5_cpd[()]
-        h5_cap = self.h5_cap[()]
-
-        num_rows = self.parm_dict['num_rows']
-        num_cols = self.parm_dict['num_cols']
-
-        h5_cpd = np.reshape(h5_cpd, [num_rows, num_cols])
-        h5_cap = np.reshape(h5_cap, [num_rows, num_cols])
-
-        del self.h5_cpd.file[self.h5_cpd.name]
-        del self.h5_cpd.file[self.h5_cap.name]
-
-        self.h5_cpd = self.h5_results_grp.create_dataset('tfp', data=h5_cpd, dtype=np.float32)
-        self.h5_cap = self.h5_results_grp.create_dataset('shift', data=h5_cap, dtype=np.float32)
 
         return
 
@@ -397,7 +388,7 @@ class GKPFM(FFtrEFM):
         exc_wfm = args[2]
 
         gk = GKPixel(defl, parm_dict, exc_wfm=exc_wfm, TF_norm=TF_norm)
-        gk.force_out(noise_tolerance=parm_dict['noise_tolerance'])
+        gk.force_out(noise_tolerance=parm_dict['noise_tolerance'], phase_shift=parm_dict['phase_shift'])
 
         if parm_dict['denoise']:
             gk.noise_filter()

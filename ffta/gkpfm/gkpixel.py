@@ -665,7 +665,7 @@ class GKPixel(Pixel):
         tx = np.linspace(0, self.total_time, self.num_CPD)
         
         if smooth:
-            ax.plot(tx * 1e3, fftconvolve(self.CPD[:self.num_CPD], np.ones(smooth)/3), 'b')
+            ax.plot(tx * 1e3, fftconvolve(self.CPD[:self.num_CPD], np.ones(smooth)/3, mode='same'), 'b')
         else:
             ax.plot(tx * 1e3, self.CPD[:self.num_CPD], 'b')
         ax.set_xlabel('Time (ms)')
@@ -686,7 +686,7 @@ class GKPixel(Pixel):
         return
 
     def min_phase(self, phases_to_test=[2.0708, 2.1208, 2.1708], 
-                  noise_tolerance=1e-6):
+                  noise_tolerance=1e-6, verbose=True):
         """
         Determine the optimal phase shift due to cable lag
         
@@ -724,7 +724,8 @@ class GKPixel(Pixel):
                 usid.plot_utils.rainbow_plot(ax, self.exc_wfm, self.force)
                 ax.set_title('Phase=' + str(ph))
 
-        print('Set self.phase_shift to match desired phase offset (radians)')
+        if verbose:
+            print('Set self.phase_shift to match desired phase offset (radians)')
 
         return
 
