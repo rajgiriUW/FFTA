@@ -160,7 +160,8 @@ class Pixel:
                  filter_frequency=False,
                  trigger=None,
                  total_time=None,
-                 sampling_rate=None):
+                 sampling_rate=None,
+                 roi=None):
 
         # Create parameter attributes for optional parameters.
         # These defaults are overwritten by values in 'params'
@@ -225,6 +226,7 @@ class Pixel:
         setattr(self, 'trigger', trigger)
         setattr(self, 'total_time', total_time)
         setattr(self, 'sampling_rate', sampling_rate)
+        setattr(self, 'roi', roi)
         
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
@@ -239,26 +241,36 @@ class Pixel:
             raise KeyError('Trigger must be supplied')
             
         if not self.total_time:
+            
             if not self.sampling_rate:
                 raise KeyError('total_time or sampling_rate must be supplied')
+            
             else:
                 self.total_time = self.sampling_rate * self.n_points
+        
         elif not self.sampling_rate:
             self.sampling_rate = int(self.n_points / self.total_time)
+        
         elif self.total_time != self.n_points / self.sampling_rate  :
+        
             print(self.n_points / self.sampling_rate )
             print(self.total_time)
             raise ValueError('total_time and sampling_rate mismatch')
         
-        if not hasattr(self, 'roi'):
+        if not self.roi:
+            
             self.roi = 0.3 * (self.total_time - self.trigger)
             warnings.warn('ROI defaulting to 30% post-trigger')
+        
+        elif self.roi > self.total_time - self.trigger:
+            raise ValueError('roi must not extend beyond the total_time')
         
         self.tidx = int(self.trigger * self.sampling_rate)    
         self._tidx_orig = self.tidx
         self.tidx_orig = self.tidx
         
         if not hasattr(self, 'drive_freq'):
+            
             self.average()
             self.set_drive()
         
@@ -294,13 +306,33 @@ class Pixel:
 
         return
 
-    def remove_dc(self):
+    def remove_dc(self, dc_width=10e3, plot=False):
         """Removes DC components from signals."""
 
-        if self.n_signals != 1:
+        if self.n_signals == 1:
+            
+            return
 
-            for i in range(self.n_signals):
-                self.signal_array[:, i] -= np.mean(self.signal_array[:, i])
+        for i in range(self.n_signals):
+            self.signal_array[:, i] -= np.mean(self.signal_array[:, i])
+
+        f_ax = np.linspace(self.sampling_rate/2, self.sampling_rate/2, self.n_points)
+        mid = int(len(f_ax) / 2)
+        # drive_bin = np.searchsorted(f_ax[mid:], self.drive_freq) + mid
+        delta_freq = self.sampling_rate / self.n_points
+
+        SIG_DC = np.fft.fftshift(np.fft.fft(self.signal_array))
+
+        SIG_DC[:mid - int(dc_width / delta_freq)] = 0
+        SIG_DC[mid + int(dc_width / delta_freq):] = 0
+        sig_dc = np.real(np.fft.ifft(np.fft.ifftshift(SIG_DC)))
+
+        if plot:
+            plt.figure()
+            plt.plot(np.arange(0, self.total_time, 1/self.sampling_rate), sig_dc, 'b')
+            plt.title('DC Offset')
+
+        self.sig_dc = sig_dc
 
         return
 
@@ -694,6 +726,9 @@ class Pixel:
         if nfft < pts_per_ncycle:
             print('Error with nfft setting')
             nfft = pts_per_ncycle
+
+        if pts_per_ncycle > len(self.signal):
+            pts_per_ncycle = len(self.signal)
 
         # drivebin = int(self.drive_freq / (self.sampling_rate / nfft ))
         freq, times, spectrogram = sps.spectrogram(self.signal,

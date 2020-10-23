@@ -101,6 +101,7 @@ class MechanicalDrive_Simple(Cantilever):
         # Did user supply a voltage pulse themselves 
         if len(w_array) != int(self.total_time * self.sampling_rate):
             print(int(self.total_time * self.sampling_rate))
+            print(len(w_array))
             raise ValueError('v_array must match sampling rate/length of parameters')
 
         self.w_array = w_array
