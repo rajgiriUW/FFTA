@@ -432,27 +432,22 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
         print('Saving from pyUSID object')
         h5_ff = h5_file.file
 
-    tfp = usid.hdf_utils.find_dataset(h5_ff[h5_path], 'tfp')[0][()]
+    cpd = usid.hdf_utils.find_dataset(h5_ff[h5_path], 'CPD')[0][()]
     # tfp_fixed = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp_fixed')[0][()]
-    shift = usid.hdf_utils.find_dataset(h5_ff[h5_path], 'shift')[0][()]
-
-    tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)
-    tfp_fixed = np.array(tfp_fixed)
-
-    print(usid.hdf_utils.find_dataset(h5_ff[h5_path], 'shift')[0].parent.name)
+    capacitance = usid.hdf_utils.find_dataset(h5_ff[h5_path], 'capacitance')[0][()]
+    
+    print(usid.hdf_utils.find_dataset(h5_ff[h5_path], 'CPD')[0].parent.name)
 
     path = h5_ff.file.filename.replace('\\', '/')
     path = '/'.join(path.split('/')[:-1]) + '/'
     os.chdir(path)
 
     if mirror:
-        np.savetxt('tfp-' + append + '.csv', np.fliplr(tfp).T, delimiter=',')
-        np.savetxt('shift-' + append + '.csv', np.fliplr(shift).T, delimiter=',')
-        np.savetxt('tfp_fixed-' + append + '.csv', np.fliplr(tfp_fixed).T, delimiter=',')
+        np.savetxt('cpd-' + append + '.csv', np.fliplr(cpd).T, delimiter=',')
+        np.savetxt('capacitance-' + append + '.csv', np.fliplr(capacitance).T, delimiter=',')
     else:
-        np.savetxt('tfp-' + append + '.csv', tfp.T, delimiter=',')
-        np.savetxt('shift-' + append + '.csv', shift.T, delimiter=',')
-        np.savetxt('tfp_fixed-' + append + '.csv', tfp_fixed.T, delimiter=',')
+        np.savetxt('cpd-' + append + '.csv', cpd.T, delimiter=',')
+        np.savetxt('capacitance-' + append + '.csv', capacitance.T, delimiter=',')
 
     return
 

@@ -11,7 +11,7 @@ Note: A 'str is not callable' bug is often due to not running set_mpeg
 
 
 def set_mpeg(path=None):
-	if not any(path):
+	if not path:
 		plt.rcParams[
 			'animation.ffmpeg_path'] = r'C:/Users/Raj/Downloads/ffmpeg/ffmpeg/bin/ffmpeg.exe'
 

@@ -37,7 +37,7 @@ class Pixel:
 
     signal_array : (n_points, n_signals) array_like
         2D real-valued signal array, corresponds to a pixel.
-    params : dict
+    params : dict, optional
         Includes parameters for processing. The list of parameters is:
 
         trigger = float (in seconds) (required)
@@ -84,7 +84,19 @@ class Pixel:
         The Hilbert Transform amplitude can sometimes have drive frequency artifact.
     filter_frequency : bool, optional
         Filters the instantaneous frequency to remove noise peaks
-
+    recombination: bool, optional
+        Whether to invert the frequency (during a recombination or positive frequency shift event)
+    
+    The following are necessary to define a signal, either in params or explicitly
+    trigger: bool, optional
+        The point where the event occurs.
+    total_time: bool, optional
+        The total time of the signal
+    sampling_rate : bool, optional
+        The sampling rate. Note that sampling_rate * total_time must equal number of samples
+    roi : bool, opertional
+        The length of the window to find a minimum frequency peak
+        
     Attributes
     ----------
     n_points : int
@@ -117,10 +129,6 @@ class Pixel:
     -----
     Frequency shift from wavelet analysis is not in Hertz. It should be used
     with caution.
-
-    analyze() does not raise an exception if there is one, however it logs the
-    exception if logging is turned on. This is implemented this way to avoid
-    crashing in the case of exception when this method is called from C API.
 
     References
     ----------
@@ -158,6 +166,7 @@ class Pixel:
                  fit_form='product', 
                  filter_amplitude=False,
                  filter_frequency=False,
+                 recombination=False,
                  trigger=None,
                  total_time=None,
                  sampling_rate=None,
@@ -183,7 +192,6 @@ class Pixel:
         self.fft_params = {}  # for STFT
         self.fft_time_res = 20e-6
 
-        self.recombination = False
         self.phase_fitting = False
         self.check_drive = True
         self.window = 'blackman'
@@ -194,6 +202,8 @@ class Pixel:
         self.fit_form = fit_form
         self.method = method
         self.filter_amplitude = filter_amplitude
+        self.filter_frequency = filter_frequency
+        self.recombination = recombination
 
         # Default Cantilever parameters, plugging in some reasonable defaults
         self.AMPINVOLS = 122e-9
@@ -209,11 +219,9 @@ class Pixel:
         self.signal_orig = None  # used in amplitude calc to undo any Windowing beforehand
 
         if len(signal_array.shape) == 2 and 1 not in signal_array.shape:
-
             self.n_points, self.n_signals = self.signal_array.shape
 
         else:
-
             self.n_signals = 1
             self.signal_array = self.signal_array.flatten()
             self.n_points = self.signal_array.shape[0]
@@ -223,28 +231,29 @@ class Pixel:
         if pycroscopy:
             self.signal_array = signal_array.T
         
-        setattr(self, 'trigger', trigger)
-        setattr(self, 'total_time', total_time)
-        setattr(self, 'sampling_rate', sampling_rate)
-        setattr(self, 'roi', roi)
+        # The copy of the signal we will manipulate
+        self.signal = np.copy(self.signal_array)
         
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
-            if not hasattr(self, key) or getattr(self, key) == None:
-                setattr(self, key, value)
+            setattr(self, key, value)
 
         for key, value in can_params.items():
             setattr(self, key, float(value))
+            
+        # Overwrite parameters with explicitly passed parameters
+        for key, val in zip(['trigger', 'total_time', 'sampling_rate', 'roi'], 
+                            [trigger, total_time, sampling_rate, roi]):
+            if val:
+                setattr(self, key, val)
 
         # Check for missing required parameters
         if self.trigger == None: # trigger can be 0
             raise KeyError('Trigger must be supplied')
             
         if not self.total_time:
-            
             if not self.sampling_rate:
                 raise KeyError('total_time or sampling_rate must be supplied')
-            
             else:
                 self.total_time = self.sampling_rate * self.n_points
         
@@ -252,13 +261,11 @@ class Pixel:
             self.sampling_rate = int(self.n_points / self.total_time)
         
         elif self.total_time != self.n_points / self.sampling_rate  :
-        
             print(self.n_points / self.sampling_rate )
             print(self.total_time)
             raise ValueError('total_time and sampling_rate mismatch')
         
         if not self.roi:
-            
             self.roi = 0.3 * (self.total_time - self.trigger)
             warnings.warn('ROI defaulting to 30% post-trigger')
         
@@ -270,7 +277,6 @@ class Pixel:
         self.tidx_orig = self.tidx
         
         if not hasattr(self, 'drive_freq'):
-            
             self.average()
             self.set_drive()
         
@@ -307,33 +313,40 @@ class Pixel:
         return
 
     def remove_dc(self, dc_width=10e3, plot=False):
-        """Removes DC components from signals."""
+        """Removes DC components from each signal using FFT."""
 
+        self.signal = np.copy(self.signal_array)
+        
         if self.n_signals == 1:
             
-            return
+            self.signal = np.reshape(self.signal, (self.n_points, self.n_signals))
 
         for i in range(self.n_signals):
-            self.signal_array[:, i] -= np.mean(self.signal_array[:, i])
-
-        f_ax = np.linspace(self.sampling_rate/2, self.sampling_rate/2, self.n_points)
-        mid = int(len(f_ax) / 2)
-        # drive_bin = np.searchsorted(f_ax[mid:], self.drive_freq) + mid
-        delta_freq = self.sampling_rate / self.n_points
-
-        SIG_DC = np.fft.fftshift(np.fft.fft(self.signal_array))
-
-        SIG_DC[:mid - int(dc_width / delta_freq)] = 0
-        SIG_DC[mid + int(dc_width / delta_freq):] = 0
-        sig_dc = np.real(np.fft.ifft(np.fft.ifftshift(SIG_DC)))
-
+            
+            f_ax = np.linspace(-self.sampling_rate/2, self.sampling_rate/2, self.n_points)
+            mid = int(len(f_ax) / 2)
+            # drive_bin = np.searchsorted(f_ax[mid:], self.drive_freq) + mid
+            delta_freq = self.sampling_rate / self.n_points
+    
+            SIG_DC = np.fft.fftshift(np.fft.fft(self.signal[:, i]))
+    
+            SIG_DC[:mid - int(dc_width / delta_freq)] = 0
+            SIG_DC[mid + int(dc_width / delta_freq):] = 0
+            sig_dc = np.real(np.fft.ifft(np.fft.ifftshift(SIG_DC)))
+    
+            self.signal[:, i] -= sig_dc
+        
         if plot:
-            plt.figure()
-            plt.plot(np.arange(0, self.total_time, 1/self.sampling_rate), sig_dc, 'b')
+            fig, ax = plt.subplots(nrows=2, figsize=(6, 10))
+            ax[0].plot(np.arange(0, self.total_time, 1/self.sampling_rate), sig_dc, 'b')
+            ax[1].plot(np.arange(0, self.total_time, 1/self.sampling_rate), self.signal_array, 'b')
+            ax[1].plot(np.arange(0, self.total_time, 1/self.sampling_rate), self.signal, 'r')
             plt.title('DC Offset')
-
-        self.sig_dc = sig_dc
-
+            
+        if self.n_signals == 1:
+            
+            self.signal = self.signal[:,0]
+            
         return
 
     def phase_lock(self):
@@ -352,10 +365,9 @@ class Pixel:
         """Averages signals."""
 
         if self.n_signals != 1:  # if not multi-signal, don't average
-            self.signal = self.signal_array.mean(axis=1)
-
-        else:
-            self.signal = np.copy(self.signal_array)
+        
+            # self.signal = self.signal_array.mean(axis=1)
+            self.signal = self.signal.mean(axis=1)
 
         return
 
@@ -936,6 +948,7 @@ class Pixel:
 
         # Check the drive frequency.
         if self.check_drive:
+            
             self.check_drive_freq()
 
         # DWT Denoise
@@ -1008,7 +1021,7 @@ class Pixel:
 
         # If it's a recombination image invert it to find minimum.
         if self.recombination:
-            
+
             self.inst_freq = self.inst_freq * -1
 
         # Find where the minimum is.
