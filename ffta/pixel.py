@@ -38,7 +38,7 @@ class Pixel:
     signal_array : (n_points, n_signals) array_like
         2D real-valued signal array, corresponds to a pixel.
     params : dict, optional
-        Includes parameters for processing. The list of parameters is:
+        Includes parameters for processing, saved by the experiment Required:
 
         trigger = float (in seconds) (required)
         total_time = float (in seconds) (either this or sampling rate required)
@@ -109,6 +109,8 @@ class Pixel:
         Signal after phase-locking and averaging.
     tidx : int
         Index of trigger in time-domain.
+    amplitude : (n_points, ) array_like
+        Instantaneous amplitude of the signal
     phase : (n_points,) array_like
         Phase of the signal, only calculated with Hilbert Transform method.
     cwt_matrix : (n_widths, n_points) array_like
@@ -264,13 +266,19 @@ class Pixel:
             print(self.n_points / self.sampling_rate )
             print(self.total_time)
             raise ValueError('total_time and sampling_rate mismatch')
-        
+         
+        if self.total_time < self.trigger:
+            self.trigger = 0.1 * self.total_time 
+         
         if not self.roi:
             self.roi = 0.3 * (self.total_time - self.trigger)
             warnings.warn('ROI defaulting to 30% post-trigger')
         
         elif self.roi > self.total_time - self.trigger:
-            raise ValueError('roi must not extend beyond the total_time')
+            print(self.roi)
+            print(self.total_time - self.trigger)
+            warnings.warn('roi must not extend beyond the total_time; setting to maximum')
+            self.roi = self.total_time - self.trigger
         
         self.tidx = int(self.trigger * self.sampling_rate)    
         self._tidx_orig = self.tidx
@@ -595,20 +603,24 @@ class Pixel:
         # Unwrap the phase.
         self.phase = np.unwrap(np.angle(self.signal))
 
-        if correct_slope:
-            # Remove the drive from phase.
-            # self.phase -= (2 * np.pi * self.drive_freq *
-            #               np.arange(self.n_points) / self.sampling_rate)
-
-            # A curve fit on the initial part to make sure that it worked.
-            start = int(0.3 * self.tidx)
-            end = int(0.7 * self.tidx)
-            fit = self.phase[start:end]
-
-            xfit = np.polyfit(np.arange(start, end), fit, 1)
-
-            # Remove the fit from phase.
-            self.phase -= (xfit[0] * np.arange(self.n_points)) + xfit[1]
+        try:
+            if correct_slope:
+                # Remove the drive from phase.
+                # self.phase -= (2 * np.pi * self.drive_freq *
+                #               np.arange(self.n_points) / self.sampling_rate)
+    
+                # A curve fit on the initial part to make sure that it worked.
+                start = int(0.3 * self.tidx)
+                end = int(0.7 * self.tidx)
+                fit = self.phase[start:end]
+    
+                xfit = np.polyfit(np.arange(start, end), fit, 1)
+    
+                # Remove the fit from phase.
+                self.phase -= (xfit[0] * np.arange(self.n_points)) + xfit[1]
+        except:
+            self.phase -= (2 * np.pi * self.drive_freq * 
+                           np.arange(self.n_points) / self.sampling_rate)
 
         self.phase = -self.phase  # need to correct for negative in DDHO solution
 
