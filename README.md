@@ -3,7 +3,7 @@
 
 
 # Fast-Free Transient Analysis
-A package for processing time-dependent frequency response information in atomic force microscopy data. This package is primarily geared towards electrostatic force microscopy, with the resulting output being the amplitude, phase, and instantaneous frequency as a function of time and position.
+A package for processing time-dependent frequency response information in atomic force microscopy data. This package is primarily geared towards electrostatic force microscopy, with the resulting output being the amplitude, phase, and instantaneous frequency as a function of time and position. This includes non-stationary Fourier mode decomposition (in testing) by Daniel Shea of University of Washington.
 
 ### For further information and discussion, primary point-of-contact:
 ```
