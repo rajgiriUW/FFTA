@@ -14,7 +14,7 @@ import os
 import numpy as np
 from ffta.load import get_utils
 from sidpy.proc.comp_utils import parallel_compute
-from pyUSID.io.write_utils import Dimension
+from pyUSID import Dimension
 import h5py
 
 from scipy.ndimage import gaussian_filter1d

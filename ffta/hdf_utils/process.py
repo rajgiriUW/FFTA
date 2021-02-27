@@ -5,7 +5,8 @@ Created on Tue Feb 11 18:07:06 2020
 @author: Raj
 """
 
-import pyUSID as usid
+from pyUSID.io.hdf_utils import write_main_dataset, find_dataset, create_results_group
+from pyUSID import Process
 import ffta
 from ffta.pixel import Pixel
 from ffta.pixel_utils import badpixels
@@ -13,13 +14,15 @@ import os
 import numpy as np
 from ffta.load import get_utils
 from sidpy.proc.comp_utils import parallel_compute
-from pyUSID.io.write_utils import Dimension
+from sidpy.hdf.hdf_utils import get_attributes, copy_attributes
+from sidpy.viz import plot_utils
+from pyUSID import Dimension
 import h5py
 
 from matplotlib import pyplot as plt
 
 
-class FFtrEFM(usid.Process):
+class FFtrEFM(Process):
     """
     Implements the pixel-by-pixel processing using ffta.pixel routines
     Abstracted using the Process class for parallel processing
@@ -88,7 +91,7 @@ class FFtrEFM(usid.Process):
         self.parm_dict = parm_dict
 
         if not any(parm_dict):
-            self.parm_dict = usid.hdf_utils.get_attributes(h5_main)
+            self.parm_dict = get_attributes(h5_main)
             self.parm_dict.update({'if_only': if_only})
 
         for key, val in parm_dict.items():
@@ -201,10 +204,9 @@ class FFtrEFM(usid.Process):
 
         ds_shape = [num_rows * num_cols, pnts_per_avg]
 
-        self.h5_results_grp = usid.hdf_utils.create_results_group(self.h5_main, self.process_name)
+        self.h5_results_grp = create_results_group(self.h5_main, self.process_name)
 
-        # h5_meas_group = usid.hdf_utils.create_indexed_group(self.h5_main.parent, self.process_name)
-        usid.hdf_utils.copy_attributes(self.h5_main.parent, self.h5_results_grp)
+        copy_attributes(self.h5_main.parent, self.h5_results_grp)
 
         # Create dimensions
         pos_desc = [Dimension('X', 'm', np.linspace(0, self.parm_dict['FastScanSize'], num_cols)),
@@ -215,7 +217,7 @@ class FFtrEFM(usid.Process):
         # ds_spec_inds, ds_spec_vals = build_ind_val_matrices(spec_desc, is_spectral=True)
 
         # Writes main dataset
-        self.h5_if = usid.hdf_utils.write_main_dataset(self.h5_results_grp,
+        self.h5_if = write_main_dataset(self.h5_results_grp,
                                                        ds_shape,
                                                        'Inst_Freq',  # Name of main dataset
                                                        'Frequency',  # Physical quantity contained in Main dataset
@@ -225,7 +227,7 @@ class FFtrEFM(usid.Process):
                                                        dtype=np.float32,  # data type / precision
                                                        main_dset_attrs=self.parm_dict)
 
-        self.h5_amp = usid.hdf_utils.write_main_dataset(self.h5_results_grp,
+        self.h5_amp = write_main_dataset(self.h5_results_grp,
                                                         ds_shape,
                                                         'Amplitude',  # Name of main dataset
                                                         'Amplitude',  # Physical quantity contained in Main dataset
@@ -240,7 +242,7 @@ class FFtrEFM(usid.Process):
                                                         dtype=np.float32,  # data type / precision
                                                         main_dset_attrs=self.parm_dict)
 
-        self.h5_phase = usid.hdf_utils.write_main_dataset(self.h5_results_grp,
+        self.h5_phase = write_main_dataset(self.h5_results_grp,
                                                           ds_shape,
                                                           'Phase',  # Name of main dataset
                                                           'Phase',  # Physical quantity contained in Main dataset
@@ -255,7 +257,7 @@ class FFtrEFM(usid.Process):
                                                           dtype=np.float32,  # data type / precision
                                                           main_dset_attrs=self.parm_dict)
 
-        self.h5_pwrdis = usid.hdf_utils.write_main_dataset(self.h5_results_grp,
+        self.h5_pwrdis = write_main_dataset(self.h5_results_grp,
                                                            ds_shape,
                                                            'PowerDissipation',  # Name of main dataset
                                                            'Power',  # Physical quantity contained in Main dataset
@@ -336,7 +338,7 @@ class FFtrEFM(usid.Process):
 
         if not self.override:
 
-            self.h5_results_grp = usid.hdf_utils.find_dataset(self.h5_main.parent, 'Inst_Freq')[index].parent
+            self.h5_results_grp = find_dataset(self.h5_main.parent, 'Inst_Freq')[index].parent
             self.h5_new_spec_vals = self.h5_results_grp['Spectroscopic_Values']
             self.h5_tfp = self.h5_results_grp['tfp']
             self.h5_shift = self.h5_results_grp['shift']
@@ -419,14 +421,13 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
         print('Saving from pyUSID object')
         h5_ff = h5_file.file
 
-    tfp = usid.hdf_utils.find_dataset(h5_ff[h5_path], 'tfp')[0][()]
-    # tfp_fixed = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp_fixed')[0][()]
-    shift = usid.hdf_utils.find_dataset(h5_ff[h5_path], 'shift')[0][()]
+    tfp = find_dataset(h5_ff[h5_path], 'tfp')[0][()]
+    shift = find_dataset(h5_ff[h5_path], 'shift')[0][()]
 
     tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)
     tfp_fixed = np.array(tfp_fixed)
 
-    print(usid.hdf_utils.find_dataset(h5_ff[h5_path], 'shift')[0].parent.name)
+    print(find_dataset(h5_ff[h5_path], 'shift')[0].parent.name)
 
     path = h5_ff.file.filename.replace('\\', '/')
     path = '/'.join(path.split('/')[:-1]) + '/'
@@ -477,7 +478,7 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
         ht = ffprocess.h5_main.file['/height/Raw_Data'][:, 0]
         ht = np.reshape(ht, [num_cols, num_rows]).transpose()
         ht_ax = a[0][0]
-        ht_image, cbar = usid.viz.plot_utils.plot_map(ht_ax, ht * 1e9, cmap='gray', **kwarg)
+        ht_image, cbar = plot_utils.plot_map(ht_ax, ht * 1e9, cmap='gray', **kwarg)
         cbar.set_label('Height (nm)', rotation=270, labelpad=16)
     except:
         pass
@@ -487,9 +488,9 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
 
     tfp_fixed, _ = badpixels.fix_array(ffprocess.h5_tfp[()], threshold=threshold)
 
-    tfp_image, cbar_tfp = usid.viz.plot_utils.plot_map(tfp_ax, tfp_fixed * scale_tfp,
+    tfp_image, cbar_tfp = plot_utils.plot_map(tfp_ax, tfp_fixed * scale_tfp,
                                                        cmap='inferno', **kwargs)
-    shift_image, cbar_sh = usid.viz.plot_utils.plot_map(shift_ax, ffprocess.h5_shift[()] * scale_shift,
+    shift_image, cbar_sh = plot_utils.plot_map(shift_ax, ffprocess.h5_shift[()] * scale_shift,
                                                         cmap='inferno', **kwargs)
 
     cbar_tfp.set_label('Time (us)', rotation=270, labelpad=16)

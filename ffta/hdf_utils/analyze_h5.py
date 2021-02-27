@@ -17,8 +17,7 @@ from ffta.pixel_utils import badpixels
 import pycroscopy as px
 import pyUSID as usid
 
-from pyUSID.io.io_utils import get_time_stamp
-from pyUSID.io.write_utils import build_ind_val_matrices, Dimension
+from pyUSID.io import Dimension
 
 """
 Analyzes an HDF_5 format trEFM data set and writes the result into that file
@@ -288,7 +287,7 @@ def save_ht_outs(h5_gp, tfp, shift):
 	tfp_px = h5_gp.create_dataset('tfp', data=tfp, dtype=np.float32)
 	shift_px = h5_gp.create_dataset('shift', data=shift, dtype=np.float32)
 	tfp_fixed_px = h5_gp.create_dataset('tfp_fixed', data=tfp_fixed, dtype=np.float32)
-	h5_gp.attrs['timestamp'] = get_time_stamp()
+# 	h5_gp.attrs['timestamp'] = write_book_keeping_attrs()
 
 	return tfp_px, shift_px, tfp_fixed_px
 

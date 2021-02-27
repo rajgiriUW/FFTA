@@ -11,7 +11,8 @@ import pycroscopy as px
 from pycroscopy.processing.cluster import Cluster
 import pyUSID as usid
 from pyUSID.processing.process import Process
-from pyUSID.io.write_utils import build_ind_val_matrices, Dimension
+from pyUSID.io.anc_build_utils import build_ind_val_matrices
+from pyUSID import Dimension
 from matplotlib import pyplot as plt
 import matplotlib.animation as animation
 from ffta.analysis import mask_utils

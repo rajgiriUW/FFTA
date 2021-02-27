@@ -8,8 +8,8 @@ __status__ = "Development"
 
 import numpy as np
 from scipy import signal as sps
-from scipy import optimize as spo
-from scipy import interpolate as spi
+# from scipy import optimize as spo
+# from scipy import interpolate as spi
 from scipy import integrate as spg
 
 from ffta.pixel_utils import noise

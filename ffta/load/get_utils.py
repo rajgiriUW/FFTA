@@ -6,6 +6,7 @@ Created on Fri Aug 24 13:40:54 2018
 """
 import pycroscopy as px
 import pyUSID as usid
+import sidpy
 
 from ffta.line import Line
 from ffta.pixel import Pixel
@@ -40,7 +41,7 @@ def get_params(h5_path, key='', verbose=False, del_indices=True):
     if isinstance(h5_path, str):
         h5_path = px.io.HDFwriter(h5_path).file
 
-    parameters = usid.hdf_utils.get_attributes(h5_path)
+    parameters = sidpy.hdf_utils.get_attributes(h5_path)
 
     # if this dataset does not have complete FFtrEFM parameters
     if 'trigger' not in parameters:

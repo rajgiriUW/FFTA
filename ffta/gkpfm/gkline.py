@@ -7,7 +7,7 @@ import warnings
 import ffta
 import time
 import pyUSID as usid
-from pyUSID.io.write_utils import Dimension
+from pyUSID import Dimension
 
 
 def cpd_total(ds, params, verbose=False, ncycles = 4, smooth=3):
