@@ -6,6 +6,8 @@ Created on Tue May 12 11:23:17 2020
 """
 
 import configparser
+from ..pixel_utils.load import cantilever_params
+from ..pixel_utils.load import configuration
 
 
 def simulation_configuration(path):
@@ -83,3 +85,41 @@ def simulation_configuration(path):
 			sim_params[key] = float(_str[0])
 
 	return can_params, force_params, sim_params
+
+def params_from_experiment(can_params_file, params_cfg):
+	'''
+	Generates a simulation-compatible configuration given a Cantilever Parameters file
+	(typically acquired in the experiment) and a Params.cfg file saved with FFtrEFM data
+
+	can_params : string
+		Path to cantilever parameters file (from Force Calibration tab)
+
+	params_cfg : string
+		Path to parameters.cfg file (from FFtrEFM experiment, in the data folder)
+	'''
+
+	can = cantilever_params(can_params_file)
+	_, par = configuration(params_cfg)
+
+	can_params = {}
+	can_params['amp_invols'] = can['Initial']['AMPINVOLS']
+	can_params['def_invols'] = can['Initial']['DEFINVOLS']
+	can_params['soft_amp'] = 0.3
+	can_params['drive_freq'] = par['drive_freq']
+	can_params['res_freq'] = par['drive_freq']
+	can_params['k'] = can['Initial']['SpringConstant']
+	can_params['q_factor'] = can['Initial']['Q']
+
+	force_params = {}
+	force_params['es_force'] = can['Differential']['ElectroForce']
+	force_params['ac_force'] = can['Initial']['DrivingForce']
+	force_params['dc_force'] = 0 # only for GKPFM
+	force_params['delta_freq'] = can['Differential']['ResFrequency']
+	force_params['tau'] = 1e-5
+
+	sim_params = {}
+	sim_params['trigger'] = par['trigger']
+	sim_params['total_time'] = par['total_time']
+	sim_params['sampling_rate'] = par['sampling_rate']
+
+	return can_params, force_params, sim_params, can, par

@@ -475,7 +475,7 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
     num_cols = ffprocess.parm_dict['num_cols']
     num_rows = ffprocess.parm_dict['num_rows']
     try:
-        ht = ffprocess.h5_main.file['/height/Raw_Data'][:, 0]
+        ht = ffprocess.h5_main.file['/height_000/Raw_Data'][:, 0]
         ht = np.reshape(ht, [num_cols, num_rows]).transpose()
         ht_ax = a[0][0]
         ht_image, cbar = plot_utils.plot_map(ht_ax, ht * 1e9, cmap='gray', **kwarg)

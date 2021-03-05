@@ -169,7 +169,7 @@ def cantilever_params(path, asDataFrame=False):
     try:
         df = pd.read_csv(path, sep='\t', skiprows=1, index_col='Unnamed: 0')
     except:
-        df = pd.read_csv(path, sep=',', skiprows=1, index_col=r'x/y')
+        df = pd.read_csv(path, sep='\t', skiprows=1)
     for c in df.columns:
         for n, cc in enumerate(df[c]): # to get around numpy scalar-string FutureWarning
             if cc != 'NAN':
