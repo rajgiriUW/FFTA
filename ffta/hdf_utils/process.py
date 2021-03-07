@@ -280,9 +280,12 @@ class FFtrEFM(Process):
 
         return
 
-    def reshape(self):
+    def reshape(self, cal=None):
+        
         '''
         Reshapes the tFP and shift data to be a matrix, then saves that dataset instead of the 1D
+        
+        cal : UNivariateSpline file from ffta.simulation.cal_curve
         '''
 
         h5_tfp = self.h5_tfp[()]
@@ -299,6 +302,13 @@ class FFtrEFM(Process):
 
         self.h5_tfp = self.h5_results_grp.create_dataset('tfp', data=h5_tfp, dtype=np.float32)
         self.h5_shift = self.h5_results_grp.create_dataset('shift', data=h5_shift, dtype=np.float32)
+
+        if cal:
+            
+            tfp_cal = cal(h5_tfp)
+            self.h5_tfp_cal = self.h5_results_grp.create_dataset('tfp_cal', 
+                                                                 data=tfp_cal, 
+                                                                 dtype=np.float32)
 
         return
 
@@ -423,9 +433,20 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
 
     tfp = find_dataset(h5_ff[h5_path], 'tfp')[0][()]
     shift = find_dataset(h5_ff[h5_path], 'shift')[0][()]
-
+    
+    try:
+        tfp_cal = find_dataset(h5_ff[h5_path], 'tfp_cal')
+    except:
+        tfp_cal = None
+        
     tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)
     tfp_fixed = np.array(tfp_fixed)
+    
+    if tfp_cal != None:
+        
+        tfp_cal = tfp_cal[0][()]
+        tfp_cal_fixed, _ = badpixels.fix_array(tfp_cal, threshold=2)
+        tfp_cal_fixed = np.array(tfp_cal_fixed)
 
     print(find_dataset(h5_ff[h5_path], 'shift')[0].parent.name)
 
@@ -442,6 +463,10 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
         np.savetxt('shift-' + append + '.csv', shift.T, delimiter=',')
         np.savetxt('tfp_fixed-' + append + '.csv', tfp_fixed.T, delimiter=',')
 
+    if isinstance(tfp_cal, np.ndarray):
+        np.savetxt('tfp_cal-' + append + '.csv', np.fliplr(tfp_cal).T, delimiter=',')
+        np.savetxt('tfp_cal_fixed-' + append + '.csv', np.fliplr(tfp_cal_fixed).T, delimiter=',')
+
     return
 
 
@@ -452,7 +477,7 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
     
     Parameters
     ----------
-    ffprocess : FFtrEFM class object (inherits Process)
+    ffprocess : FFtrEFM class object (inherits Process) or the parent Group
     
     Returns
     -------
@@ -463,8 +488,29 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
     tfp_ax = a[0][1]
     shift_ax = a[1][1]
 
-    img_length = ffprocess.parm_dict['FastScanSize']
-    img_height = ffprocess.parm_dict['SlowScanSize']
+    if isinstance(h5_file, ffta.hdf_utils.process.FFtrEFM):
+
+        img_length = ffprocess.parm_dict['FastScanSize']
+        img_height = ffprocess.parm_dict['SlowScanSize']
+        
+        num_cols = ffprocess.parm_dict['num_cols']
+        num_rows = ffprocess.parm_dict['num_rows']
+        
+        tfp = ffprocess.h5_tfp[()]
+        shift = ffprocess.h5_shift[()]
+    
+    elif isinstance(ffprocess, h5py.Group):
+        
+        attr = get_attributes(ffprocess['Inst_Freq'])
+        img_length = attr['FastScanSize']
+        img_height = attr['SlowScanSize']
+        
+        num_cols = attr['num_cols']
+        num_rows = attr['num_rows']
+        
+        tfp = ffprocess['tfp']
+        shift = ffprocess['shift']
+        
     kwarg = {'origin': 'lower', 'x_vec': img_length * 1e6,
              'y_vec': img_height * 1e6, 'num_ticks': 5, 'stdevs': 3, 'show_cbar': True}
 
@@ -472,8 +518,6 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
         if k not in kwargs:
             kwargs.update({k: v})
 
-    num_cols = ffprocess.parm_dict['num_cols']
-    num_rows = ffprocess.parm_dict['num_rows']
     try:
         ht = ffprocess.h5_main.file['/height_000/Raw_Data'][:, 0]
         ht = np.reshape(ht, [num_cols, num_rows]).transpose()
@@ -486,11 +530,11 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
     tfp_ax.set_title('tFP Image')
     shift_ax.set_title('Shift Image')
 
-    tfp_fixed, _ = badpixels.fix_array(ffprocess.h5_tfp[()], threshold=threshold)
+    tfp_fixed, _ = badpixels.fix_array(tfp, threshold=threshold)
 
     tfp_image, cbar_tfp = plot_utils.plot_map(tfp_ax, tfp_fixed * scale_tfp,
                                                        cmap='inferno', **kwargs)
-    shift_image, cbar_sh = plot_utils.plot_map(shift_ax, ffprocess.h5_shift[()] * scale_shift,
+    shift_image, cbar_sh = plot_utils.plot_map(shift_ax, shift * scale_shift,
                                                         cmap='inferno', **kwargs)
 
     cbar_tfp.set_label('Time (us)', rotation=270, labelpad=16)
