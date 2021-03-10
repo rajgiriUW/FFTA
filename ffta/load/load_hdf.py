@@ -108,9 +108,13 @@ def load_wrapper(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False,
 
     if ibw_file_path:
         
+        if verbose:
+            print('Creating Topo Directory')
         tran = gl_ibw.GLIBWTranslator()
         h5_path = tran.translate(ibw_file_path, ftype=ftype,
                                  verbose=verbose, subfolder=subfolder)
+        if verbose:
+            print('Created file', h5_path)
     else:
         h5_path = 'FF_H5'
         
@@ -316,7 +320,11 @@ def load_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True,
         # warnings.warn('Time-per-point calculation error')
 
     # To do: Fix the labels/atrtibutes on the relevant data sets
-    hdf = h5py.File(h5_path, 'w')
+    try:
+        hdf = h5py.File(h5_path, 'a')
+    except:
+        print('Creating HDF5 file...')
+        hdf = h5py.File(h5_path, 'w')
     
     try:
         ff_group = hdf.create_group('FF_Group')

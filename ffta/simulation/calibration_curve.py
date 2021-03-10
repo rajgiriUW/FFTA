@@ -28,10 +28,10 @@ Usage:
     plt.plot(tfp, taus, 'bX-')
     
     If you want to change the fit parameters per tau
-    taus, tfp = cal_curve(param_cfg, can_params, roi=0.001, n_taps=199)
+    taus, tfp, spl = cal_curve(param_cfg, can_params, roi=0.001, n_taps=199)
 '''
 
-def cal_curve(can_path, param_cfg, **kwargs):
+def cal_curve(can_path, param_cfg, plot = True, **kwargs):
     '''
     can_params : string
 		Path to cantilever parameters file (from Force Calibration tab)
@@ -69,14 +69,20 @@ def cal_curve(can_path, param_cfg, **kwargs):
     tfps = np.delete(tfps, np.where(dtfp < 0)[0])
     taus = np.delete(taus, np.where(dtfp < 0)[0])
     
-    spl = UnivariateSpline(tfps, taus)
+    try:
+        spl = UnivariateSpline(tfps, taus)
+    except:
+        print(taus)
+        print(tfps)
+        
     
-    pix.plot()
-    fig, ax = plt.subplots(facecolor='white')
-    ax.loglog(tfps, taus, 'bX-')
-    ax.set_xlabel('$t_{fp}$ (s)')
-    ax.set_ylabel(r'$\tau$ (s)')
-    ax.set_title('Calibration curve')
+    if plot:
+        pix.plot()
+        fig, ax = plt.subplots(facecolor='white')
+        ax.loglog(tfps, taus, 'bX-')
+        ax.set_xlabel('$t_{fp}$ (s)')
+        ax.set_ylabel(r'$\tau$ (s)')
+        ax.set_title('Calibration curve')
     
     # Save Calibration Curve
     df = pd.DataFrame(index=taus, data=tfps)

@@ -435,16 +435,15 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     shift = find_dataset(h5_ff[h5_path], 'shift')[0][()]
     
     try:
-        tfp_cal = find_dataset(h5_ff[h5_path], 'tfp_cal')
+        tfp_cal = find_dataset(h5_ff[h5_path], 'tfp_cal')[0][()]
     except:
         tfp_cal = None
         
     tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)
     tfp_fixed = np.array(tfp_fixed)
     
-    if tfp_cal != None:
+    if list(tfp_cal) != None:
         
-        tfp_cal = tfp_cal[0][()]
         tfp_cal_fixed, _ = badpixels.fix_array(tfp_cal, threshold=2)
         tfp_cal_fixed = np.array(tfp_cal_fixed)
 
@@ -488,7 +487,7 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
     tfp_ax = a[0][1]
     shift_ax = a[1][1]
 
-    if isinstance(h5_file, ffta.hdf_utils.process.FFtrEFM):
+    if isinstance(ffprocess, ffta.hdf_utils.process.FFtrEFM):
 
         img_length = ffprocess.parm_dict['FastScanSize']
         img_height = ffprocess.parm_dict['SlowScanSize']
