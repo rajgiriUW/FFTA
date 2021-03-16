@@ -37,7 +37,13 @@ This includes a few types of frequency analysis:
 The Jupyter notebook in this repository "FFtrEFM Basic Processing" is good at walking through the basic commands.
 
 #### Setup the repository
-Currently, there's no automated way to do this because it's not packaged. So download the source, then unzip somewhere. Then, in whichever command prompt you like:
+You can easily install via pip:
+
+```
+pip install -U ffta
+```
+
+Alternatively, download the source, then unzip somewhere. Then, in whichever command prompt you like:
 ```
 python setup.py
 ```
@@ -66,12 +72,12 @@ h5_path, parm_dict, h5_avg = ffta.hdf_utils.load_hdf.load_wrapper(ibw_file_path=
 
 #### SVD filter
 ```
-h5_svd = ffta.analysis.svd.FF_SVD(h5_avg)
+h5_svd = ffta.analysis.svd.test_svd(h5_avg)
 ```
 #### Rebuild after filtering out components
 ```
-clean_components = [0,1,2,3,4] # would only recontruct with the first 4 components
-h5_rb = ffta.analysis.svd.FF_SVD_filter(h5_avg, clean_components)
+clean_components = [0,1,2,3,4] # would only recontruct with the first 5 components
+h5_rb = ffta.analysis.svd.svd_filter(h5_avg, clean_components)
 ```
 
 #### The actual FF-trEFM processing.
@@ -89,7 +95,7 @@ data.test()
 
 Here, we will filter the amplitude, set the ROI for determining tFP to 12 us, set the trigger to be 685 us, and change the instantaneous frequency analysis method to "FFT" (a "sliding FFT" which is essentially a STFT). Then, re-run test() to see the changes.
 ```
-data.update_parm(**{'filter_amp': True, 'roi':0.00012, 'trigger': 0.000685, 'method':'fft'})
+data.update_parm(filter_amp= True, roi=0.00012, trigger=0.000685, method='fft')
 data.test()
 ```
 

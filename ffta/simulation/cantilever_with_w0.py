@@ -6,13 +6,14 @@ __email__ = "rgiri@uw.edu"
 __status__ = "Production"
 
 import numpy as np
+from math import pi
 from scipy.integrate import odeint
 
 from .cantilever import Cantilever
 from . import excitation
 
 # Set constant 2 * pi.
-PI2 = 2 * np.pi
+PI2 = 2 * pi
 
 
 class MechanicalDrive_Simple(Cantilever):
@@ -94,7 +95,6 @@ class MechanicalDrive_Simple(Cantilever):
 
     def __init__(self, can_params, force_params, sim_params,
                  w_array=[]):
-
         parms = [can_params, force_params, sim_params]
         super(MechanicalDrive_Simple, self).__init__(*parms)
 
@@ -105,7 +105,6 @@ class MechanicalDrive_Simple(Cantilever):
             raise ValueError('v_array must match sampling rate/length of parameters')
 
         self.w_array = w_array
-
 
         return
 
@@ -129,9 +128,8 @@ class MechanicalDrive_Simple(Cantilever):
         p = int(np.floor(t * self.sampling_rate))
         n_points = int(self.total_time * self.sampling_rate)
 
-
         w = self.w_array[p] if p < n_points else self.w_array[-1]
-        
+
         return w
 
     def force(self, t, t0, tau):
@@ -156,11 +154,11 @@ class MechanicalDrive_Simple(Cantilever):
         """
 
         driving_force = self.f0 * np.sin(self.wd * t)
-        #electro_force = self.fe * self.__gamma__(t)
-        electro_force = self.fe 
+        # electro_force = self.fe * self.__gamma__(t)
+        electro_force = self.fe
 
         return driving_force - electro_force
-    
+
     def dZ_dt(self, Z, t=0):
         """
         Takes the derivative of the given Z with respect to time.
