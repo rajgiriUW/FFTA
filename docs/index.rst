@@ -134,5 +134,8 @@ It is good practice in HDF5 files to explicitly close them when not in use.
    h5_avg.file.close()
 
 .. toctree::
-   :maxdepth: 4
-   source/ffta
+   :maxdepth: 2
+   :titlesonly:
+
+   FFTA <index.rst>
+   Source <source/ffta.rst>
