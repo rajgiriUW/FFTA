@@ -6,13 +6,14 @@ __email__ = "rgiri@uw.edu"
 __status__ = "Production"
 
 import numpy as np
+from math import pi
 from scipy.integrate import odeint
 from scipy.signal import chirp
 
 from .cantilever import Cantilever
 
 # Set constant 2 * pi.
-PI2 = 2 * np.pi
+PI2 = 2 * pi
 
 
 class BroadbandPulse(Cantilever):

@@ -12,12 +12,12 @@ import argparse
 
 def GenChirp(f_center, f_width=100e3, length=1e-2, sampling_rate=1e8, name='chirp'):
     '''
-    Generates a single broad-frequency signal using scipy chirp, writes to name.dat
+    Generates a single broad-frequency signal using SciPy chirp, writes to name.dat
     
     Important usage regarding the sampling rate:
-        The sampling rate here must match that of the wave generator when you load
-        this signal. There is a limit of 250 MHz on the 33200 Agilent wave generator,
-        but obviously that varies.
+    The sampling rate here must match that of the wave generator when you load
+    this signal. There is a limit of 250 MHz on the 33200 Agilent wave generator,
+    but obviously that varies.
     
     Parameters
     ----------
@@ -25,8 +25,8 @@ def GenChirp(f_center, f_width=100e3, length=1e-2, sampling_rate=1e8, name='chir
         Central frequency for the signal
         
     f_width : float
-        The single-sided width of the chirp. Generates signal from f_center - f_width
-         to f_center + f_width
+        The single-sided width of the chirp. Generates signal from f_center - f_width 
+	to f_center + f_width
          
     length : float
         the timescale of the signal. Keep this length in mind for data acquisition;
@@ -61,7 +61,26 @@ def GenManyChirps(f_center, f_width=100e3, length=1e-2, sampling_rate=1e8):
     Based on the Agilent manual, the max-frequency is 250 MHz/number_of_points
     The minimum number of points is 8, maximum is 1e6
 		
-	This creates 3 chirp signals around the first three mechanical resonances
+    This creates 3 chirp signals around the first three mechanical resonances
+
+    Parameters
+    ----------
+    f_center : float
+        Central frequency for the signal
+        
+    f_width : float
+        The single-sided width of the chirp. Generates signal from f_center - f_width 
+	to f_center + f_width
+         
+    length : float
+        the timescale of the signal. Keep this length in mind for data acquisition;
+        if your chirp is longer than your data acquisition, you will miss many of 
+        the frequencies
+        
+    sampling_rate : int
+        Sampling rate of the chirp, based on length/sampling_rate number of steps
+        This rate must be consistent on the wave generator or the frequencies will
+        be off  
     '''
 
     name = "chirp_w.dat"

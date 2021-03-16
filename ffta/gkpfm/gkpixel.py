@@ -6,6 +6,7 @@ Created on Tue Sep  3 11:55:14 2019
 """
 
 import numpy as np
+from math import pi
 import numpy.polynomial.polynomial as npPoly
 from scipy.optimize import fmin_tnc
 from scipy.signal import fftconvolve
@@ -104,7 +105,7 @@ class GKPixel(Pixel):
 
         return
 
-    def excitation(self, exc_params={}, phase=-np.pi):
+    def excitation(self, exc_params={}, phase=-pi):
         """
         Generates excitation waveform (AC probing bias)
 
@@ -128,11 +129,11 @@ class GKPixel(Pixel):
         ph = self.exc_params['phase']
         fr = self.exc_params['frequency']
 
-        self.exc_wfm = (ac * np.sin(self.t_ax * 2 * np.pi * fr + ph) + dc)
+        self.exc_wfm = (ac * np.sin(self.t_ax * 2 * pi * fr + ph) + dc)
 
         return
 
-    def excitation_phase(self, exc_path, exc_params={}, phase_range = [-np.pi, np.pi]):
+    def excitation_phase(self, exc_path, exc_params={}, phase_range = [-pi, pi]):
         """
         Generates the excitation waveform based on the input ibw.
         
@@ -319,7 +320,7 @@ class GKPixel(Pixel):
             # initial guesses    
             a_guess = np.max(np.abs(response)) / q_guess
             w_guess = band[int(len(band) / 2)]
-            phi_guess = -np.pi
+            phi_guess = -pi
             coef_guess = [np.real(a_guess), w_guess, q_guess, phi_guess]
 
             # SHO fit
@@ -484,7 +485,7 @@ class GKPixel(Pixel):
         if self.phase_shift != 0:
             # DFT shift theorem
             period = self.sampling_rate / self.drive_freq
-            ph = self.phase_shift * period / (2*np.pi)
+            ph = self.phase_shift * period / (2*pi)
             SIG = self.SIG * np.exp(-1j * ph * self.f_ax / (0.5*len(self.f_ax)) )
 
         self.FORCE = np.zeros(len(SIG), dtype=complex)
@@ -732,12 +733,12 @@ class GKPixel(Pixel):
     def min_phase_fft(self, signal):
 
         fits = []
-        xpts = np.arange(-2 * np.pi, 2 * np.pi, 0.1)
+        xpts = np.arange(-2 * pi, 2 * pi, 0.1)
         fs = np.fft.fft(signal)
         idx = np.argmax(np.abs(fs))
         for i in xpts:
             txl = np.linspace(0, self.total_time, self.n_points)
-            resp_wfm = np.sin(txl * 2 * np.pi * self.drive_freq + i)[:len(signal)]
+            resp_wfm = np.sin(txl * 2 * pi * self.drive_freq + i)[:len(signal)]
 
             fr = np.fft.fft(resp_wfm)
             fits.append(np.angle(fr / fs)[idx])
@@ -749,7 +750,7 @@ class GKPixel(Pixel):
         fitsp = []
         for i in ph_test:
             txl = np.linspace(0, self.total_time, self.n_points)
-            resp_wfm = np.sin(txl * 2 * np.pi * self.drive_freq + i)[:len(signal)]
+            resp_wfm = np.sin(txl * 2 * pi * self.drive_freq + i)[:len(signal)]
 
             mid = int(self.pts_per_cycle / 2)
 

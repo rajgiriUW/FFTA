@@ -1,18 +1,18 @@
 """simulate.py: Contains Cantilever class."""
 # pylint: disable=E1101,R0902,C0103
-__author__ = "Durmus U. Karatay"
 __copyright__ = "Copyright 2020, Ginger Lab"
-__maintainer__ = "Rajiv Giridharaogpal"
+__author__ = "Rajiv Giridharaogpal"
 __email__ = "rgiri@uw.edu"
 __status__ = "Production"
 
 import numpy as np
+from math import pi
 from scipy.integrate import odeint
 
 import ffta
 
 # Set constant 2 * pi.
-PI2 = 2 * float(np.pi)
+PI2 = 2 * pi
 
 
 class Cantilever:

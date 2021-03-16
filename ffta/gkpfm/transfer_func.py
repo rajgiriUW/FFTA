@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from scipy import signal as sg
+from math import pi
 
 import ffta
 import time
@@ -154,7 +155,7 @@ def params_list(path='', psd_freq=1e6, lift=50):
 
 
 def test_Ycalc(h5_main, pixel_ind=[0, 0], transfer_func=None, resampled=True, ratios=None,
-			   verbose=True, noise_floor=1e-3, phase=-np.pi, plot=False, scaling=1):
+			   verbose=True, noise_floor=1e-3, phase=-pi, plot=False, scaling=1):
 	'''
 	Divides the response by the transfer function
 	
@@ -265,7 +266,7 @@ def test_Ycalc(h5_main, pixel_ind=[0, 0], transfer_func=None, resampled=True, ra
 
 
 def Y_calc(h5_main, transfer_func=None, resampled=True, ratios=None, verbose=False,
-		   noise_floor=1e-3, phase=-np.pi, plot=False, scaling=1):
+		   noise_floor=1e-3, phase=-pi, plot=False, scaling=1):
 	'''
 	Divides the response by the transfer function
 	
@@ -359,7 +360,7 @@ def Y_calc(h5_main, transfer_func=None, resampled=True, ratios=None, verbose=Fal
 	return Yout, yout
 
 
-def check_phase(h5_main, transfer_func, phase_list=[-np.pi, -np.pi / 2, 0],
+def check_phase(h5_main, transfer_func, phase_list=[-pi, -pi / 2, 0],
 				plot=True, noise_tolerance=1e-6, samp_rate=10e6):
 	'''
 	Uses the list of phases in phase_list to plot the various phase offsets
@@ -381,7 +382,7 @@ def check_phase(h5_main, transfer_func, phase_list=[-np.pi, -np.pi / 2, 0],
 
 	exc_params = {'ac': 1, 'dc': 0, 'phase': 0, 'frequency': drive_freq}
 	exc_params['ac']
-	excitation = (exc_params['ac'] * np.sin(tx * 2 * np.pi * exc_params['frequency'] \
+	excitation = (exc_params['ac'] * np.sin(tx * 2 * pi * exc_params['frequency'] \
 											+ exc_params['phase']) + exc_params['dc'])
 
 	for ph in phase_list:
@@ -477,7 +478,7 @@ def check_response(h5_main, pixel=0, ph=0):
 	freq = parm_dict['drive_freq']
 	txl = np.linspace(0, parm_dict['total_time'], h5_main[pixel, :].shape[0])
 
-	resp_wfm = np.sin(txl * 2 * np.pi * freq + ph)
+	resp_wfm = np.sin(txl * 2 * pi * freq + ph)
 
 	plt.figure()
 	plt.plot(resp_wfm, h5_main[()][pixel, :])

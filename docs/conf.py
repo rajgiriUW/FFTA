@@ -16,18 +16,12 @@ import sphinx_rtd_theme
 
 
 sys.path.insert(0, os.path.abspath('..'))
-sys.path.insert(0, os.path.abspath('../ffta'))
-sys.path.insert(0, os.path.abspath('../ffta/acquisition'))
-sys.path.insert(0, os.path.abspath('../ffta/analysis'))
-sys.path.insert(0, os.path.abspath('../ffta/gkpfm'))
-sys.path.insert(0, os.path.abspath('../ffta/hdf_utils'))
-sys.path.insert(0, os.path.abspath('../ffta/load'))
-sys.path.insert(0, os.path.abspath('../ffta/pixel_utils'))
-sys.path.insert(0, os.path.abspath('../ffta/simulation'))
+
+
 
 autodoc_mock_imports = ['scipy', 'numpy', 'watchdog', 'igor', 'pandas', 'pywt',
 	'matplotlib', 'pyUSID', 'numexpr', 'pycroscopy', 'pywavelets',
-	'h5py', 'sklearn']
+	'h5py', 'sklearn', 'sidpy']
 
 # -- Project information -----------------------------------------------------
 
