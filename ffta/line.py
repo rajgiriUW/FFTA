@@ -45,10 +45,8 @@ class Line:
         
     Attributes
     ----------
-    n_points : int
+    n_pixels : int
         Number of points in a signal.
-    n_signals : int
-        Number of signals in a line.
     inst_freq : (n_points, n_pixels) array_like
         Instantenous frequencies of the line.
     tfp : (n_pixels,) array_like
@@ -64,7 +62,7 @@ class Line:
 
     Examples
     --------
-    >>> from ffta import line, utils
+    >>> from ffta import line, pixel_utils
     >>>
     >>> signal_file = '../data/SW_0000.ibw'
     >>> params_file = '../data/parameters.cfg'

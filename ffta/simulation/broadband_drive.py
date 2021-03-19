@@ -5,9 +5,7 @@ __copyright__ = "Copyright 2020, Ginger Lab"
 __email__ = "rgiri@uw.edu"
 __status__ = "Production"
 
-import numpy as np
 from math import pi
-from scipy.integrate import odeint
 from scipy.signal import chirp
 
 from .cantilever import Cantilever

@@ -15,6 +15,9 @@ import h5py
 import pycroscopy as px
 import pyUSID as usid
 import sidpy
+from sidpy.hdf.hdf_utils import get_attributes,
+from pyUSID.io.anc_build_utils import build_ind_val_matrices
+from pyUSID.io.hdf_utils import create_results_group
 from pyUSID import Dimension
 
 from ffta.pixel_utils import load
@@ -97,17 +100,17 @@ def load_wrapper(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False,
 
     if not any(ibw_file_path):
         ibw_file_path = sidpy.io.interface_utils.openfile_dialog(caption='Select IBW Image ',
-                                                  file_types='IBW Files (*.ibw)')
+                                                                 file_types='IBW Files (*.ibw)')
 
     if not any(ff_file_path):
         ff_file_path = sidpy.io.interface_utils.openfile_dialog(caption='Select FF config in folder',
-                                                 file_types='Config File (*.cfg)')
+                                                                file_types='Config File (*.cfg)')
         ff_file_path = '/'.join(ff_file_path.split('/')[:-1])
 
     # Igor image file translation into an H5 file
 
     if ibw_file_path:
-        
+
         if verbose:
             print('Creating Topo Directory')
         tran = gl_ibw.GLIBWTranslator()
@@ -117,9 +120,9 @@ def load_wrapper(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False,
             print('Created file', h5_path)
     else:
         h5_path = 'FF_H5'
-        
+
     # Set up FF data
-    h5_path, data_files, parm_dict = load_folder(folder_path=ff_file_path, 
+    h5_path, data_files, parm_dict = load_folder(folder_path=ff_file_path,
                                                  verbose=verbose,
                                                  file_name=h5_path)
 
@@ -130,7 +133,7 @@ def load_wrapper(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False,
     if loadverbose:
         print('*** Copy-Paste below code for IDE access to h5***')
         print('import h5py')
-        print("h5_file = h5py.File(r'"+h5_path+"')")
+        print("h5_file = h5py.File(r'" + h5_path + "')")
         print("h5_avg = h5_file['FF_Group/FF_Avg']")
 
     return h5_path, parm_dict, h5_ff
@@ -146,7 +149,7 @@ def load_folder(folder_path='', xy_scansize=[0, 0], file_name='FF_H5',
     folder_path : string
         Path to folder you want to process
 
-    xy_sscansize : 2-float array
+    xy_scansize : 2-float array
         Width by Height in meters (e.g. [8e-6, 4e-6]), if not in parameters file
 
     file_name : str
@@ -325,7 +328,7 @@ def load_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True,
     except:
         print('Creating HDF5 file...')
         hdf = h5py.File(h5_path, 'w')
-    
+
     try:
         ff_group = hdf.create_group('FF_Group')
     except:
@@ -340,7 +343,7 @@ def load_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True,
 
     for p in parm_dict:
         ff_group.attrs[p] = parm_dict[p]
-    ff_group.attrs['pnts_per_line'] = num_cols  
+    ff_group.attrs['pnts_per_line'] = num_cols
 
     h5_ff = usid.hdf_utils.write_main_dataset(ff_group,  # parent HDF5 group
                                               (num_rows * num_cols * pnts_per_pixel, pnts_per_avg),
@@ -414,7 +417,7 @@ def load_pixel_averaged_from_raw(h5_file, verbose=True, loadverbose=True):
 
     """
 
-    hdf = px.io.HDFwriter(h5_file)
+    hdf = h5py.File(h5_file)
     h5_main = usid.hdf_utils.find_dataset(hdf.file, 'FF_Raw')[0]
 
     try:
@@ -422,7 +425,7 @@ def load_pixel_averaged_from_raw(h5_file, verbose=True, loadverbose=True):
     except:
         ff_avg_group = usid.hdf_utils.create_indexed_group(h5_main.parent, 'FF_Avg')
 
-    parm_dict = usid.hdf_utils.get_attributes(h5_main.parent)
+    parm_dict = get_attributes(h5_main.parent)
 
     num_rows = parm_dict['num_rows']
     num_cols = parm_dict['num_cols']
@@ -513,7 +516,7 @@ def load_pixel_averaged_FF(data_files, parm_dict, h5_path,
 
     """
 
-    hdf = px.io.HDFwriter(h5_path)
+    hdf = h5py.File(h5_path)
 
     try:
         ff_avg_group = hdf.file.create_group('FF_Group')
@@ -587,59 +590,3 @@ def load_pixel_averaged_FF(data_files, parm_dict, h5_path,
     hdf.flush()
 
     return h5_avg
-
-
-def createHDF5_file(signal, parm_dict, h5_path='', ds_name='FF_Raw'):
-    """
-    Generates the HDF5 file given path to a specific file and a parameters dictionary
-
-    Parameters
-    ----------
-    h5_path : string
-        Path to desired h5 file.
-
-    signal : str, ndarray
-        Path to the data file to be converted or a workspace array
-
-    parm_dict : dict
-        Scan parameters
-
-    Returns
-    -------
-    h5_path: str
-        The filename path to the H5 file create
-
-    """
-
-    sg = signal
-
-    if 'str' in str(type(signal)):
-        sg = load.signal(signal)
-
-    if not any(h5_path):  # if not passed, auto-generate name
-        fname = signal.replace('/', '\\')
-        h5_path = fname[:-4] + '.h5'
-    else:
-        fname = h5_path
-
-    hdf = px.ioHDF5(h5_path)
-    usid.hdf_utils.print_tree(hdf.file)
-
-    ff_group = px.MicroDataGroup('FF_Group', parent='/')
-    root_group = px.MicroDataGroup('/')
-
-    #    fname = fname.split('\\')[-1][:-4]
-    sg = px.MicroDataset(ds_name, data=sg, dtype=np.float32, parent=ff_group)
-
-    if 'pnts_per_pixel' not in parm_dict.keys():
-        parm_dict['pnts_per_avg'] = signal.shape[1]
-        parm_dict['pnts_per_pixel'] = 1
-        parm_dict['pnts_per_line'] = parm_dict['num_cols']
-
-    ff_group.addChildren([sg])
-    ff_group.attrs = parm_dict
-
-    # Get reference for writing the data
-    h5_refs = hdf.writeData(ff_group, print_log=True)
-
-    hdf.flush()
