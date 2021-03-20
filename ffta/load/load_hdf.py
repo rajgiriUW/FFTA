@@ -12,10 +12,9 @@ import numpy as np
 import os
 import h5py
 
-import pycroscopy as px
 import pyUSID as usid
 import sidpy
-from sidpy.hdf.hdf_utils import get_attributes,
+from sidpy.hdf.hdf_utils import get_attributes
 from pyUSID.io.anc_build_utils import build_ind_val_matrices
 from pyUSID.io.hdf_utils import create_results_group
 from pyUSID import Dimension
