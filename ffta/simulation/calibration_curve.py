@@ -8,8 +8,8 @@ Created on Thu Mar  4 10:27:55 2021
 import numpy as np
 
 from .mechanical_drive import MechanicalDrive
-from . import excitation
-from .load import params_from_experiment as load_parm
+from .utils import excitation
+from .utils.load import params_from_experiment as load_parm
 from scipy.interpolate import UnivariateSpline
 
 from matplotlib import pyplot as plt

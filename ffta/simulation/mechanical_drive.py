@@ -10,7 +10,7 @@ from math import pi
 from scipy.integrate import odeint
 
 from .cantilever import Cantilever
-from . import excitation
+from .utils import excitation
 
 # Set constant 2 * pi.
 PI2 = 2 * pi

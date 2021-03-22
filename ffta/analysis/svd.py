@@ -8,7 +8,7 @@ Created on Wed Mar  7 22:04:39 2018
 import pyUSID as usid
 import numpy as np
 
-from svd_utils import SVD, rebuild_svd
+from .svd_utils import SVD, rebuild_svd
 
 from matplotlib import pyplot as plt
 

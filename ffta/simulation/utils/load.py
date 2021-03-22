@@ -6,8 +6,8 @@ Created on Tue May 12 11:23:17 2020
 """
 
 import configparser
-from ..pixel_utils.load import cantilever_params
-from ..pixel_utils.load import configuration
+from ffta.pixel_utils.load import cantilever_params
+from ffta.pixel_utils.load import configuration
 
 
 def simulation_configuration(path):
