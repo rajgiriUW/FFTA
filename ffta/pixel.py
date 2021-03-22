@@ -23,6 +23,7 @@ import pywt
 import time
 import warnings
 
+
 class Pixel:
     """
     Signal Processing to Extract Time-to-First-Peak.
@@ -158,14 +159,14 @@ class Pixel:
 
     """
 
-    def __init__(self, 
-                 signal_array, 
-                 params={}, 
+    def __init__(self,
+                 signal_array,
+                 params={},
                  can_params={},
-                 fit=True, 
+                 fit=True,
                  pycroscopy=False,
-                 method='hilbert', 
-                 fit_form='product', 
+                 method='hilbert',
+                 fit_form='product',
                  filter_amplitude=False,
                  filter_frequency=False,
                  recombination=False,
@@ -227,67 +228,67 @@ class Pixel:
             self.n_signals = 1
             self.signal_array = self.signal_array.flatten()
             self.n_points = self.signal_array.shape[0]
-        
+
         self._n_points_orig = self.signal_array.shape[0]
-        
+
         if pycroscopy:
             self.signal_array = signal_array.T
-        
+
         # The copy of the signal we will manipulate
         self.signal = np.copy(self.signal_array)
-        
+
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
             setattr(self, key, value)
 
         for key, value in can_params.items():
             setattr(self, key, float(value))
-            
+
         # Overwrite parameters with explicitly passed parameters
-        for key, val in zip(['trigger', 'total_time', 'sampling_rate', 'roi'], 
+        for key, val in zip(['trigger', 'total_time', 'sampling_rate', 'roi'],
                             [trigger, total_time, sampling_rate, roi]):
             if val:
                 setattr(self, key, val)
 
         # Check for missing required parameters
-        if self.trigger == None: # trigger can be 0
+        if self.trigger == None:  # trigger can be 0
             raise KeyError('Trigger must be supplied')
-            
+
         if not self.total_time:
             if not self.sampling_rate:
                 raise KeyError('total_time or sampling_rate must be supplied')
             else:
                 self.total_time = self.sampling_rate * self.n_points
-        
+
         elif not self.sampling_rate:
             self.sampling_rate = int(self.n_points / self.total_time)
-        
-        elif self.total_time != self.n_points / self.sampling_rate  :
-            print(self.n_points / self.sampling_rate )
+
+        elif self.total_time != self.n_points / self.sampling_rate:
+            print(self.n_points / self.sampling_rate)
             print(self.total_time)
             raise ValueError('total_time and sampling_rate mismatch')
-         
+
         if self.total_time < self.trigger:
-            self.trigger = 0.1 * self.total_time 
-         
+            self.trigger = 0.1 * self.total_time
+
         if not self.roi:
             self.roi = 0.3 * (self.total_time - self.trigger)
             warnings.warn('ROI defaulting to 30% post-trigger')
-        
+
         elif self.roi > self.total_time - self.trigger:
             print(self.roi)
             print(self.total_time - self.trigger)
             warnings.warn('roi must not extend beyond the total_time; setting to maximum')
             self.roi = self.total_time - self.trigger
-        
-        self.tidx = int(self.trigger * self.sampling_rate)    
+
+        self.tidx = int(self.trigger * self.sampling_rate)
         self._tidx_orig = self.tidx
         self.tidx_orig = self.tidx
-        
+
         if not hasattr(self, 'drive_freq'):
             self.average()
             self.set_drive()
-        
+
         # Processing parameters    
         if self.filter_frequency:
             self.bandpass_filter = 0  # turns off FIR
@@ -324,37 +325,34 @@ class Pixel:
         """Removes DC components from each signal using FFT."""
 
         self.signal = np.copy(self.signal_array)
-        
+
         if self.n_signals == 1:
-            
             self.signal = np.reshape(self.signal, (self.n_points, self.n_signals))
 
         for i in range(self.n_signals):
-            
-            f_ax = np.linspace(-self.sampling_rate/2, self.sampling_rate/2, self.n_points)
+            f_ax = np.linspace(-self.sampling_rate / 2, self.sampling_rate / 2, self.n_points)
             mid = int(len(f_ax) / 2)
             # drive_bin = np.searchsorted(f_ax[mid:], self.drive_freq) + mid
             delta_freq = self.sampling_rate / self.n_points
-    
+
             SIG_DC = np.fft.fftshift(np.fft.fft(self.signal[:, i]))
-    
+
             SIG_DC[:mid - int(dc_width / delta_freq)] = 0
             SIG_DC[mid + int(dc_width / delta_freq):] = 0
             sig_dc = np.real(np.fft.ifft(np.fft.ifftshift(SIG_DC)))
-    
+
             self.signal[:, i] -= sig_dc
-        
+
         if plot:
             fig, ax = plt.subplots(nrows=2, figsize=(6, 10))
-            ax[0].plot(np.arange(0, self.total_time, 1/self.sampling_rate), sig_dc, 'b')
-            ax[1].plot(np.arange(0, self.total_time, 1/self.sampling_rate), self.signal_array, 'b')
-            ax[1].plot(np.arange(0, self.total_time, 1/self.sampling_rate), self.signal, 'r')
+            ax[0].plot(np.arange(0, self.total_time, 1 / self.sampling_rate), sig_dc, 'b')
+            ax[1].plot(np.arange(0, self.total_time, 1 / self.sampling_rate), self.signal_array, 'b')
+            ax[1].plot(np.arange(0, self.total_time, 1 / self.sampling_rate), self.signal, 'r')
             plt.title('DC Offset')
-            
+
         if self.n_signals == 1:
-            
-            self.signal = self.signal[:,0]
-            
+            self.signal = self.signal[:, 0]
+
         return
 
     def phase_lock(self):
@@ -373,7 +371,7 @@ class Pixel:
         """Averages signals."""
 
         if self.n_signals != 1:  # if not multi-signal, don't average
-        
+
             # self.signal = self.signal_array.mean(axis=1)
             self.signal = self.signal.mean(axis=1)
 
@@ -388,9 +386,9 @@ class Pixel:
         signal = self.signal[:n_fft]
         fft_amplitude = np.abs(np.fft.rfft(signal))
         drive_freq = fft_amplitude.argmax() * dfreq
-        
+
         self.drive_freq = drive_freq
-        
+
         return
 
     def check_drive_freq(self):
@@ -608,18 +606,18 @@ class Pixel:
                 # Remove the drive from phase.
                 # self.phase -= (2 * np.pi * self.drive_freq *
                 #               np.arange(self.n_points) / self.sampling_rate)
-    
+
                 # A curve fit on the initial part to make sure that it worked.
                 start = int(0.3 * self.tidx)
                 end = int(0.7 * self.tidx)
                 fit = self.phase[start:end]
-    
+
                 xfit = np.polyfit(np.arange(start, end), fit, 1)
-    
+
                 # Remove the fit from phase.
                 self.phase -= (xfit[0] * np.arange(self.n_points)) + xfit[1]
         except:
-            self.phase -= (2 * np.pi * self.drive_freq * 
+            self.phase -= (2 * np.pi * self.drive_freq *
                            np.arange(self.n_points) / self.sampling_rate)
 
         self.phase = -self.phase  # need to correct for negative in DDHO solution
@@ -646,7 +644,7 @@ class Pixel:
         self.inst_freq = self.inst_freq_raw - self.inst_freq_raw[self.tidx]
 
         return
-    
+
     def calculate_cwt(self, f_center=None, verbose=False, optimize=False, fit=False):
         '''
         Calculate instantaneous frequency using continuous wavelet transfer
@@ -668,7 +666,7 @@ class Pixel:
 
         dt = 1 / self.sampling_rate
         sc = pywt.scale2frequency(self.wavelet, self.scales) / dt
-        
+
         if self.verbose:
             print('Wavelet scale from', np.min(sc), 'to', np.max(sc))
 
@@ -744,7 +742,7 @@ class Pixel:
             Length of FFT calculated in the spectrogram. More points gets much slower
             but the longer the FFT the finer the frequency bin spacing            
         '''
-        
+
         pts_per_ncycle = int(self.fft_time_res * self.sampling_rate)
 
         if nfft < pts_per_ncycle:
@@ -794,14 +792,14 @@ class Pixel:
         self.phase = phase
 
         return
-    
+
     def forcevib(self):
         """Calculate the resonance frequency directly via FORCE-VIB method.
         See
         """
-        
+
         return
-    
+
     def find_tfp(self):
         """Calculate tfp and shift based self.fit_form and self.fit selection"""
         ridx = int(self.roi * self.sampling_rate)
@@ -809,37 +807,37 @@ class Pixel:
         cut -= self.inst_freq[self.tidx]
         self.cut = cut
         t = np.arange(cut.shape[0]) / self.sampling_rate
-        
+
         try:
-            
+
             if not self.fit:
-    
+
                 tfp_calc.find_minimum(self, cut)
-    
+
             elif self.fit_form == 'sum':
-    
+
                 tfp_calc.fit_freq_sum(self, cut, t)
-    
+
             elif self.fit_form == 'exp':
-    
+
                 tfp_calc.fit_freq_exp(self, cut, t)
-    
+
             elif self.fit_form == 'ringdown':
-    
+
                 cut = self.amplitude[self.tidx:(self.tidx + ridx)]
                 tfp_calc.fit_ringdown(self, cut, t)
-    
+
             elif self.fit_form == 'product':
-    
+
                 tfp_calc.fit_freq_product(self, cut, t)
-    
+
             elif self.fit_form == 'phase':
-    
+
                 cut = -1 * (self.phase[self.tidx:(self.tidx + ridx)] - self.phase[self.tidx])
                 tfp_calc.fit_phase(self, cut, t)
 
         except:
-            
+
             self.tfp = np.nan
             self.shift = np.nan
             self.best_fit = np.zeros(cut.shape[0])
@@ -960,7 +958,6 @@ class Pixel:
 
         # Check the drive frequency.
         if self.check_drive:
-            
             self.check_drive_freq()
 
         # DWT Denoise
@@ -977,7 +974,7 @@ class Pixel:
             self.calculate_stft(**self.fft_params)
 
         elif self.method == 'fv':
-            
+
             self.forcevib()
 
         elif self.method == 'hilbert':
@@ -1033,7 +1030,6 @@ class Pixel:
 
         # If it's a recombination image invert it to find minimum.
         if self.recombination:
-
             self.inst_freq = self.inst_freq * -1
 
         # Find where the minimum is.
@@ -1041,12 +1037,10 @@ class Pixel:
 
         # Restore the length due to FIR filter being causal
         if self.method == 'hilbert':
-            
             self.restore_signal()
 
         # If it's a recombination image invert it to find minimum.
         if self.recombination:
-            
             self.inst_freq = self.inst_freq * -1
             self.best_fit = self.best_fit * -1
             self.cut = self.cut * -1

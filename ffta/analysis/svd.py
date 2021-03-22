@@ -5,11 +5,10 @@ Created on Wed Mar  7 22:04:39 2018
 @author: Raj
 """
 
-import pycroscopy as px
 import pyUSID as usid
 import numpy as np
 
-from pycroscopy.processing.svd_utils import SVD
+from .svd_utils import SVD, rebuild_svd
 
 from matplotlib import pyplot as plt
 
@@ -100,7 +99,7 @@ def svd_filter(h5_main, clean_components=None):
 	if not (isinstance(h5_main, usid.USIDataset)):
 		h5_main = usid.USIDataset(h5_main)
 
-	h5_rb = px.processing.svd_utils.rebuild_svd(h5_main, components=clean_components)
+	h5_rb = rebuild_svd(h5_main, components=clean_components)
 
 	parameters = get_utils.get_params(h5_main)
 

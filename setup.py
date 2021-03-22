@@ -24,13 +24,12 @@ setup(
                       'igor>=0.3',
                       'numexpr>=2.7.1',
                       'pyUSID>=0.0.8',
-                      'pycroscopy>=0.60',
                       'pywavelets>=1.1.1',
                       'sidpy>=0.0.2',
                       'pandas>=1.1.0',
                       'BGlib>=0.0.2'
                       ],
-
+    test_suite='pytest',
     # entry_points={
     #      'console_scripts': [
     #          'ffta-analyze = ffta.analyze:main',

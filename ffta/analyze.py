@@ -14,8 +14,8 @@ import logging
 import argparse as ap
 import numpy as np
 import ffta.line as line
-from ffta.pixel_utils import load
-import badpixels
+from .pixel_utils import load
+from .pixel_utils import badpixels
 
 # Plotting imports
 import matplotlib as mpl
