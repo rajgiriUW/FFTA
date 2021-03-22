@@ -29,7 +29,7 @@ setup(
                       'pandas>=1.1.0',
                       'BGlib>=0.0.2'
                       ],
-
+    test_suite='pytest',
     # entry_points={
     #      'console_scripts': [
     #          'ffta-analyze = ffta.analyze:main',
