@@ -29,18 +29,18 @@ ffta.simulation.electric\_drive module
    :undoc-members:
    :show-inheritance:
 
-ffta.simulation.excitation module
+ffta.simulation.utils.excitation module
 ---------------------------------
 
-.. automodule:: ffta.simulation.excitation
+.. automodule:: ffta.simulation.utils.excitation
    :members:
    :undoc-members:
    :show-inheritance:
 
-ffta.simulation.load module
+ffta.simulation.utils.load module
 ---------------------------
 
-.. automodule:: ffta.simulation.load
+.. automodule:: ffta.simulation.utils.load
    :members:
    :undoc-members:
    :show-inheritance:

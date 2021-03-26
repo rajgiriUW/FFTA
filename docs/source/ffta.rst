@@ -54,7 +54,7 @@ ffta.line module
 ffta.pixel module
 -----------------
 
-.. automodule:: ffta.pixel
+.. autoclass:: ffta.pixel.Pixel
    :members:
    :undoc-members:
    :show-inheritance:

@@ -5,4 +5,4 @@ from . import test_pixel
 from . import create_movie
 from . import filtering
 
-__all__ = ['svd', 'dist_cluster', 'gmode_simple']
+__all__ = ['svd', 'dist_cluster']
