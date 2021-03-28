@@ -15,8 +15,6 @@ import h5py
 import pyUSID as usid
 import sidpy
 from sidpy.hdf.hdf_utils import get_attributes
-from pyUSID.io.anc_build_utils import build_ind_val_matrices
-from pyUSID.io.hdf_utils import create_results_group
 from pyUSID import Dimension
 
 from ffta.pixel_utils import load
@@ -226,8 +224,8 @@ def load_folder(folder_path='', xy_scansize=[0, 0], file_name='FF_H5',
     ratio = np.round(parm_dict['FastScanSize'] * 1e6, 2) / np.round(parm_dict['SlowScanSize'] * 1e6, 2)
     if n_pixels / len(data_files) != ratio:
         print(ratio)
-        print(parm_dict['FastScanSize'], parm_dict['SlowScanSize'], 
-              n_pixels / len(data_files), 
+        print(parm_dict['FastScanSize'], parm_dict['SlowScanSize'],
+              n_pixels / len(data_files),
               len(data_files))
         raise Exception('X-Y Dimensions do not match filelist. Add manually to config file. Check n-pixels.')
 
@@ -441,10 +439,8 @@ def load_pixel_averaged_from_raw(h5_file, verbose=True, loadverbose=True):
     # Set up the position vectors for the data
     pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
                 Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
-    ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False)
 
     spec_desc = [Dimension('Time', 's', np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
-    ds_spec_inds, ds_spec_vals = build_ind_val_dsets(spec_desc, is_spectral=True)
 
     for p in parm_dict:
         ff_avg_group.attrs[p] = parm_dict[p]
@@ -474,113 +470,6 @@ def load_pixel_averaged_from_raw(h5_file, verbose=True, loadverbose=True):
         _ll = _ll.pixel_wise_avg()
 
         h5_avg[i * num_cols:(i + 1) * num_cols, :] = _ll[:, :]
-
-    if verbose == True:
-        usid.hdf_utils.print_tree(hdf.file, rel_paths=True)
-        h5_avg = usid.hdf_utils.find_dataset(hdf.file, 'FF_Avg')[0]
-
-        print('H5_avg of size:', h5_avg.shape)
-
-    hdf.flush()
-
-    return h5_avg
-
-
-def load_pixel_averaged_FF(data_files, parm_dict, h5_path,
-                           verbose=False, loadverbose=True, mirror=False):
-    """
-    Creates a new group FF_Avg where the raw FF files are averaged together
-
-    This function does not process the Raw data and is more useful when the resulting 
-    Raw data matrix is very large (causing memory errors)
-    
-    This is more useful as pixel-wise averages are more relevant in FF-processing
-
-    This Dataset is (n_pixels*n_rows, n_pnts_per_avg)
-
-    Parameters
-    ----------
-    h5_file : h5py File
-        H5 File to be examined. File typically set as h5_file = hdf.file
-        hdf = px.ioHDF5(h5_path), h5_path = path to disk
-
-    verbose : bool, optional
-        Display outputs of each function or not
-
-    loadverbose : Boolean (optional)
-        Whether to print any simple "loading Line X" statements for feedback
-
-    Returns
-    -------
-    h5_avg : Dataset
-        The new averaged Dataset
-
-    """
-
-    hdf = h5py.File(h5_path)
-
-    try:
-        ff_avg_group = hdf.file.create_group('FF_Group')
-    except:
-        ff_avg_group = usid.hdf_utils.create_indexed_group(hdf.file['/'], 'FF_Group')
-
-    try:
-        ff_avg_group = hdf.file[ff_avg_group.name].create_group('FF_Avg')
-    except:
-        ff_avg_group = usid.hdf_utils.create_indexed_group(ff_avg_group, 'FF_Avg')
-
-    num_rows = parm_dict['num_rows']
-    num_cols = parm_dict['num_cols']
-    pnts_per_avg = parm_dict['pnts_per_avg']
-    pnts_per_line = parm_dict['pnts_per_line']
-    pnts_per_pixel = parm_dict['pnts_per_pixel']
-    parm_dict['pnts_per_pixel'] = 1  # only 1 average per pixel now
-    parm_dict['pnts_per_line'] = num_cols  # equivalent now with averaged data
-    n_pix = int(pnts_per_line / pnts_per_pixel)
-    dt = 1 / parm_dict['sampling_rate']
-
-    # Set up the position vectors for the data
-    pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
-                Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
-    ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False)
-
-    spec_desc = [Dimension('Time', 's', np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
-    ds_spec_inds, ds_spec_vals = build_ind_val_dsets(spec_desc, is_spectral=True)
-
-    for p in parm_dict:
-        ff_avg_group.attrs[p] = parm_dict[p]
-    ff_avg_group.attrs['pnts_per_line'] = num_cols  # to change number of pnts in a line
-    ff_avg_group.attrs['pnts_per_pixel'] = 1  # to change number of pnts in a pixel
-
-    h5_avg = usid.hdf_utils.write_main_dataset(ff_avg_group,  # parent HDF5 group
-                                               (num_rows * num_cols, pnts_per_avg),  # shape of Main dataset
-                                               'FF_Avg',  # Name of main dataset
-                                               'Deflection',  # Physical quantity contained in Main dataset
-                                               'V',  # Units for the physical quantity
-                                               pos_desc,  # Position dimensions
-                                               spec_desc,  # Spectroscopic dimensions
-                                               dtype=np.float32,  # data type / precision
-                                               compression='gzip',
-                                               main_dset_attrs=parm_dict)
-
-    # Generates a line from each data file, averages, then saves the data
-
-    for k, n in zip(data_files, np.arange(0, len(data_files))):
-
-        if loadverbose:
-            fname = k.replace('/', '\\')
-            print('####', fname.split('\\')[-1], '####')
-            fname = str(n).rjust(4, '0')
-
-        line_file = load.signal(k)
-
-        _ll = line.Line(line_file, parm_dict, n_pixels=n_pix, pycroscopy=False)
-        _ll = _ll.pixel_wise_avg().T
-
-        if mirror:
-            h5_avg[n * num_cols:(n + 1) * num_cols, :] = np.flipud(_ll[:, :])
-        else:
-            h5_avg[n * num_cols:(n + 1) * num_cols, :] = _ll[:, :]
 
     if verbose == True:
         usid.hdf_utils.print_tree(hdf.file, rel_paths=True)
