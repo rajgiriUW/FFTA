@@ -1,7 +1,7 @@
 """pixel.py: Contains pixel class."""
 # pylint: disable=E1101,R0902,C0103
 __author__ = "Rajiv Giridharagopal"
-__copyright__ = "Copyright 2020"
+__copyright__ = "Copyright 2021"
 __maintainer__ = "Rajiv Giridharagopal"
 __email__ = "rgiri@uw.edu"
 __status__ = "Development"
@@ -36,9 +36,9 @@ class Pixel:
     b) Wavelet Transform
     c) Short-Time Fourier Transform (STFT))
 
-    signal_array : (n_points, n_signals) array_like
+    signal_array: (n_points, n_signals) array_like
         2D real-valued signal array, corresponds to a pixel.
-    params : dict, optional
+    params: dict, optional
         Includes parameters for processing, saved by the experiment Required:
 
         trigger = float (in seconds) (required)
@@ -56,14 +56,14 @@ class Pixel:
         wavelet_parameter = int (default: 5)
         recombination = bool (0: Data are for Charging up, 1: Recombination)
         fit_phase = bool (0: fit to frequency, 1: fit to phase)
-    can_params : dict, optional
+    can_params: dict, optional
         Contains the cantilever parameters (e.g. AMPINVOLS).
         see ffta.pixel_utils.load.cantilever_params
-    fit : bool, optional
+    fit: bool, optional
         Find tFP by just raw minimum (False) or fitting product of 2 exponentials (True)
     pycroscopy : bool, optional
         Pycroscopy requires different orientation, so this corrects for this effect.
-    fit_form : str, optional
+    fit_form: str, optional
         Functional form used when fitting. 
         
         One of 
@@ -72,7 +72,7 @@ class Pixel:
             exp: single expential decay
             ringdown: single exponential decay of amplitude, not frequency, scaled to return Q
     
-    method : str, optional
+    method: str, optional
         Method for generating instantaneous frequency, amplitude, and phase response
         
         One of
@@ -81,9 +81,9 @@ class Pixel:
             stft: short time Fourier transform (sliding FFT)
             fv: Feldman Force-Vib method
     
-    filter_amplitude : bool, optional
+    filter_amplitude: bool, optional
         The Hilbert Transform amplitude can sometimes have drive frequency artifact.
-    filter_frequency : bool, optional
+    filter_frequency: bool, optional
         Filters the instantaneous frequency to remove noise peaks
     recombination: bool, optional
         Whether to invert the frequency (during a recombination or positive frequency shift event)
@@ -93,9 +93,9 @@ class Pixel:
         The point where the event occurs.
     total_time: bool, optional
         The total time of the signal
-    sampling_rate : bool, optional
+    sampling_rate: bool, optional
         The sampling rate. Note that sampling_rate * total_time must equal number of samples
-    roi : bool, opertional
+    roi: bool, opertional
         The length of the window to find a minimum frequency peak
         
     Attributes

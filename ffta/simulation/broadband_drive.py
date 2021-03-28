@@ -59,12 +59,13 @@ class BroadbandPulse(Cantilever):
 
     Examples
     --------
-    >>> from ffta.simulation import mechanical_dirve, load
+    >>> from ffta.simulation import mechanical_drive
+    >>> from ffta.simulation.utils import load
     >>>
     >>> params_file = '../examples/sim_params.cfg'
     >>> params = load.simulation_configuration(params_file)
     >>>
-    >>> c = mechanical_dirve.MechanicalDrive(*params)
+    >>> c = mechanical_drive.MechanicalDrive(*params)
     >>> Z, infodict = c.simulate()
     >>> c.analyze()
     >>> c.analyze(roi=0.004) # can change the parameters as desired

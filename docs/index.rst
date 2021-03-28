@@ -3,9 +3,22 @@ Fast Free Transient Analysis (FFTA)
 **Methods for analyzing non-stationary microscopy information**
 
 
+.. toctree::
+   :hidden:
+   :glob:
+   :maxdepth: 2
+
+   About <about.rst>
+   Github <https://github.com/rajgiriUW/ffta>
+   Analyzing a Signal <about.rst>
+   Analyzing an Image <about.rst>
+   Simulating a Cantilever <notebooks/simulating.ipynb>
+   Source <source.ffta.rst>
+
 | Rajiv Giridharagopal, Ph.D.
 | University of Washington
 | rgiri@uw.edu
+
 
 
 About
@@ -19,6 +32,8 @@ This includes a few types of spectral analysis:
 * Short-time Fourier Transform
 * General Mode KPFM (G-KPFM)
 * Non-stationary Fourier Mode Decomposition (via the `Brunton lab <https://www.eigensteve.com>`_ and the `Kutz lab <https://faculty.washington.edu/kutz/>`_ )
+
+Also, this package includes simulation code for computing damped driven harmonic oscillator (DDHO) response to an excitation source. 
 
 FFTA builds heavily upon the `Universal Spectroscopic and Imaging Data (USID) <https://pycroscopy.github.io/pyUSID/index.html>`_ from Oak Ridge National Lab, as well as utilities from `Spectroscopic and Imaging Data (sidPy) <https://pycroscopy.github.io/sidpy/index.html>`_. The result is a HDF5 of the data, making transfer and re-analysis straightforward.
 
@@ -132,10 +147,3 @@ It is good practice in HDF5 files to explicitly close them when not in use.
 .. code:: bash
 
    h5_avg.file.close()
-
-.. toctree::
-   :maxdepth: 2
-   :titlesonly:
-
-   FFTA <index.rst>
-   Source <source/ffta.rst>

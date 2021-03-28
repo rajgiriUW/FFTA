@@ -15,3 +15,5 @@ __all__ += hdf_utils.__all__
 __all__ += pixel_utils.__all__
 __all__ += analysis.__all__
 __all__ += gkpfm.__all__
+__all__ += load.__all__
+__all__ += simulation.__all__

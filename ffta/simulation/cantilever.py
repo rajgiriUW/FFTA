@@ -21,9 +21,9 @@ class Cantilever:
 
     This class contains the functions needed to simulate. To create a class that
     simulates a subset, it needs to overload the following functions:
-        force(self, t)
-        omega(self, t)
-        dZdt(self, t) if the given ODE form will not work
+    force(self, t)
+    omega(self, t)
+    dZdt(self, t) if the given ODE form will not work
 
     Parameters
     ----------
@@ -89,7 +89,8 @@ class Cantilever:
 
     Examples
     --------
-    >>> from ffta.simulation import cantilever, load
+    >>> from ffta.simulation import cantilever
+    >>> from ffta.simulation.utils import load
     >>>
     >>> params_file = '../examples/sim_params.cfg'
     >>> params = load.simulation_configuration(params_file)
