@@ -8,7 +8,6 @@ Created on Thu Mar  4 10:27:55 2021
 import numpy as np
 
 from .mechanical_drive import MechanicalDrive
-from .utils import excitation
 from .utils.load import params_from_experiment as load_parm
 from scipy.interpolate import UnivariateSpline
 
@@ -35,6 +34,8 @@ Usage:
 
 def cal_curve(can_path, param_cfg, plot=True, **kwargs):
     '''
+    Parameters
+    ----------
     can_params : string
 		Path to cantilever parameters file (from Force Calibration tab)
 
@@ -42,13 +43,13 @@ def cal_curve(can_path, param_cfg, plot=True, **kwargs):
 		Path to parameters.cfg file (from FFtrEFM experiment, in the data folder)
         
     Returns:
-        
-        taus : ndArray
-            The single exponential taus that were simulated
-        tfps : ndArray
-            The measured time to first peaks
-        spl : UnivariateSpline
-            spline object of the calibration curve. To scale an image, type spl(x)
+    --------
+    taus : ndArray
+        The single exponential taus that were simulated
+    tfps : ndArray
+        The measured time to first peaks
+    spl : UnivariateSpline
+        spline object of the calibration curve. To scale an image, type spl(x)
             
 	'''
 
