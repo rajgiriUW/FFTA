@@ -8,12 +8,13 @@ sys.path.insert(0, '..')
 
 import ffta
 import pyUSID as usid
+import pytest
 
 # Testing of standard process flow
 class TestFFTA:
 
-    ff_folder = 'tests/testdata'
-    ff_file = 'tests/testdata/FF_H5.h5'
+    self.ff_folder = 'tests/testdata'
+    self.ff_file = 'tests/testdata/FF_H5.h5'
     try:
         os.remove(ff_file)
 
@@ -22,16 +23,16 @@ class TestFFTA:
         os.remove(ff_folder + '/tfp_test.csv')
 
     except:
-        pass
+        print('aaa')
 
-    def load_data_files(self):
-        h5_path, data_files, parm_dict = ffta.load.load_hdf.load_folder(folder_path=ff_folder)
+    def test_load_data_files(self):
+        h5_path, data_files, parm_dict = ffta.load.load_hdf.load_folder(folder_path=self.ff_folder)
         assert (len(data_files) == 8)
         assert (len(parm_dict.items()) == 22)
         assert (type(h5_path) == str)
 
-    def load_FF(self):
-        h5_path, data_files, parm_dict = ffta.load.load_hdf.load_folder(folder_path=ff_folder)
+    def test_load_FF(self):
+        h5_path, data_files, parm_dict = ffta.load.load_hdf.load_folder(folder_path=self.ff_folder)
         h5_avg = ffta.load.load_hdf.load_FF(data_files, parm_dict, h5_path)
 
         assert(h5_avg.shape == (8192, 20000) )
