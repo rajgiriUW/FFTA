@@ -82,7 +82,7 @@ def process(h5_file, ds='FF_Raw', ref='', clear_filter=False,
 
 	if ('str' in ftype) or ('File' in ftype) or ('Dataset' in ftype):
 
-		h5_file = px.io.HDFwriter(h5_file).file
+		h5_file = h5py.File(h5_file)
 
 	else:
 
@@ -270,19 +270,6 @@ def save_ht_outs(h5_gp, tfp, shift):
 	tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)
 	tfp_fixed = np.array(tfp_fixed)
 
-	# write data; note that this is all actually deprecated and should be fixed
-	#    grp_name = h5_gp.name
-	#    grp_tr = px.io.VirtualGroup(grp_name)
-	#    tfp_px = px.io.VirtualDataset('tfp', tfp, parent = h5_gp)
-	#    shift_px = px.io.VirtualDataset('shift', shift, parent = h5_gp)
-	#    tfp_fixed_px = px.io.VirtualDataset('tfp_fixed', tfp_fixed, parent = h5_gp)
-	#
-	#    grp_tr.attrs['timestamp'] = get_time_stamp()
-	#    grp_tr.add_children([tfp_px])
-	#    grp_tr.add_children([shift_px])
-	#    grp_tr.add_children([tfp_fixed_px])
-
-	# write data using current pyUSID implementations
 	#    grp_tr = h5_file.create_group(h5_gp.name)
 	tfp_px = h5_gp.create_dataset('tfp', data=tfp, dtype=np.float32)
 	shift_px = h5_gp.create_dataset('shift', data=shift, dtype=np.float32)
@@ -350,7 +337,7 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
 		Number of standard deviations to display
 	"""
 
-	h5_file = px.io.HDFwriter(h5_file).file
+	h5_file = h5py.File(h5_file)
 	
 	try:
 		h5_if = usid.hdf_utils.find_dataset(h5_file[h5_path], 'Inst_Freq')[0]
