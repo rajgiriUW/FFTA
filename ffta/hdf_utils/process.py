@@ -442,7 +442,7 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)
     tfp_fixed = np.array(tfp_fixed)
     
-    if list(tfp_cal) != None:
+    if isinstance(tfp_cal, np.ndarray):
         
         tfp_cal_fixed, _ = badpixels.fix_array(tfp_cal, threshold=2)
         tfp_cal_fixed = np.array(tfp_cal_fixed)
