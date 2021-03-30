@@ -55,7 +55,7 @@ def cal_curve(can_path, param_cfg, plot=True, **kwargs):
 
     can_params, force_params, sim_params, _, parms = load_parm(can_path, param_cfg)
 
-    taus = np.logspace(-7, -3, 40)
+    taus = np.logspace(-7, -3, 50)
     tfps = []
 
     for t in taus:
@@ -70,6 +70,10 @@ def cal_curve(can_path, param_cfg, plot=True, **kwargs):
     taus = np.array(taus)
     tfps = np.delete(tfps, np.where(dtfp < 0)[0])
     taus = np.delete(taus, np.where(dtfp < 0)[0])
+    
+    negs = np.diff(taus) / np.diff(tfps)
+    tfps = np.delete(tfps, np.where(negs < 0)[0])
+    taus = np.delete(taus, np.where(negs < 0)[0])
 
     try:
         spl = UnivariateSpline(tfps, taus)
