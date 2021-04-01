@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 """
+Copied from Pycroscopy for legacy compatibility reasons. See:
+https://github.com/pycroscopy/pycroscopy
+
 USID utilities for performing randomized singular value decomposition and reconstructing results
 
 Created on Mon Mar 28 09:45:08 2016

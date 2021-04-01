@@ -4,9 +4,9 @@ Created on Fri Aug 24 13:40:54 2018
 
 @author: Raj
 """
-import pycroscopy as px
 import pyUSID as usid
 import sidpy
+import h5py
 
 from ffta.line import Line
 from ffta.pixel import Pixel
@@ -39,20 +39,20 @@ def get_params(h5_path, key='', verbose=False, del_indices=True):
     """
 
     if isinstance(h5_path, str):
-        h5_path = px.io.HDFwriter(h5_path).file
+        h5_path = h5py.File(h5_path)
 
     parameters = sidpy.hdf_utils.get_attributes(h5_path)
 
     # if this dataset does not have complete FFtrEFM parameters
     if 'trigger' not in parameters:
-        parameters = usid.hdf_utils.get_attributes(h5_path.parent)
+        parameters = sidpy.hdf_utils.get_attributes(h5_path.parent)
 
     # still not there? hard-select the main dataset
     if 'trigger' not in parameters:
 
         try:
-            h5_file = px.io.HDFwriter(h5_path).file
-            parameters = usid.hdf_utils.get_attributes(h5_file['FF_Group'])
+            h5_file = h5py.File(h5_path)
+            parameters = sidpy.hdf_utils.get_attributes(h5_file['FF_Group'])
 
         except:
             raise TypeError('No proper parameters file found.')
@@ -61,7 +61,7 @@ def get_params(h5_path, key='', verbose=False, del_indices=True):
     if 'trigger' not in parameters:
 
         try:
-            h5_file = px.io.HDFwriter(h5_path).file
+            h5_file = h5py.File(h5_path)
             parameters = usid.hdf_utils.get_attributes(h5_file['FF_Group/FF_Avg'])
 
         except:
@@ -165,7 +165,7 @@ def get_line(h5_path, line_num, params={},
     if 'Dataset' not in str(type(h5_path)):
 
         parameters = get_params(h5_path)
-        h5_file = px.io.HDFwriter(h5_path).file
+        h5_file = h5py.File(h5_path)
 
         d = usid.hdf_utils.find_dataset(h5_file, 'FF_Raw')[0]
         c = parameters['num_cols']
@@ -246,7 +246,7 @@ def get_pixel(h5_path, rc, params={}, pixel_params={},
     # If not a dataset, then find the associated Group
     if 'Dataset' not in str(type(h5_path)):
         p = get_params(h5_path)
-        h5_file = px.io.HDFwriter(h5_path).file
+        h5_file = h5py.File(h5_path)
 
         d = usid.hdf_utils.find_dataset(h5_file, 'FF_Raw')[0]
         r = p['num_rows']

@@ -300,15 +300,27 @@ class FFtrEFM(Process):
         del self.h5_tfp.file[self.h5_tfp.name]
         del self.h5_tfp.file[self.h5_shift.name]
 
-        self.h5_tfp = self.h5_results_grp.create_dataset('tfp', data=h5_tfp, dtype=np.float32)
-        self.h5_shift = self.h5_results_grp.create_dataset('shift', data=h5_shift, dtype=np.float32)
+        self.h5_tfp = self.h5_results_grp.create_dataset('tfp', 
+                                                         data=h5_tfp, 
+                                                         dtype=np.float32)
+        self.h5_shift = self.h5_results_grp.create_dataset('shift', 
+                                                           data=h5_shift, 
+                                                           dtype=np.float32)
 
         if cal:
             
+            if 'tfp_cal' in self.h5_results_grp:
+                del self.h5_results_grp['tfp_cal']
             tfp_cal = cal(h5_tfp)
             self.h5_tfp_cal = self.h5_results_grp.create_dataset('tfp_cal', 
                                                                  data=tfp_cal, 
                                                                  dtype=np.float32)
+            taus = np.logspace(-7, -3, 40)
+            if 'cal_curve' in self.h5_results_grp:
+                del self.h5_results_grp['cal_curve']
+            _ = self.h5_results_grp.create_dataset('cal_curve',
+                                                   data = cal(taus),
+                                                   dtype=np.float32)
 
         return
 
@@ -442,7 +454,7 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)
     tfp_fixed = np.array(tfp_fixed)
     
-    if list(tfp_cal) != None:
+    if isinstance(tfp_cal, np.ndarray):
         
         tfp_cal_fixed, _ = badpixels.fix_array(tfp_cal, threshold=2)
         tfp_cal_fixed = np.array(tfp_cal_fixed)
@@ -486,6 +498,7 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
 
     tfp_ax = a[0][1]
     shift_ax = a[1][1]
+    tfp_cal_ax = a[1][0]
 
     if isinstance(ffprocess, ffta.hdf_utils.process.FFtrEFM):
 
@@ -497,6 +510,11 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
         
         tfp = ffprocess.h5_tfp[()]
         shift = ffprocess.h5_shift[()]
+        
+        if 'tfp_cal' in ffprocess.h5_tfp.parent:
+            tfp_cal = ffprocess.h5_tfp.parent['tfp_cal'][()]
+        else:
+            tfp_cal = np.zeros(tfp.shape)
     
     elif isinstance(ffprocess, h5py.Group):
         
@@ -510,8 +528,15 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
         tfp = ffprocess['tfp']
         shift = ffprocess['shift']
         
+        if 'tfp_cal' in ffprocess:
+            tfp_cal = ffprocess['tfp_cal'][()]
+        else:
+            tfp_cal = np.zeros(tfp.shape)
+        
     kwarg = {'origin': 'lower', 'x_vec': img_length * 1e6,
              'y_vec': img_height * 1e6, 'num_ticks': 5, 'stdevs': 3, 'show_cbar': True}
+
+
 
     for k, v in kwarg.items():
         if k not in kwargs:
@@ -530,14 +555,18 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
     shift_ax.set_title('Shift Image')
 
     tfp_fixed, _ = badpixels.fix_array(tfp, threshold=threshold)
+    tfp_cal_fixed, _ = badpixels.fix_array(tfp_cal, threshold=threshold)
 
     tfp_image, cbar_tfp = plot_utils.plot_map(tfp_ax, tfp_fixed * scale_tfp,
-                                                       cmap='inferno', **kwargs)
+                                              cmap='inferno', **kwargs)
     shift_image, cbar_sh = plot_utils.plot_map(shift_ax, shift * scale_shift,
-                                                        cmap='inferno', **kwargs)
-
+                                               cmap='inferno', **kwargs)
+    tfp_cal_image, cbar_tfp_cal = plot_utils.plot_map(tfp_cal_ax, tfp_cal_fixed * scale_tfp,
+                                                  cmap='inferno', **kwargs)
+    
     cbar_tfp.set_label('Time (us)', rotation=270, labelpad=16)
     cbar_sh.set_label('Frequency Shift (Hz)', rotation=270, labelpad=16)
+    cbar_tfp_cal.set_label('Time Calib. (us)', rotation=90, labelpad=16)
     text = tfp_ax.text(num_cols / 2, num_rows + 3, '')
 
     return fig, a

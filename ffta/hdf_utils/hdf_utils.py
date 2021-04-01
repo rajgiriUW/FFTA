@@ -4,7 +4,6 @@ Created on Thu Feb 22 14:28:28 2018
 
 @author: Raj
 """
-import pycroscopy as px
 import pyUSID as usid
 
 import warnings
@@ -53,7 +52,7 @@ def _which_h5_group(h5_path):
 
 	# h5_path is a file path
 	if 'str' in ftype:
-		hdf = px.io.HDFwriter(h5_path)
+		hdf = h5py.File(h5_path)
 		p = usid.hdf_utils.find_dataset(hdf.file, 'FF_Raw')[0]
 
 		return p.parent
@@ -128,7 +127,7 @@ def add_standard_sets(h5_path, group, fast_x=32e-6, slow_y=8e-6,
 		Whether to write to the command line
 	"""
 
-	hdf = px.io.HDFwriter(h5_path)
+	hdf = h5py.File(h5_path)
 
 	if not any(parm_dict):
 		parm_dict = get_utils.get_params(h5_path)
