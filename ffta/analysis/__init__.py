@@ -1,8 +1,7 @@
-from . import dist_cluster
 from . import svd
 from . import mask_utils
 from . import test_pixel
 from . import create_movie
-from . import filtering
+#from . import filtering
 
-__all__ = ['svd', 'dist_cluster']
+__all__ = ['svd']
