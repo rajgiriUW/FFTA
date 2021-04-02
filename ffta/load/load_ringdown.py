@@ -11,7 +11,7 @@ from scipy.optimize import minimize
 import os
 
 import pyUSID as usid
-from pycroscopy.io.write_utils import build_ind_val_dsets, Dimension
+from sidpy import Dimension
 
 from ffta.load.load_hdf import load_folder
 from ffta.load import gl_ibw
@@ -178,10 +178,8 @@ def load_ringdown(data_files, parm_dict, h5_path,
 
 	pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols * pnts_per_pixel)),
 				Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
-	ds_pos_ind, ds_pos_val = build_ind_val_dsets(pos_desc, is_spectral=False, verbose=verbose)
 
 	spec_desc = [Dimension('Time', 's', np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
-	ds_spec_inds, ds_spec_vals = build_ind_val_dsets(spec_desc, is_spectral=True)
 
 	for p in parm_dict:
 		rd_group.attrs[p] = parm_dict[p]

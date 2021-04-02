@@ -13,7 +13,7 @@ from igor import binarywave as bw
 
 from sidpy.sid import Translator # , generate_dummy_main_parms
 
-from pycroscopy.io.write_utils import Dimension
+from sidpy import Dimension
 from pyUSID.io.hdf_utils import write_ind_val_dsets
 from pyUSID.io.hdf_utils import write_main_dataset, create_indexed_group
 import h5py
