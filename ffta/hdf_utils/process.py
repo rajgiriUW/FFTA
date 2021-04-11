@@ -416,7 +416,7 @@ class FFtrEFM(Process):
         return [inst_freq, amplitude, phase, tfp, shift, pwr_diss]
 
 
-def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
+def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False, offset=0):
     """
     Saves the tfp, shift, and fixed_tfp as CSV files
     
@@ -430,6 +430,9 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     
     append : str, optional
         text to append to file name
+        
+    offset : float
+        if calculating tFP with a fixed offset for fitting, this subtracts it out
     """
 
     h5_ff = h5_file
@@ -466,17 +469,22 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     os.chdir(path)
 
     if mirror:
-        np.savetxt('tfp-' + append + '.csv', np.fliplr(tfp).T, delimiter=',')
+        np.savetxt('tfp-' + append + '.csv', np.fliplr(tfp - offset).T, delimiter=',')
         np.savetxt('shift-' + append + '.csv', np.fliplr(shift).T, delimiter=',')
-        np.savetxt('tfp_fixed-' + append + '.csv', np.fliplr(tfp_fixed).T, delimiter=',')
+        np.savetxt('tfp_fixed-' + append + '.csv', np.fliplr(tfp_fixed - offset).T, delimiter=',')
     else:
-        np.savetxt('tfp-' + append + '.csv', tfp.T, delimiter=',')
+        np.savetxt('tfp-' + append + '.csv', (tfp- offset).T, delimiter=',')
         np.savetxt('shift-' + append + '.csv', shift.T, delimiter=',')
-        np.savetxt('tfp_fixed-' + append + '.csv', tfp_fixed.T, delimiter=',')
+        np.savetxt('tfp_fixed-' + append + '.csv', (tfp_fixed- offset).T, delimiter=',')
 
     if isinstance(tfp_cal, np.ndarray):
-        np.savetxt('tfp_cal-' + append + '.csv', np.fliplr(tfp_cal).T, delimiter=',')
-        np.savetxt('tfp_cal_fixed-' + append + '.csv', np.fliplr(tfp_cal_fixed).T, delimiter=',')
+        
+        if mirror:
+            np.savetxt('tfp_cal-' + append + '.csv', np.fliplr(tfp_cal- offset).T, delimiter=',')
+            np.savetxt('tfp_cal_fixed-' + append + '.csv', np.fliplr(tfp_cal_fixed- offset).T, delimiter=',')
+        else:
+            np.savetxt('tfp_cal-' + append + '.csv', (tfp_cal- offset).T, delimiter=',')
+            np.savetxt('tfp_cal_fixed-' + append + '.csv', (tfp_cal_fixed- offset).T, delimiter=',')
 
     return
 
@@ -513,8 +521,9 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
         
         if 'tfp_cal' in ffprocess.h5_tfp.parent:
             tfp_cal = ffprocess.h5_tfp.parent['tfp_cal'][()]
+            tfp_cal_fixed, _ = badpixels.fix_array(tfp_cal, threshold=threshold)
         else:
-            tfp_cal = np.zeros(tfp.shape)
+            tfp_cal_fixed = tfp_cal = np.ones(tfp.shape)
     
     elif isinstance(ffprocess, h5py.Group):
         
@@ -530,13 +539,12 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
         
         if 'tfp_cal' in ffprocess:
             tfp_cal = ffprocess['tfp_cal'][()]
+            tfp_cal_fixed, _ = badpixels.fix_array(tfp_cal, threshold=threshold)
         else:
-            tfp_cal = np.zeros(tfp.shape)
-        
+            tfp_cal_fixed = tfp_cal = np.ones(tfp.shape) 
+            
     kwarg = {'origin': 'lower', 'x_vec': img_length * 1e6,
              'y_vec': img_height * 1e6, 'num_ticks': 5, 'stdevs': 3, 'show_cbar': True}
-
-
 
     for k, v in kwarg.items():
         if k not in kwargs:
@@ -555,7 +563,7 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
     shift_ax.set_title('Shift Image')
 
     tfp_fixed, _ = badpixels.fix_array(tfp, threshold=threshold)
-    tfp_cal_fixed, _ = badpixels.fix_array(tfp_cal, threshold=threshold)
+
 
     tfp_image, cbar_tfp = plot_utils.plot_map(tfp_ax, tfp_fixed * scale_tfp,
                                               cmap='inferno', **kwargs)
