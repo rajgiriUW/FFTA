@@ -23,11 +23,12 @@ setup(
                       'scipy>=1.4.1',
                       'igor>=0.3',
                       'numexpr>=2.7.1',
-                      'pyUSID>=0.0.8',
+                      'pyUSID>=0.0.10',
                       'pywavelets>=1.1.1',
-                      'sidpy>=0.0.2',
+                      'sidpy>=0.0.5',
                       'pandas>=1.1.0',
-                      'BGlib>=0.0.2'
+                      'BGlib>=0.0.2',
+                      'pycroscopy=0.60.8'
                       ],
     test_suite='pytest',
     # entry_points={
