@@ -6,10 +6,11 @@ Created on Thu Mar  4 10:27:55 2021
 """
 
 import numpy as np
+import h5py
 
 from .mechanical_drive import MechanicalDrive
 from .utils.load import params_from_experiment as load_parm
-from scipy.interpolate import UnivariateSpline
+from scipy.interpolate import InterpolatedUnivariateSpline as ius
 
 from matplotlib import pyplot as plt
 import pandas as pd
@@ -32,7 +33,7 @@ Usage:
 '''
 
 
-def cal_curve(can_path, param_cfg, plot=True, **kwargs):
+def cal_curve(can_path, param_cfg, tfp_data = [], plot=True, **kwargs):
     '''
     Parameters
     ----------
@@ -41,7 +42,15 @@ def cal_curve(can_path, param_cfg, plot=True, **kwargs):
 
 	params_cfg : string
 		Path to parameters.cfg file (from FFtrEFM experiment, in the data folder)
-        
+    
+    tfp_data : ndarray (either an image or a 2-index array), optional
+        tfp data to set a range for the simulations
+        If 2-index, takes the range as low to high
+        If an image or array, just finds the max and min
+    
+    plot : bool, optional
+        Plots the last taus vs tfps for verification
+    
     Returns:
     --------
     taus : ndArray
@@ -55,7 +64,25 @@ def cal_curve(can_path, param_cfg, plot=True, **kwargs):
 
     can_params, force_params, sim_params, _, parms = load_parm(can_path, param_cfg)
 
-    taus = np.logspace(-7, -3, 50)
+    _rlo = -7
+    _rhi = -3
+
+    if isinstance(tfp_data, h5py.Dataset):
+        tfp_data = tfp_data[()]
+
+    if tfp_data:
+        
+        if len(tfp_data) == 2 and (tfp_data[1] > tfp_data[0]):
+            
+            _rlo = np.floor(np.log10(tfp_data[0]))
+            _rhi = np.ceil(np.log10(tfp_data[1]))
+        
+        else:
+            
+            _rlo = np.floor(np.log10(tfp_data.min()))
+            _rhi = np.ceil(np.log10(tfp_data.max()))
+
+    taus = np.logspace(_rlo, _rhi, 50)
     tfps = []
 
     for t in taus:
@@ -76,8 +103,9 @@ def cal_curve(can_path, param_cfg, plot=True, **kwargs):
     taus = np.delete(taus, np.where(negs < 0)[0])
 
     try:
-        spl = UnivariateSpline(tfps, taus)
+        spl = ius(tfps, taus, k=4)
     except:
+        print('=== Error generating cal-curve. Check manually ===')
         spl = None
         print(taus)
         print(tfps)

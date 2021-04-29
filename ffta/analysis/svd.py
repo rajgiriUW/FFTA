@@ -171,7 +171,7 @@ def plot_svd(h5_main, savefig=False, num_plots=16, **kwargs):
 	if savefig:
 		plt.savefig('Cumulative_variance_plot.png')
 
-	fig_skree, axes = usid.viz.plot_utils.plot_scree(h5_S, title='Scree plot')
+	fig_skree, axes = usid.viz.plot_utils.plot_scree(h5_S[()], title='Scree plot')
 	fig_skree.tight_layout()
 
 	if savefig:
