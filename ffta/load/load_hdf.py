@@ -321,7 +321,7 @@ def load_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True,
         def_vec = def_vec[:-1]
         # warnings.warn('Time-per-point calculation error')
 
-    # To do: Fix the labels/atrtibutes on the relevant data sets
+    # To do: Fix the labels/attributes on the relevant data sets
     try:
         hdf = h5py.File(h5_path, 'a')
     except:
