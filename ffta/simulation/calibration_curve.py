@@ -9,7 +9,9 @@ import numpy as np
 
 from .mechanical_drive import MechanicalDrive
 from .utils.load import params_from_experiment as load_parm
-from scipy.interpolate import UnivariateSpline
+from .utils.load import simulation_configuration as load_sim_config
+from ffta.pixel_utils.load import configuration
+from scipy.interpolate import InterpolatedUnivariateSpline as ius
 
 from matplotlib import pyplot as plt
 import pandas as pd
@@ -32,16 +34,24 @@ Usage:
 '''
 
 
-def cal_curve(can_path, param_cfg, plot=True, **kwargs):
+def cal_curve(can_path, param_cfg, taus_range = [], plot=True, **kwargs):
     '''
     Parameters
     ----------
-    can_params : string
+    can_params : string or tuple
 		Path to cantilever parameters file (from Force Calibration tab)
+        If a Dict, assumed is passed a tuple from ffta.simulation.utils.load.simulation_configuration (old sim style)
 
 	params_cfg : string
 		Path to parameters.cfg file (from FFtrEFM experiment, in the data folder)
+    
+    taus_range : ndarray (2-index array), optional
+        taus_range to set a range for the simulations, taken as [low, high]
         
+    
+    plot : bool, optional
+        Plots the last taus vs tfps for verification
+    
     Returns:
     --------
     taus : ndArray
@@ -52,10 +62,28 @@ def cal_curve(can_path, param_cfg, plot=True, **kwargs):
         spline object of the calibration curve. To scale an image, type spl(x)
             
 	'''
+    if isinstance(can_path, str):
+        can_params, force_params, sim_params, _, parms = load_parm(can_path, param_cfg)
+    elif isinstance(can_path, tuple):
+        can_params, force_params, sim_params = load_sim_config(can_path)
+        _, parms = configuration(param_cfg)
+        can_params['drive_freq'] = parms['drive_freq']
+        can_params['res_freq'] = parms['drive_freq']
+        sim_params['trigger'] = parms['trigger']
+        sim_params['total_time'] = parms['total_time']
+        sim_params['sampling_rate'] = parms['sampling_rate']
+        
+    print(can_params, sim_params)
 
-    can_params, force_params, sim_params, _, parms = load_parm(can_path, param_cfg)
+    _rlo = -7
+    _rhi = -3
 
-    taus = np.logspace(-7, -3, 50)
+    if len(taus_range) == 2 and (taus_range[1] > taus_range[0]):
+            
+        _rlo = np.floor(np.log10(taus_range[0]))
+        _rhi = np.ceil(np.log10(taus_range[1]))
+            
+    taus = np.logspace(_rlo, _rhi, 50)
     tfps = []
 
     for t in taus:
@@ -64,6 +92,14 @@ def cal_curve(can_path, param_cfg, plot=True, **kwargs):
         Z, _ = cant.simulate()
         pix = cant.analyze(plot=False, **kwargs)
         tfps.append(pix.tfp)
+
+    # sort the arrays
+    taus = taus[np.argsort(tfps)]
+    tfps = np.sort(tfps)
+    
+    # Splines work better on shorter lengthscales
+    taus = np.log(taus)
+    tfps = np.log(tfps)
 
     dtfp = np.diff(tfps)
     tfps = np.array(tfps)
@@ -76,8 +112,9 @@ def cal_curve(can_path, param_cfg, plot=True, **kwargs):
     taus = np.delete(taus, np.where(negs < 0)[0])
 
     try:
-        spl = UnivariateSpline(tfps, taus)
+        spl = ius(tfps, taus, k=4)
     except:
+        print('=== Error generating cal-curve. Check manually ===')
         spl = None
         print(taus)
         print(tfps)
@@ -85,7 +122,11 @@ def cal_curve(can_path, param_cfg, plot=True, **kwargs):
     if plot:
         pix.plot()
         fig, ax = plt.subplots(facecolor='white')
-        ax.loglog(tfps, taus, 'bX-')
+        ax.loglog(np.exp(tfps), np.exp(taus), 'bX-')
+        try:
+            ax.loglog(np.exp(tfps), np.exp(spl(tfps)), 'r--')
+        except:
+            pass
         ax.set_xlabel('$t_{fp}$ (s)')
         ax.set_ylabel(r'$\tau$ (s)')
         ax.set_title('Calibration curve')
@@ -95,5 +136,7 @@ def cal_curve(can_path, param_cfg, plot=True, **kwargs):
     df = df.rename(columns={0: 'tfps'})
     df.index.name = 'taus'
     df.to_csv('Calibration_Curve.csv')
+
+    print('Do not forget that the spline is in log-space')
 
     return taus, tfps, spl

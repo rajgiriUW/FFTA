@@ -8,13 +8,12 @@ sys.path.insert(0, '..')
 
 import ffta
 import pyUSID as usid
-import pytest
 
 
 # Testing of standard process flow
 class TestFFTA:
-    ff_folder = 'tests/testdata'
-    ff_file = 'tests/testdata/FF_H5.h5'
+    ff_folder = r'tests/testdata'
+    ff_file = r'tests/testdata/FF_H5.h5'
 
     def delete_old_h5(self):
 
@@ -37,6 +36,7 @@ class TestFFTA:
     def test_load_FF(self):
         self.delete_old_h5()
         h5_path, data_files, parm_dict = ffta.load.load_hdf.load_folder(folder_path=self.ff_folder)
+        h5_path = h5_path.replace('\\', '/') #travis
         h5_avg = ffta.load.load_hdf.load_FF(data_files, parm_dict, h5_path)
 
         assert (h5_avg.shape == (1024, 16000))
@@ -51,6 +51,7 @@ class TestFFTA:
         ff.update_parm(roi=0.0007, n_taps=499, fit=True, filter_amplitude=True)
         ff.compute()
         ff.reshape()
+        ffta.hdf_utils.process.save_CSV_from_file(ff)
 
         tfp = h5_rb.file['FF_Group/FF_Avg-SVD_000/Rebuilt_Data_000/Rebuilt_Data-Fast_Free_000/tfp']
         assert (tfp.shape == (8, 128))
@@ -58,9 +59,11 @@ class TestFFTA:
         shift = h5_rb.file['FF_Group/FF_Avg-SVD_000/Rebuilt_Data_000/Rebuilt_Data-Fast_Free_000/shift']
         assert (shift.shape == (8, 128))
 
-        inst_freq = hdf['FF_Group/FF_Avg-SVD_000/Rebuilt_Data_000/Rebuilt_Data-Fast_Free_001/Inst_Freq']
+        inst_freq = h5_rb.file['FF_Group/FF_Avg-SVD_000/Rebuilt_Data_000/Rebuilt_Data-Fast_Free_000/Inst_Freq']
         assert (inst_freq.shape == (1024, 16000))
 
         h5_avg.file.close()
 
-        ffta.hdf_utils.process.save_CSV_from_file(ff)
+        self.delete_old_h5()
+
+        return

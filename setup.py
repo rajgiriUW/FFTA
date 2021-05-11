@@ -28,7 +28,7 @@ setup(
                       'sidpy>=0.0.5',
                       'pandas>=1.1.0',
                       'BGlib>=0.0.2',
-                      'pycroscopy=0.60.8'
+                      'pycroscopy>=0.60.8'
                       ],
     test_suite='pytest',
     # entry_points={
