@@ -7,7 +7,7 @@ before_install:
   - pip install -U pytest
   
   - pip install coveralls
-  - pip install decorator --upgrade
+  - pip install decorator==4.3
   - pip uninstall numpy -y
   - pip install numpy>=1.18.1
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
