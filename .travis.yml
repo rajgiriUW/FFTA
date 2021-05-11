@@ -10,7 +10,7 @@ before_install:
   - pip uninstall numpy -y
   - pip install numpy>=1.18.1
   - pip uninstall decorator
-  - pip install decorator=4.4.2
+  - pip install decorator>=4.4.2
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
 install: 
   - python setup.py install
