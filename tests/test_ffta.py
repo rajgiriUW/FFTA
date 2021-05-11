@@ -8,7 +8,6 @@ sys.path.insert(0, '..')
 
 import ffta
 import pyUSID as usid
-import pytest
 
 
 # Testing of standard process flow
@@ -51,6 +50,7 @@ class TestFFTA:
         ff.update_parm(roi=0.0007, n_taps=499, fit=True, filter_amplitude=True)
         ff.compute()
         ff.reshape()
+        ffta.hdf_utils.process.save_CSV_from_file(ff)
 
         tfp = h5_rb.file['FF_Group/FF_Avg-SVD_000/Rebuilt_Data_000/Rebuilt_Data-Fast_Free_000/tfp']
         assert (tfp.shape == (8, 128))
@@ -58,9 +58,9 @@ class TestFFTA:
         shift = h5_rb.file['FF_Group/FF_Avg-SVD_000/Rebuilt_Data_000/Rebuilt_Data-Fast_Free_000/shift']
         assert (shift.shape == (8, 128))
 
-        inst_freq = hdf['FF_Group/FF_Avg-SVD_000/Rebuilt_Data_000/Rebuilt_Data-Fast_Free_001/Inst_Freq']
+        inst_freq = h5_rb.file['FF_Group/FF_Avg-SVD_000/Rebuilt_Data_000/Rebuilt_Data-Fast_Free_000/Inst_Freq']
         assert (inst_freq.shape == (1024, 16000))
 
         h5_avg.file.close()
 
-        ffta.hdf_utils.process.save_CSV_from_file(ff)
+        return

@@ -6,10 +6,11 @@ Created on Thu Mar  4 10:27:55 2021
 """
 
 import numpy as np
-import h5py
 
 from .mechanical_drive import MechanicalDrive
 from .utils.load import params_from_experiment as load_parm
+from .utils.load import simulation_configuration as load_sim_config
+from ffta.pixel_utils.load import configuration
 from scipy.interpolate import InterpolatedUnivariateSpline as ius
 
 from matplotlib import pyplot as plt
@@ -37,8 +38,9 @@ def cal_curve(can_path, param_cfg, taus_range = [], plot=True, **kwargs):
     '''
     Parameters
     ----------
-    can_params : string
+    can_params : string or tuple
 		Path to cantilever parameters file (from Force Calibration tab)
+        If a Dict, assumed is passed a tuple from ffta.simulation.utils.load.simulation_configuration (old sim style)
 
 	params_cfg : string
 		Path to parameters.cfg file (from FFtrEFM experiment, in the data folder)
@@ -60,8 +62,18 @@ def cal_curve(can_path, param_cfg, taus_range = [], plot=True, **kwargs):
         spline object of the calibration curve. To scale an image, type spl(x)
             
 	'''
-
-    can_params, force_params, sim_params, _, parms = load_parm(can_path, param_cfg)
+    if isinstance(can_path, str):
+        can_params, force_params, sim_params, _, parms = load_parm(can_path, param_cfg)
+    elif isinstance(can_path, tuple):
+        can_params, force_params, sim_params = load_sim_config(can_path)
+        _, parms = configuration(param_cfg)
+        can_params['drive_freq'] = parms['drive_freq']
+        can_params['res_freq'] = parms['drive_freq']
+        sim_params['trigger'] = parms['trigger']
+        sim_params['total_time'] = parms['total_time']
+        sim_params['sampling_rate'] = parms['sampling_rate']
+        
+    print(can_params, sim_params)
 
     _rlo = -7
     _rhi = -3
@@ -111,6 +123,10 @@ def cal_curve(can_path, param_cfg, taus_range = [], plot=True, **kwargs):
         pix.plot()
         fig, ax = plt.subplots(facecolor='white')
         ax.loglog(np.exp(tfps), np.exp(taus), 'bX-')
+        try:
+            ax.loglog(np.exp(tfps), np.exp(spl(tfps)), 'r--')
+        except:
+            pass
         ax.set_xlabel('$t_{fp}$ (s)')
         ax.set_ylabel(r'$\tau$ (s)')
         ax.set_title('Calibration curve')
