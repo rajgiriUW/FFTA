@@ -323,7 +323,7 @@ def load_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True,
 
     # To do: Fix the labels/attributes on the relevant data sets
     try:
-        hdf = h5py.File(h5_path, 'a')
+        hdf = h5py.File(h5_path, 'r+')
     except:
         print('Creating HDF5 file...')
         hdf = h5py.File(h5_path, 'w')
