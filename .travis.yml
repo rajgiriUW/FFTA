@@ -1,16 +1,15 @@
 language: python
 python:
-  - '3.7'
+  - 3.7
 before_install:
   - python --version
   - pip install -U pip
   - pip install -U pytest
-  - pip install coverage
+  
   - pip install coveralls
+  - pip install decorator==4.3
   - pip uninstall numpy -y
   - pip install numpy>=1.18.1
-  - pip uninstall decorator
-  - pip install decorator>=4.4.2
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
 install: 
   - python setup.py install
@@ -18,5 +17,5 @@ script:
   - coverage run --source=ffta -m pytest tests/
 stages:
 after_success:
-  - coverage report -m
+  
   - coveralls

@@ -24,21 +24,21 @@ import pyUSID as usid
 
 class GKPixel(Pixel):
 
-    def __init__(self, signal_array, 
-                 params, 
+    def __init__(self, signal_array,
+                 params,
                  can_params={},
-                 fit=True, 
-                 pycroscopy=False, 
-                 method='hilbert', 
+                 fit=True,
+                 pycroscopy=False,
+                 method='hilbert',
                  fit_form='product',
-                 filter_amplitude=False, 
+                 filter_amplitude=False,
                  filter_frequency=False,
                  trigger=None,
                  total_time=None,
                  sampling_rate=None,
-                 TF_norm=[], 
-                 exc_wfm=[], 
-                 periods=2, 
+                 TF_norm=[],
+                 exc_wfm=[],
+                 periods=2,
                  phase_shift=0):
         '''
         Class for processing G-KPFM data
@@ -70,16 +70,16 @@ class GKPixel(Pixel):
             CPD_mean : float
                 Simple average of the CPD trace, useful for plotting
         '''
-        
+
         if len(signal_array.shape) > 1:
             warnings.warn('Be sure you are only sending one pixel of data, not an image')
-        
+
         self.periods = periods
         self.phase_shift = phase_shift
 
         super().__init__(signal_array, params, can_params,
                          fit, False, method, fit_form,
-                         filter_amplitude, filter_frequency, 
+                         filter_amplitude, filter_frequency,
                          trigger, total_time, sampling_rate)
 
         # This functionality is for single lines
@@ -132,7 +132,7 @@ class GKPixel(Pixel):
 
         return
 
-    def excitation_phase(self, exc_path, exc_params={}, phase_range = [-pi, pi]):
+    def excitation_phase(self, exc_path, exc_params={}, phase_range=[-pi, pi]):
         """
         Generates the excitation waveform based on the input ibw.
         
@@ -156,30 +156,29 @@ class GKPixel(Pixel):
         self.exc_wfm
 
         """
-        
+
         phase_test = np.arange(phase_range[0], phase_range[1], 0.1)
-        
+
         exc_raw = loadibw(exc_path)['wave']['wData']
-        exc_raw = exc_raw[:,10] # pick a random slice
-        
+        exc_raw = exc_raw[:, 10]  # pick a random slice
+
         for p in phase_test:
-            
+
             self.excitation(exc_params, p)
-            
+
             _pke = np.argmax(self.exc_wfm[:50:1])
             _pki = np.argmax(exc_raw[:50:1])
-            
+
             if _pke == _pki:
                 print('Done matching phase', p)
                 plt.figure()
                 plt.plot(self.exc_wfm[:50], 'r')
-                plt.plot(exc_raw[:50]*100, 'b')
-                
+                plt.plot(exc_raw[:50] * 100, 'b')
+
                 break
-            
-        
+
         return
-    
+
     def excitation_scale(self, exc_path, exc_params):
         """
         Generates the excitation waveform based on the input ibw. Scaled to exc_params
@@ -197,16 +196,16 @@ class GKPixel(Pixel):
                 
                 example : exc_params = {'ac': 3, 'dc': 3} for 3 Vdc and 3Vac excitation
         """
-        
+
         exc_raw = loadibw(exc_path)['wave']['wData'].mean(axis=1)
-        exc_raw *= 10 # resistor divider
+        exc_raw *= 10  # resistor divider
         exc_raw = (exc_raw - exc_raw.min()) / (exc_raw.max() - exc_raw.min())
-        exc_raw = (exc_raw - 0.5) * 2 #scaled -1 to 1
+        exc_raw = (exc_raw - 0.5) * 2  # scaled -1 to 1
         exc_raw *= exc_params['ac']
         exc_raw += exc_params['dc']
-        
-        self.exc_wfm = exc_raw 
-        
+
+        self.exc_wfm = exc_raw
+
         return
 
     def dc_response(self, plot=True):
@@ -239,19 +238,19 @@ class GKPixel(Pixel):
         Process transfer function and broadband excitation from supplied file
         This function does not check shape or length
         '''
-        
+
         if isinstance(tf_path, str):
             tf = loadibw(tf_path)['wave']['wData']
         else:
             tf = tf_path
-            
+
         if isinstance(excitation_path, str):
             exc = loadibw(excitation_path)['wave']['wData']
         else:
             exc = excitation_path
-            
+
         self.tf = tf
-        if len(tf.shape ) > 1:
+        if len(tf.shape) > 1:
             self.tf = np.mean(tf, axis=1)
         self.TF = np.fft.fftshift(np.fft.fft(self.tf))
 
@@ -261,7 +260,7 @@ class GKPixel(Pixel):
         self.tf_exc = exc
         if len(exc.shape) > 1:
             self.tf_exc = np.mean(exc, axis=1)
-            
+
         self.TF_EXC = np.fft.fftshift(np.fft.fft(self.tf_exc))
 
     def process_tf(self, resonances=2, width=20e3, exc_floor=10, plot=False):
@@ -478,14 +477,13 @@ class GKPixel(Pixel):
         SIG = np.copy(self.SIG)
 
         if phase_shift != 0:
-
             self.phase_shift = phase_shift
-            
+
         if self.phase_shift != 0:
             # DFT shift theorem
             period = self.sampling_rate / self.drive_freq
-            ph = self.phase_shift * period / (2*pi)
-            SIG = self.SIG * np.exp(-1j * ph * self.f_ax / (0.5*len(self.f_ax)) )
+            ph = self.phase_shift * period / (2 * pi)
+            SIG = self.SIG * np.exp(-1j * ph * self.f_ax / (0.5 * len(self.f_ax)))
 
         self.FORCE = np.zeros(len(SIG), dtype=complex)
 
@@ -500,7 +498,7 @@ class GKPixel(Pixel):
         self.FORCE[signal_pass] = SIG[signal_pass]
         self.FORCE = self.FORCE / self.TF_norm
         self.force = np.real(np.fft.ifft(np.fft.ifftshift(self.FORCE)))
-        
+
         del SIG
 
         if plot:
@@ -663,9 +661,9 @@ class GKPixel(Pixel):
         '''
         fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
         tx = np.linspace(0, self.total_time, self.num_CPD)
-        
+
         if smooth:
-            ax.plot(tx * 1e3, fftconvolve(self.CPD[:self.num_CPD], np.ones(smooth)/3, mode='same'), 'b')
+            ax.plot(tx * 1e3, fftconvolve(self.CPD[:self.num_CPD], np.ones(smooth) / 3, mode='same'), 'b')
         else:
             ax.plot(tx * 1e3, self.CPD[:self.num_CPD], 'b')
         ax.set_xlabel('Time (ms)')
@@ -682,10 +680,10 @@ class GKPixel(Pixel):
         center = int(len(self.CPD) / 2)
         df = self.sampling_rate / len(self.CPD)
         bin_width = int(self.filter_bandwidth / df)
-        
+
         return
 
-    def min_phase(self, phases_to_test=[2.0708, 2.1208, 2.1708], 
+    def min_phase(self, phases_to_test=[2.0708, 2.1208, 2.1708],
                   noise_tolerance=1e-6, verbose=True):
         """
         Determine the optimal phase shift due to cable lag
@@ -704,7 +702,7 @@ class GKPixel(Pixel):
         return
 
         """
-        
+
         # have to iterate this cell many times to find the right phase
         phases_to_test = np.array(phases_to_test)
 
