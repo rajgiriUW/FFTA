@@ -12,8 +12,8 @@ import pyUSID as usid
 
 # Testing of standard process flow
 class TestFFTA:
-    ff_folder = r'tests/testdata'
-    ff_file = r'tests/testdata/FF_H5.h5'
+    ff_folder = r'tests\testdata'
+    ff_file = r'tests\testdata\FF_H5.h5'
 
     def delete_old_h5(self):
 
