@@ -36,7 +36,7 @@ class TestFFTA:
     def test_load_FF(self):
         self.delete_old_h5()
         h5_path, data_files, parm_dict = ffta.load.load_hdf.load_folder(folder_path=self.ff_folder)
-        h5_path = h5_path.replace('\\', '/') #travis
+        h5_path = h5_path.replace('\\', '/')  # travis
         h5_avg = ffta.load.load_hdf.load_FF(data_files, parm_dict, h5_path)
 
         assert (h5_avg.shape == (1024, 16000))

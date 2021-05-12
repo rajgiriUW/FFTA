@@ -19,7 +19,7 @@ from .pixel_utils import badpixels
 
 # Plotting imports
 import matplotlib as mpl
-#mpl.use('WxAgg')
+# mpl.use('WxAgg')
 from matplotlib import pyplot as plt
 from matplotlib import gridspec as gs
 
@@ -51,12 +51,11 @@ def main(argv=None):
     parser.add_argument('path', nargs='?', default=os.getcwd(),
                         help='path to directory')
     parser.add_argument('-p', help='parallel computing option should be'
-                        'followed by the number of CPUs.', type=int,
+                                   'followed by the number of CPUs.', type=int,
                         choices=range(2, cpu_count + 1))
     parser.add_argument('-v', action='version',
                         version='FFtr-EFM 2.0 Release Candidate')
     args = parser.parse_args(argv)
-
 
     # Scan the path for .ibw and .cfg files.
     path = args.path
@@ -72,11 +71,10 @@ def main(argv=None):
     n_pixels, parameters = load.configuration(config_file)
 
     print('Recombination: ', parameters['recombination'])
-    if 'phase_fitting' in parameters:    
-
+    if 'phase_fitting' in parameters:
         print('Phase fitting: ', parameters['phase_fitting'])
 
-    print( 'ROI: ', parameters['roi'])
+    print('ROI: ', parameters['roi'])
 
     if not args.p:
 
@@ -109,12 +107,11 @@ def main(argv=None):
 
         # Load every file in the file list one by one.
         for i, data_file in enumerate(data_files):
-
             signal_array = load.signal(data_file)
             line_inst = line.Line(signal_array, parameters, n_pixels)
             tfp[i, :], shift[i, :], _ = line_inst.analyze()
-#            line_inst = line.Line(signal_array, parameters, n_pixels,fitphase=True)
-#            tfpphase[i, :], _, _ = line_inst.analyze()
+            #            line_inst = line.Line(signal_array, parameters, n_pixels,fitphase=True)
+            #            tfpphase[i, :], _, _ = line_inst.analyze()
 
             tfp_image = tfp_ax.imshow(tfp * 1e6, cmap='inferno', **kwargs)
             shift_image = shift_ax.imshow(shift, cmap='cubehelix', **kwargs)
@@ -167,13 +164,12 @@ def main(argv=None):
 
         # Convert list of arrays to 2D array.
         for i in range(n_files):
-
             tfp[i, :] = tfp_list[i]
             shift[i, :] = shift_list[i]
 
         elapsed_time = time.time() - start_time
 
-        print ('It took {0:.1f} seconds.'.format(elapsed_time))
+        print('It took {0:.1f} seconds.'.format(elapsed_time))
 
     # Filter bad pixels
     tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)
@@ -187,6 +183,6 @@ def main(argv=None):
 
     return
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

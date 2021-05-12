@@ -34,7 +34,7 @@ Usage:
 '''
 
 
-def cal_curve(can_path, param_cfg, taus_range = [], plot=True, **kwargs):
+def cal_curve(can_path, param_cfg, taus_range=[], plot=True, **kwargs):
     '''
     Parameters
     ----------
@@ -72,17 +72,16 @@ def cal_curve(can_path, param_cfg, taus_range = [], plot=True, **kwargs):
         sim_params['trigger'] = parms['trigger']
         sim_params['total_time'] = parms['total_time']
         sim_params['sampling_rate'] = parms['sampling_rate']
-        
+
     print(can_params, sim_params)
 
     _rlo = -7
     _rhi = -3
 
     if len(taus_range) == 2 and (taus_range[1] > taus_range[0]):
-            
         _rlo = np.floor(np.log10(taus_range[0]))
         _rhi = np.ceil(np.log10(taus_range[1]))
-            
+
     taus = np.logspace(_rlo, _rhi, 50)
     tfps = []
 
@@ -96,7 +95,7 @@ def cal_curve(can_path, param_cfg, taus_range = [], plot=True, **kwargs):
     # sort the arrays
     taus = taus[np.argsort(tfps)]
     tfps = np.sort(tfps)
-    
+
     # Splines work better on shorter lengthscales
     taus = np.log(taus)
     tfps = np.log(tfps)
@@ -106,7 +105,7 @@ def cal_curve(can_path, param_cfg, taus_range = [], plot=True, **kwargs):
     taus = np.array(taus)
     tfps = np.delete(tfps, np.where(dtfp < 0)[0])
     taus = np.delete(taus, np.where(dtfp < 0)[0])
-    
+
     negs = np.diff(taus) / np.diff(tfps)
     tfps = np.delete(tfps, np.where(negs < 0)[0])
     taus = np.delete(taus, np.where(negs < 0)[0])
