@@ -73,8 +73,6 @@ def cal_curve(can_path, param_cfg, taus_range=[], plot=True, **kwargs):
         sim_params['total_time'] = parms['total_time']
         sim_params['sampling_rate'] = parms['sampling_rate']
 
-    print(can_params, sim_params)
-
     _rlo = -7
     _rhi = -3
 
