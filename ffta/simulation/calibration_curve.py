@@ -12,6 +12,7 @@ from .utils.load import params_from_experiment as load_parm
 from .utils.load import simulation_configuration as load_sim_config
 from ffta.pixel_utils.load import configuration
 from scipy.interpolate import InterpolatedUnivariateSpline as ius
+from scipy.signal import medfilt
 
 from matplotlib import pyplot as plt
 import pandas as pd
@@ -94,20 +95,40 @@ def cal_curve(can_path, param_cfg, taus_range=[], plot=True, **kwargs):
     taus = taus[np.argsort(tfps)]
     tfps = np.sort(tfps)
 
+
+
     # Splines work better on shorter lengthscales
     taus = np.log(taus)
     tfps = np.log(tfps)
 
+    # Error corrections
+    # negative x-values (must be monotonic for spline)
     dtfp = np.diff(tfps)
     tfps = np.array(tfps)
     taus = np.array(taus)
     tfps = np.delete(tfps, np.where(dtfp < 0)[0])
     taus = np.delete(taus, np.where(dtfp < 0)[0])
+    
+    # "hot" pixels in the cal-curve
+    hotpixels = np.abs(taus - medfilt(taus))
+    taus = np.delete(taus, np.where(hotpixels > 0))
+    tfps = np.delete(tfps, np.where(hotpixels > 0))
 
-    negs = np.diff(taus) / np.diff(tfps)
-    tfps = np.delete(tfps, np.where(negs < 0)[0])
-    taus = np.delete(taus, np.where(negs < 0)[0])
+    # Negative slopes
+    neg_slope = np.diff(taus) / np.diff(tfps)
+    while any(np.where (neg_slope < 0)[0]):
 
+        tfps = np.delete(tfps, np.where(neg_slope < 0)[0])
+        taus = np.delete(taus, np.where(neg_slope < 0)[0])
+        neg_slope = np.diff(taus) / np.diff(tfps)
+    
+    # Infinite slops (tfp saturation at long taus)
+    while (any(np.where(neg_slope == np.inf)[0])):
+
+        tfps = np.delete(tfps, np.where(neg_slope == np.inf)[0])
+        taus = np.delete(taus, np.where(neg_slope == np.inf)[0])
+        neg_slope = np.diff(taus) / np.diff(tfps)
+        
     try:
         spl = ius(tfps, taus, k=4)
     except:
