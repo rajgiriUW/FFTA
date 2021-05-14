@@ -19,7 +19,6 @@ class NFMDMode:
     t: numpy.ndarray
         time vector, same length as the IF and IA vectors.
     '''
-
     def __init__(self, IF, IA, A, t):
         self.IF = IF
         self.IA = IA
@@ -37,20 +36,20 @@ class NFMDPixel:
     nfmd_options: dict
         options passed to the NFMD analysis class
     '''
-
     def __init__(self, signal,
-                 nfmd_options={'num_freqs': 3,
-                               'window_size': 320}):
+                 nfmd_options={'num_freqs':3,
+                               'window_size':320}):
         # Signal
         self.signal = signal
 
-        # self.signal = (signal-np.mean(signal))
-        # self.signal /= np.std(signal)
+        #self.signal = (signal-np.mean(signal))
+        #self.signal /= np.std(signal)
 
         # Signal Decomposition options
         self.nfmd_options = nfmd_options
 
-    def analyze(self, dt=1):
+
+    def analyze(self, dt=1, update_freq: int = None):
         '''
         Initialize an NFMDMode object containing the data relevant to
         a Fourier mode in the data. This is a data storage object.
@@ -61,14 +60,14 @@ class NFMDPixel:
         '''
         # Initialize the NFMD object
         nfmd = NFMD(self.signal, **self.nfmd_options)
-        t = np.arange(nfmd.n) * dt
+        t = np.arange(nfmd.n)*dt
 
         # Decompose the signal using NFMD
-        freqs, A, losses, indices = nfmd.decompose_signal()
-
+        freqs, A, losses, indices = nfmd.decompose_signal(update_freq)
+    
         # Compute corrected frequencies (scaled by dt) and instantaneous amplitudes
-        freqs = nfmd.correct_frequencies(dt=dt)
-        amps = nfmd.compute_amps()
+        self.freqs = nfmd.correct_frequencies(dt=dt)
+        self.amps = nfmd.compute_amps()
 
         # Slice for each window, and then the center point of each window!
         self.indices = indices
@@ -88,8 +87,8 @@ class NFMDPixel:
             # If it's not the lowest-freq mode (assumed to be the mean)
             if i != np.argmin(mean_freqs):
                 # Extract IFs, IAs, and A vector for the mode:
-                IF = freqs[:, i]
-                IA = amps[:, i]
+                IF = self.freqs[:,i]
+                IA = self.amps[:,i]
                 A = A[:, i::nfmd.num_freqs]
                 # Initialize the Mode object:
                 mode = NFMDMode(IF, IA, A, t[nfmd.mid_idcs])
