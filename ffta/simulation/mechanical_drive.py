@@ -76,7 +76,8 @@ class MechanicalDrive(Cantilever):
 
     Examples
     --------
-    >>> from ffta.simulation import mechanical_drive, load
+    >>> from ffta.simulation import mechanical_drive
+    >>> from ffta.simulation.utils import load
     >>>
     >>> params_file = '../examples/sim_params.cfg'
     >>> params = load.simulation_configuration(params_file)

@@ -1,7 +1,6 @@
 # Model Examples
 import warnings
 from scipy import optimize
-import numpy as np
 warnings.filterwarnings('ignore')
 
 # Setting parameters for models with known constants

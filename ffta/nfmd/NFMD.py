@@ -1,16 +1,8 @@
-'''
-@author: Daniel Shea
-
-https://github.com/sheadan/NFMD-ExtractionInstantaneous/
-'''
-
-
 import numpy as np
 import torch
 
 
 class NFMD:
-    
     def __init__(self, signal, num_freqs, window_size,
                  windows=None,
                  optimizer=torch.optim.SGD,

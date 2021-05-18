@@ -180,7 +180,7 @@ def load_folder(folder_path='', xy_scansize=[0, 0], file_name='FF_H5',
         folder_path = '/'.join(folder_path.split('/')[:-1])
 
     print(folder_path, 'folder path')
-    filelist = os.listdir(folder_path)
+    filelist = sorted(os.listdir(folder_path))
 
     if textload == False:
 
@@ -221,7 +221,7 @@ def load_folder(folder_path='', xy_scansize=[0, 0], file_name='FF_H5',
         parm_dict['SlowScanSize'] = height
 
     # Check ratio is correct
-    ratio = np.round(parm_dict['FastScanSize'] * 1e6, 2) / np.round(parm_dict['SlowScanSize'] * 1e6, 2)
+    ratio = np.round(parm_dict['FastScanSize'] * 1e6, 4) / np.round(parm_dict['SlowScanSize'] * 1e6, 4)
     if n_pixels / len(data_files) != ratio:
         print(ratio)
         print(parm_dict['FastScanSize'], parm_dict['SlowScanSize'],

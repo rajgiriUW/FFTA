@@ -12,6 +12,7 @@ from .utils.load import params_from_experiment as load_parm
 from .utils.load import simulation_configuration as load_sim_config
 from ffta.pixel_utils.load import configuration
 from scipy.interpolate import InterpolatedUnivariateSpline as ius
+from scipy.signal import medfilt
 
 from matplotlib import pyplot as plt
 import pandas as pd
@@ -34,7 +35,7 @@ Usage:
 '''
 
 
-def cal_curve(can_path, param_cfg, taus_range = [], plot=True, **kwargs):
+def cal_curve(can_path, param_cfg, taus_range=[], plot=True, **kwargs):
     '''
     Parameters
     ----------
@@ -72,17 +73,14 @@ def cal_curve(can_path, param_cfg, taus_range = [], plot=True, **kwargs):
         sim_params['trigger'] = parms['trigger']
         sim_params['total_time'] = parms['total_time']
         sim_params['sampling_rate'] = parms['sampling_rate']
-        
-    print(can_params, sim_params)
 
     _rlo = -7
     _rhi = -3
 
     if len(taus_range) == 2 and (taus_range[1] > taus_range[0]):
-            
         _rlo = np.floor(np.log10(taus_range[0]))
         _rhi = np.ceil(np.log10(taus_range[1]))
-            
+
     taus = np.logspace(_rlo, _rhi, 50)
     tfps = []
 
@@ -96,21 +94,41 @@ def cal_curve(can_path, param_cfg, taus_range = [], plot=True, **kwargs):
     # sort the arrays
     taus = taus[np.argsort(tfps)]
     tfps = np.sort(tfps)
-    
+
+
+
     # Splines work better on shorter lengthscales
     taus = np.log(taus)
     tfps = np.log(tfps)
 
+    # Error corrections
+    # negative x-values (must be monotonic for spline)
     dtfp = np.diff(tfps)
     tfps = np.array(tfps)
     taus = np.array(taus)
     tfps = np.delete(tfps, np.where(dtfp < 0)[0])
     taus = np.delete(taus, np.where(dtfp < 0)[0])
     
-    negs = np.diff(taus) / np.diff(tfps)
-    tfps = np.delete(tfps, np.where(negs < 0)[0])
-    taus = np.delete(taus, np.where(negs < 0)[0])
+    # "hot" pixels in the cal-curve
+    hotpixels = np.abs(taus - medfilt(taus))
+    taus = np.delete(taus, np.where(hotpixels > 0))
+    tfps = np.delete(tfps, np.where(hotpixels > 0))
 
+    # Negative slopes
+    neg_slope = np.diff(taus) / np.diff(tfps)
+    while any(np.where (neg_slope < 0)[0]):
+
+        tfps = np.delete(tfps, np.where(neg_slope < 0)[0])
+        taus = np.delete(taus, np.where(neg_slope < 0)[0])
+        neg_slope = np.diff(taus) / np.diff(tfps)
+    
+    # Infinite slops (tfp saturation at long taus)
+    while (any(np.where(neg_slope == np.inf)[0])):
+
+        tfps = np.delete(tfps, np.where(neg_slope == np.inf)[0])
+        taus = np.delete(taus, np.where(neg_slope == np.inf)[0])
+        neg_slope = np.diff(taus) / np.diff(tfps)
+        
     try:
         spl = ius(tfps, taus, k=4)
     except:

@@ -349,7 +349,7 @@ class Cantilever:
                        'trigger': 0.0005,
                        'window': 'blackman',
                        'wavelet_analysis': 0,
-                       'fft_params': {}}
+                       'fft_time_res': 2e-5}
 
         _can_params = {'amp_invols': 5.52e-08,
                        'def_invols': 5.06e-08,
@@ -407,7 +407,7 @@ class Cantilever:
         '''
         param_keys = ['bandpass_filter', 'drive_freq', 'filter_bandwidth', 'n_taps',
                       'roi', 'sampling_rate', 'total_time', 'trigger', 'window', 'wavelet_analysis',
-                      'fft_params']
+                      'fft_time_res']
 
         can_param_keys = ['amp_invols', 'def_invols', 'k', 'q_factor']
 
