@@ -883,7 +883,7 @@ class Pixel:
 
         return
 
-    def plot(self, newplot=True, raw=False):
+    def plot(self, newplot=True, fit=True):
         """ 
         Quick visualization of best_fit and cut.
         
@@ -891,8 +891,8 @@ class Pixel:
         ----------
         newplot : bool, optional
             generates a new plot (True) or plots on existing plot figure (False)
-        
-        raw : bool, optional
+        fit : bool, opttional
+            Overlays fit on the instantaneous frequency image
         """
 
         if newplot:
@@ -909,10 +909,12 @@ class Pixel:
 
         a[0].plot(tx * 1e3, self.inst_freq[cut[0]:cut[1]], 'r-')
 
-        if self.fit_form == 'ringdown':
-            a[1].plot(tx * 1e3, self.best_fit, 'g--')
-        else:
-            a[0].plot(tx * 1e3, self.best_fit, 'g--')
+        if fit:
+            if self.fit_form == 'ringdown':
+                a[1].plot(tx * 1e3, self.best_fit, 'g--')
+            else:
+                a[0].plot(tx * 1e3, self.best_fit, 'g--')
+                
         a[1].plot(tx * 1e3, self.amplitude[cut[0]:cut[1]], 'b')
         a[2].plot(tx * 1e3, self.phase[cut[0]:cut[1]] * 180 / np.pi, 'm')
 
