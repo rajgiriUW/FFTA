@@ -315,7 +315,7 @@ class FFtrEFM(Process):
             self.h5_tfp_cal = self.h5_results_grp.create_dataset('tfp_cal', 
                                                                  data=tfp_cal, 
                                                                  dtype=np.float32)
-            tfps = np.logspace(-7, -5, 50)
+            tfps = np.linspace(self.h5_tfp[()].min(), self.h5_tfp[()].max(), 50)
             if 'cal_curve' in self.h5_results_grp:
                 del self.h5_results_grp['cal_curve']
             _ = self.h5_results_grp.create_dataset('cal_curve',

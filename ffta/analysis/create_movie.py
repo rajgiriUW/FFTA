@@ -1,6 +1,7 @@
 import matplotlib.animation as animation
 from matplotlib import pyplot as plt
 import pyUSID as usid
+import sidpy
 from scipy import signal as sps
 import numpy as np
 
@@ -26,9 +27,9 @@ def setup_movie(h5_ds, size=(10, 6), vscale=[None, None], cmap='inferno'):
 	if 'USID' not in str(type(h5_ds)):
 		h5_ds = usid.USIDataset(h5_ds)
 
-	params = usid.hdf_utils.get_attributes(h5_ds)
+	params = sidpy.hdf_utils.get_attributes(h5_ds)
 	if 'trigger' not in params:
-		params = usid.hdf_utils.get_attributes(h5_ds.parent)
+		params = sidpy.hdf_utils.get_attributes(h5_ds.parent)
 
 	ds = h5_ds.get_n_dim_form()[:, :, 0]
 
@@ -105,9 +106,9 @@ def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
 	if isinstance(crop, int):
 		height = height * crop / h5_ds.get_n_dim_form()[:, :, 0].shape[0]
 
-	params = usid.hdf_utils.get_attributes(h5_ds)
+	params = sidpy.hdf_utils.get_attributes(h5_ds)
 	if 'trigger' not in params:
-		params = usid.hdf_utils.get_attributes(h5_ds.parent)
+		params = sidpy.hdf_utils.get_attributes(h5_ds.parent)
 
 	if isinstance(smooth, int):
 		kernel = np.ones(smooth) / smooth
@@ -187,9 +188,9 @@ def create_cpd_movie(h5_ds, filename='cpd', size=(10, 6),
 	_orig = np.copy(h5_ds[()])
 	length = h5_ds.get_pos_values('X')
 	height = h5_ds.get_pos_values('Y')
-	params = usid.hdf_utils.get_attributes(h5_ds)
+	params = sidpy.hdf_utils.get_attributes(h5_ds)
 	if 'trigger' not in params:
-		params = usid.hdf_utils.get_attributes(h5_ds.parent)
+		params = sidpy.hdf_utils.get_attributes(h5_ds.parent)
 
 	if isinstance(smooth, int):
 		kernel = np.ones(smooth) / smooth
