@@ -16,6 +16,7 @@ from ffta.pixel_utils import noise
 from ffta.pixel_utils import parab
 from ffta.pixel_utils import dwavelet
 from ffta.pixel_utils import tfp_calc
+from ffta.nfmd import NFMD
 
 from matplotlib import pyplot as plt
 import pywt
@@ -195,6 +196,16 @@ class Pixel:
         self.fft_params = {}  # for STFT
         self.fft_time_res = 20e-6
 
+        # NFMD 
+        self.nfmd_analysis = False
+        self.num_freqs = 2
+        self.window_size = 40
+        self.optimizer_opts = {'lr': 1e-4}
+        self.max_iters = 100
+        self.target_loss = 1e-4
+        self.update_freq = None
+
+        # Misc Settings
         self.phase_fitting = False
         self.check_drive = True
         self.window = 'blackman'
@@ -725,22 +736,21 @@ class Pixel:
 
         return
 
-    def calculate_stft(self, nfft=200):
+    def calculate_stft(self, nfft=200, calc_phase = False):
         '''
         Sliding FFT approach
         
         Parameters
         ----------
-        time_res : float, optional
+        self.fft_time_res : float, optional
             What timescale to evaluate each FFT over
                   
-        fit : bool, optional
-            Fits a parabola to the frequency peak to get the actual frequency
-            Otherwise defaults to parabolic interpolation (see parab.fit)
-        
         nfft : int
             Length of FFT calculated in the spectrogram. More points gets much slower
-            but the longer the FFT the finer the frequency bin spacing            
+            but the longer the FFT the finer the frequency bin spacing   
+            
+        calc_phase : bool, optional
+            Calculates teh Phase (not usually needed)
         '''
 
         pts_per_ncycle = int(self.fft_time_res * self.sampling_rate)
@@ -772,8 +782,11 @@ class Pixel:
         inst_freq = np.pad(inst_freq, (_pre, _post))
         amplitude = np.pad(amplitude, (_pre, _post))
 
-        phase = spg.cumtrapz(inst_freq)
-        phase = np.append(phase, phase[-1])
+        if calc_phase:
+            phase = spg.cumtrapz(inst_freq)
+            phase = np.append(phase, phase[-1])
+        else:
+            phase = np.zeros(len(inst_freq))
         tidx = int(self.tidx * len(inst_freq) / self.n_points)
 
         self.amplitude = amplitude
@@ -793,10 +806,37 @@ class Pixel:
 
         return
 
-    def forcevib(self):
-        """Calculate the resonance frequency directly via FORCE-VIB method.
-        See
-        """
+    def calculate_nfmd(self, calc_phase=False):
+        '''
+        Nonstationary Fourier Mode Decomposition Approach
+        
+        calc_phase : bool, optional
+        
+            Calculates teh Phase (not usually needed)
+        '''
+        z = self.signal
+        nfmd = NFMD(z/np.std(z),
+                    num_freqs=self.num_freqs,
+                    window_size=self.window_size,
+                    optimizer_opts=self.optimizer_opts,
+                    max_iters=self.max_iters,
+                    target_loss=self.target_loss)
+
+        freqs, A, losses, indices = nfmd.decompose_signal(self.update_freq)
+
+        dt = 1 / self.sampling_rate
+        self.n_freqs = nfmd.correct_frequencies(dt=dt)
+        self.n_amps = nfmd.compute_amps()
+        self.n_mean = nfmd.compute_mean()
+        
+        self.inst_freq = self.n_freqs[:,0]
+        self.amplitude = self.n_amps[:,0]
+        
+        if calc_phase:
+            phase = spg.cumtrapz(self.inst_freq)
+            self.phase = np.append(phase, phase[-1])
+        else:
+            self.phase = np.zeros(len(self.inst_freq))
 
         return
 
@@ -975,11 +1015,13 @@ class Pixel:
             # Calculate instantenous frequency using sliding FFT
             self.calculate_stft(**self.fft_params)
 
-        elif self.method == 'fv':
+        elif self.method == 'nfmd':
 
-            self.forcevib()
+            # Nonstationary Fourier Mode Decomposition
+            self.calculate_nfmd()
 
         elif self.method == 'hilbert':
+
             # Hilbert transform method
 
             # Apply window.
