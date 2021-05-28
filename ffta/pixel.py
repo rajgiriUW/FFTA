@@ -305,7 +305,7 @@ class Pixel:
             self.bandpass_filter = 0  # turns off FIR
 
         # Initialize attributes that are going to be assigned later.
-        self.signal = None
+        self.signal = np.array([])
         self.phase = None
         self.inst_freq = None
         self.tfp = None
@@ -806,15 +806,34 @@ class Pixel:
 
         return
 
-    def calculate_nfmd(self, calc_phase=False):
+    def calculate_nfmd(self, calc_phase=False, override_window = True, verbose = True):
         '''
         Nonstationary Fourier Mode Decomposition Approach
         
         calc_phase : bool, optional
-        
-            Calculates teh Phase (not usually needed)
+            Calculates the Phase (not usually needed)
+        override_window: bool, optional
+            Automatically adjusts window to be integer number of cycles
+        verbose : bool, optional
+            Console feedback
+    
         '''
+        if not self.signal.any():
+
+            self.signal = self.signal_array
+            self.average()
+            
         z = self.signal
+        
+        if not override_window:
+            
+            win_size_cycle = int(self.sampling_rate / self.drive_freq)
+            self.window_size = (self.window_size // win_size_cycle) * win_size_cycle
+            
+            if verbose: 
+                
+                print('window size automatically adjusted to ', self.window_size)
+        
         nfmd = NFMD(z/np.std(z),
                     num_freqs=self.num_freqs,
                     window_size=self.window_size,
@@ -822,8 +841,11 @@ class Pixel:
                     max_iters=self.max_iters,
                     target_loss=self.target_loss)
 
-        freqs, A, losses, indices = nfmd.decompose_signal(self.update_freq)
-
+        if verbose:
+            freqs, A, losses, indices = nfmd.decompose_signal(self.update_freq)
+        else:
+            freqs, A, losses, indices = nfmd.decompose_signal()
+            
         dt = 1 / self.sampling_rate
         self.n_freqs = nfmd.correct_frequencies(dt=dt)
         self.n_amps = nfmd.compute_amps()
@@ -836,14 +858,14 @@ class Pixel:
             phase = spg.cumtrapz(self.inst_freq)
             self.phase = np.append(phase, phase[-1])
         else:
-            self.phase = np.zeros(len(self.inst_freq))
+            self.phase = self.n_mean
 
         return
 
     def find_tfp(self):
         """Calculate tfp and shift based self.fit_form and self.fit selection"""
         ridx = int(self.roi * self.sampling_rate)
-        cut = self.inst_freq[self.tidx:(self.tidx + ridx)]
+        cut = np.copy(self.inst_freq[self.tidx:(self.tidx + ridx)])
         cut -= self.inst_freq[self.tidx]
         self.cut = cut
         t = np.arange(cut.shape[0]) / self.sampling_rate
@@ -882,6 +904,10 @@ class Pixel:
             self.shift = np.nan
             self.best_fit = np.zeros(cut.shape[0])
             print('error with fitting')
+
+        self.cut += self.inst_freq[self.tidx]
+        self.best_fit += self.inst_freq[self.tidx]
+        del cut
 
         return
 
@@ -987,7 +1013,8 @@ class Pixel:
             t1 = time.time()
 
         # Remove DC component, first.
-        self.remove_dc()
+        if self.method != 'nfmd':
+            self.remove_dc()
 
         # Phase-lock signals.
         # self.phase_lock()
@@ -999,7 +1026,7 @@ class Pixel:
         # self.remove_dc()
 
         # Check the drive frequency.
-        if self.check_drive:
+        if self.check_drive and self.method != 'nfmd':
             self.check_drive_freq()
 
         # DWT Denoise
