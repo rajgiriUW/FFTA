@@ -1,21 +1,26 @@
 language: python
 python:
-  - 3.7
+- 3.7
 before_install:
-  - python --version
-  - pip install -U pip
-  - pip install -U pytest
-  
-  - pip install coveralls
-  - pip install decorator>=5.0.7
-  - pip uninstall numpy -y
-  - pip install numpy>=1.18.1
-  - export PYTHONPATH=$PYTHONPATH:$(pwd)
-install: 
-  - python setup.py install
-script: 
-  - coverage run --source=ffta -m pytest tests/
+- python --version
+- pip install -U pip
+- pip install -U pytest
+- pip install coveralls
+- pip install decorator>=5.0.7
+- pip uninstall numpy -y
+- pip install numpy>=1.18.1
+- export PYTHONPATH=$PYTHONPATH:$(pwd)
+install:
+- python setup.py install
+script:
+- coverage run --source=ffta -m pytest tests/
 stages:
 after_success:
-  
-  - coveralls
+- coveralls
+deploy:
+  provider: pypi
+  username: __token__
+  password:
+    secure: $PYPITOKEN
+  on:
+    tags: true
