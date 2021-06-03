@@ -29,7 +29,7 @@ setup(
                       'pandas>=1.1.0',
                       'BGlib>=0.0.2',
                       'pycroscopy>=0.60.8',
-                      'pytorch>=1.6.0'
+                      'torch>=1.6.0'
                       ],
     test_suite='pytest',
     # entry_points={
