@@ -95,8 +95,6 @@ def cal_curve(can_path, param_cfg, taus_range=[], plot=True, **kwargs):
     taus = taus[np.argsort(tfps)]
     tfps = np.sort(tfps)
 
-
-
     # Splines work better on shorter lengthscales
     taus = np.log(taus)
     tfps = np.log(tfps)
@@ -108,7 +106,7 @@ def cal_curve(can_path, param_cfg, taus_range=[], plot=True, **kwargs):
     taus = np.array(taus)
     tfps = np.delete(tfps, np.where(dtfp < 0)[0])
     taus = np.delete(taus, np.where(dtfp < 0)[0])
-    
+
     # "hot" pixels in the cal-curve
     hotpixels = np.abs(taus - medfilt(taus))
     taus = np.delete(taus, np.where(hotpixels > 0))
@@ -116,19 +114,17 @@ def cal_curve(can_path, param_cfg, taus_range=[], plot=True, **kwargs):
 
     # Negative slopes
     neg_slope = np.diff(taus) / np.diff(tfps)
-    while any(np.where (neg_slope < 0)[0]):
-
+    while any(np.where(neg_slope < 0)[0]):
         tfps = np.delete(tfps, np.where(neg_slope < 0)[0])
         taus = np.delete(taus, np.where(neg_slope < 0)[0])
         neg_slope = np.diff(taus) / np.diff(tfps)
-    
+
     # Infinite slops (tfp saturation at long taus)
     while (any(np.where(neg_slope == np.inf)[0])):
-
         tfps = np.delete(tfps, np.where(neg_slope == np.inf)[0])
         taus = np.delete(taus, np.where(neg_slope == np.inf)[0])
         neg_slope = np.diff(taus) / np.diff(tfps)
-        
+
     try:
         spl = ius(tfps, taus, k=4)
     except:
@@ -156,5 +152,32 @@ def cal_curve(can_path, param_cfg, taus_range=[], plot=True, **kwargs):
     df.to_csv('Calibration_Curve.csv')
 
     print('Do not forget that the spline is in log-space')
+
+    return taus, tfps, spl
+
+def reconstruct_cal_curve(csv_file):
+    '''
+    Reconstruct the calibration curve from a saved CSV
+    
+    csv_file : str, path to CSV file
+    
+    Returns:
+    --------
+    taus : ndArray
+        The single exponential taus that were simulated
+    tfps : ndArray
+        The measured time to first peaks
+    spl : UnivariateSpline
+        spline object of the calibration curve. To scale an image, type spl(x)
+            
+	'''
+
+    df = pd.read_csv(csv_file)
+    
+    taus = df['taus']
+    tfps = df['tfps']
+    spl = ius(tfps, taus, k=4)
+    
+    print ('Note that taus, tfps, and cal_curve are in log-space')
 
     return taus, tfps, spl

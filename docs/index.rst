@@ -11,7 +11,7 @@ Fast Free Transient Analysis (FFTA)
    About <about.rst>
    Github <https://github.com/rajgiriUW/ffta>
    Analyzing a Signal <about.rst>
-   Analyzing an Image <about.rst>
+   Analyzing an Image <image.rst>
    Simulating a Cantilever <notebooks/simulating.ipynb>
    Source <source.ffta.rst>
 
@@ -31,7 +31,7 @@ This includes a few types of spectral analysis:
 * Wavelet Transform (Morlet wavelet)
 * Short-time Fourier Transform
 * General Mode KPFM (G-KPFM)
-* Non-stationary Fourier Mode Decomposition (via the `Brunton lab <https://www.eigensteve.com>`_ and the `Kutz lab <https://faculty.washington.edu/kutz/>`_ )
+* Non-stationary Fourier Mode Decomposition by `Daniel Shea <https://github.com/sheadan/NFMD-ExtractionInstantaneous/>`_
 
 Also, this package includes simulation code for computing damped driven harmonic oscillator (DDHO) response to an excitation source. 
 
