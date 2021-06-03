@@ -8,8 +8,6 @@ __status__ = "Development"
 
 import numpy as np
 from scipy import signal as sps
-# from scipy import optimize as spo
-# from scipy import interpolate as spi
 from scipy import integrate as spg
 
 from ffta.pixel_utils import noise
@@ -736,7 +734,7 @@ class Pixel:
 
         return
 
-    def calculate_stft(self, nfft=200, calc_phase = False):
+    def calculate_stft(self, nfft=200, calc_phase=False):
         '''
         Sliding FFT approach
         
@@ -806,7 +804,7 @@ class Pixel:
 
         return
 
-    def calculate_nfmd(self, calc_phase=False, override_window = True, verbose = True):
+    def calculate_nfmd(self, calc_phase=False, override_window=True, verbose=True):
         '''
         Nonstationary Fourier Mode Decomposition Approach
         
@@ -819,22 +817,20 @@ class Pixel:
     
         '''
         if not self.signal.any():
-
             self.signal = self.signal_array
             self.average()
-            
+
         z = self.signal
-        
+
         if not override_window:
-            
+
             win_size_cycle = int(self.sampling_rate / self.drive_freq)
             self.window_size = (self.window_size // win_size_cycle) * win_size_cycle
-            
-            if verbose: 
-                
+
+            if verbose:
                 print('window size automatically adjusted to ', self.window_size)
-        
-        nfmd = NFMD(z/np.std(z),
+
+        nfmd = NFMD(z / np.std(z),
                     num_freqs=self.num_freqs,
                     window_size=self.window_size,
                     optimizer_opts=self.optimizer_opts,
@@ -845,15 +841,15 @@ class Pixel:
             freqs, A, losses, indices = nfmd.decompose_signal(self.update_freq)
         else:
             freqs, A, losses, indices = nfmd.decompose_signal()
-            
+
         dt = 1 / self.sampling_rate
         self.n_freqs = nfmd.correct_frequencies(dt=dt)
         self.n_amps = nfmd.compute_amps()
         self.n_mean = nfmd.compute_mean()
-        
-        self.inst_freq = self.n_freqs[:,0]
-        self.amplitude = self.n_amps[:,0]
-        
+
+        self.inst_freq = self.n_freqs[:, 0]
+        self.amplitude = self.n_amps[:, 0]
+
         if calc_phase:
             phase = spg.cumtrapz(self.inst_freq)
             self.phase = np.append(phase, phase[-1])
@@ -980,7 +976,7 @@ class Pixel:
                 a[1].plot(tx * 1e3, self.best_fit, 'g--')
             else:
                 a[0].plot(tx * 1e3, self.best_fit, 'g--')
-                
+
         a[1].plot(tx * 1e3, self.amplitude[cut[0]:cut[1]], 'b')
         a[2].plot(tx * 1e3, self.phase[cut[0]:cut[1]] * 180 / np.pi, 'm')
 

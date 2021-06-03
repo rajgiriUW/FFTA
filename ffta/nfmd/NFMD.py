@@ -54,7 +54,6 @@ class NFMD:
         self.target_loss = target_loss
         self.device = device
 
-
     def decompose_signal(self, update_freq: int = None):
         '''
         Compute the slices of the windows used in the analysis.
@@ -129,7 +128,6 @@ class NFMD:
 
         return self.freqs, self.A, self.losses, self.indices
 
-
     def compute_window_indices(self):
         '''
         Sets the 'indices' attribute with computed index slices corresponding
@@ -145,7 +143,7 @@ class NFMD:
 
         '''
         # Define how many points between centerpoint of windows
-        increment = int(self.n/self.windows)
+        increment = int(self.n / self.windows)
         window_size = self.window_size
         # Initialize the indices lists
         self.indices = []
@@ -153,14 +151,13 @@ class NFMD:
         # Populate the indices lists
         for i in range(self.windows):
             # Compute window slice indices
-            idx_start = int(max(0, i*increment-window_size/2))
-            idx_end = int(min(self.n, i*increment+window_size/2))
-            if idx_end-idx_start == window_size:
+            idx_start = int(max(0, i * increment - window_size / 2))
+            idx_end = int(min(self.n, i * increment + window_size / 2))
+            if idx_end - idx_start == window_size:
                 # Add the index slice to the indices list
                 self.indices.append(slice(idx_start, idx_end))
-                idx_mid = int((idx_end+idx_start)/2)
+                idx_mid = int((idx_end + idx_start) / 2)
                 self.mid_idcs.append(idx_mid)
-
 
     def fit_window(self, xt, freqs=None, A=None):
         '''
@@ -197,7 +194,6 @@ class NFMD:
 
         return loss, freqs, A
 
-
     def fft(self, xt):
         '''
         Given temporal data xt, fft performs the initial guess of the
@@ -218,7 +214,7 @@ class NFMD:
         '''
         # Ensure input signal is 1D:
         if len(xt.shape) == 1:
-            xt = xt.reshape(-1,1)
+            xt = xt.reshape(-1, 1)
 
         # Gather model-fitting parameters
         k = self.num_freqs
@@ -232,31 +228,31 @@ class NFMD:
             if len(freqs) == 0:
                 residual = xt
             else:
-                t = np.expand_dims(np.arange(N)+1, -1)
+                t = np.expand_dims(np.arange(N) + 1, -1)
                 ws = np.asarray(freqs)
-                Omega = np.concatenate([np.cos(t*2*np.pi*ws),
-                                        np.sin(t*2*np.pi*ws)], -1)
+                Omega = np.concatenate([np.cos(t * 2 * np.pi * ws),
+                                        np.sin(t * 2 * np.pi * ws)], -1)
                 A = np.dot(np.linalg.pinv(Omega), xt)
 
                 pred = np.dot(Omega, A)
 
-                residual = pred-xt
+                residual = pred - xt
 
             ffts = 0
 
             for j in range(xt.shape[1]):
-                ffts += np.abs(np.fft.fft(residual[:, j])[:N//2])
+                ffts += np.abs(np.fft.fft(residual[:, j])[:N // 2])
 
-            w = np.fft.fftfreq(N, 1)[:N//2]
+            w = np.fft.fftfreq(N, 1)[:N // 2]
             idxs = np.argmax(ffts)
 
             freqs.append(w[idxs])
             ws = np.asarray(freqs)
 
-            t = np.expand_dims(np.arange(N)+1, -1)
+            t = np.expand_dims(np.arange(N) + 1, -1)
 
-            Omega = np.concatenate([np.cos(t*2*np.pi*ws),
-                                    np.sin(t*2*np.pi*ws)], -1)
+            Omega = np.concatenate([np.cos(t * 2 * np.pi * ws),
+                                    np.sin(t * 2 * np.pi * ws)], -1)
 
             A = np.dot(np.linalg.pinv(Omega), xt)
 
@@ -299,7 +295,7 @@ class NFMD:
         # Time indices
         t = torch.unsqueeze(torch.arange(len(xt),
                                          dtype=torch.get_default_dtype(),
-                                         device=self.device)+1, -1)
+                                         device=self.device) + 1, -1)
 
         # Determine how many iterations will be used
         if not max_iters:
@@ -308,15 +304,15 @@ class NFMD:
         # SGD to determine solution
         for i in range(max_iters):
             # Compute new model
-            Omega = torch.cat([torch.cos(t*2*np.pi*freqs),
-                               torch.sin(t*2*np.pi*freqs)], -1)
+            Omega = torch.cat([torch.cos(t * 2 * np.pi * freqs),
+                               torch.sin(t * 2 * np.pi * freqs)], -1)
 
             A = torch.matmul(torch.pinverse(Omega.data), xt)
 
             xhat = torch.matmul(Omega, A)
 
             # Compute Loss function
-            loss = torch.mean((xhat-xt)**2)
+            loss = torch.mean((xhat - xt) ** 2)
 
             # Take a step
             o2.zero_grad()
@@ -350,12 +346,12 @@ class NFMD:
         TYPE numpy.array
             xhat from 0 to T.
         '''
-        t = np.expand_dims(np.arange(T)+1, -1)
+        t = np.expand_dims(np.arange(T) + 1, -1)
 
         for i, idx_slice in enumerate(self.indices):
             local_freqs = self.freqs[i]
-        Omega = np.concatenate([np.cos(t*2*np.pi*self.freqs),
-                                np.sin(t*2*np.pi*self.freqs)], -1)
+        Omega = np.concatenate([np.cos(t * 2 * np.pi * self.freqs),
+                                np.sin(t * 2 * np.pi * self.freqs)], -1)
         return np.dot(Omega, self.A)
 
     def correct_frequencies(self, dt):
@@ -375,7 +371,7 @@ class NFMD:
         '''
         corrected_freqs = []
         for freq in self.freqs:
-            corrected_freqs.append(freq/dt)
+            corrected_freqs.append(freq / dt)
         corrected_freqs = np.asarray(corrected_freqs)
         return corrected_freqs
 
@@ -395,17 +391,17 @@ class NFMD:
         '''
         # initialize amps list
         Amps = np.ndarray((self.A.shape[0], self.num_freqs))
-        #print(Amps.shape)
+        # print(Amps.shape)
         # Populate amps list
         for i, A in enumerate(self.A):
-            #print(A.shape)
+            # print(A.shape)
             # Reshape the As list into a 2 x k matrix of
             # cosine and sine coefficients
-            AsBs = A.reshape(-1,self.num_freqs)
+            AsBs = A.reshape(-1, self.num_freqs)
             # Compute amplitude of each mode:
             for j in range(AsBs.shape[-1]):
-                Amp = complex(*AsBs[:,j])
-                Amps[i,j]=abs(Amp)
+                Amp = complex(*AsBs[:, j])
+                Amps[i, j] = abs(Amp)
         Amps = np.asarray(Amps)
         return Amps
 
@@ -431,17 +427,17 @@ class NFMD:
         means = np.ndarray(len(self.mid_idcs))
         # Identify the low-frequency mode based on initial frequency estimate
         if lf_mode is None:
-            lf_mode = np.argmin(np.mean(self.freqs[:,:], axis=0))
-        mid_idx = int(self.window_size/2)
+            lf_mode = np.argmin(np.mean(self.freqs[:, :], axis=0))
+        mid_idx = int(self.window_size / 2)
         # Iterate through each fourier object and compute the mean
         for i in range(len(self.mid_idcs)):
             # Grab the frequency and the amplitudes
             freq = self.freqs[i, lf_mode]
             A = self.A[i, lf_mode::self.num_freqs]
             # Compute the estimate
-            t = np.expand_dims(np.arange(self.window_size)+1, -1)
-            Omega = np.concatenate([np.cos(t*2*np.pi*freq),
-                                    np.sin(t*2*np.pi*freq)], -1)
+            t = np.expand_dims(np.arange(self.window_size) + 1, -1)
+            Omega = np.concatenate([np.cos(t * 2 * np.pi * freq),
+                                    np.sin(t * 2 * np.pi * freq)], -1)
             fit = np.dot(Omega, A)
             # Grab the centerpoint and add it to the means list
             means[i] = fit[mid_idx]
