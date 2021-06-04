@@ -22,5 +22,6 @@ deploy:
   username: __token__
   password:
     secure: $PYPITOKEN
+  distributions: "sdist bdist_wheel"
   on:
     tags: true

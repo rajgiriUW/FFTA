@@ -75,6 +75,24 @@ The typical workflow involves:
 5. Saving the tFP data to a CSV for use in your favorite image software like Igor. You can also of course save an image in Python directly. You might also consider `seaborn-image <https://seaborn-image.readthedocs.io/en/latest/>`_.
 6. Close the file.
 
+Quick processing
+~~~~~~~~~~~~~~~~
+This assumes all your data are saved as Igor IBW Files, and you have an appropriate .cfg file. Details on the example will be in the `Analyzing an Image <image.rst>`_ page.
+
+.. code:: bash
+
+   import ffta
+   ff_folder = r'D:\Raj FFtrEFM continued\Old_Decent_OPV_Sets\MDMO-PPV\FF04_outputs\IBW_Files'
+   h5_path, data_files, parm_dict = ffta.load.load_hdf.load_folder(ff_folder)
+   h5_avg = ffta.load.load_hdf.load_FF(data_files, parm_dict, h5_path)
+   h5_svd = ffta.analysis.svd.test_svd(h5_avg) # PCA filter, choose first X non-noisy components
+   clean_components = [0,1,2,3,4] 
+   h5_rb = ffta.analysis.svd.svd_filter(h5_avg, clean_components) # say the first 7 are okay
+   data = ffta.hdf_utils.process.FFtrEFM(h5_rb)
+   data.compute()
+
+More details on each step are below.
+
 Load the data
 ~~~~~~~~~~~~~
 This command assumes your data are saved as Igor IBW files.
