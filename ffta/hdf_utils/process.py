@@ -369,6 +369,7 @@ class FFtrEFM(Process):
             self.h5_phase = self.h5_results_grp['Phase']
             try:
                 self.h5_pwrdis = self.h5_results_grp['PowerDissipation']
+                self.h5_tfp_cal = self.h5_results_grp['tfp_cal']
             except:
                 pass
         return
