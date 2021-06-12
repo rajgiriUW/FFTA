@@ -1,6 +1,7 @@
 from setuptools import setup, find_packages
 
 from os import path
+
 this_directory = path.abspath(path.dirname(__file__))
 with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
@@ -15,7 +16,7 @@ setup(
     author='Rajiv Giridharagopal',
     author_email='rgiri@uw.edu',
     license='MIT',
-	url='https://github.com/rajgiriUW/ffta/',
+    url='https://github.com/rajgiriUW/ffta/',
 
     packages=find_packages(exclude=['xop', 'docs', 'data', 'notebooks']),
 
@@ -27,7 +28,7 @@ setup(
                       'pywavelets>=1.1.1',
                       'sidpy>=0.0.5',
                       'pandas>=1.1.0',
-                      'BGlib>=0.0.2',
+                      'BGlib>=0.0.3',
                       'pycroscopy>=0.60.8',
                       'torch>=1.6.0'
                       ],
