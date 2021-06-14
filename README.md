@@ -32,3 +32,6 @@ This includes a few types of frequency analysis:
 3. Giridharagopal R, Precht JA, Jariwala S, Collins L, et al. Time-Resolved Electrical Scanning Probe Microscopy of Layered Perovskites Reveals Spatial Variations in Photoinduced Ionic and Electronic Carrier Motion. *ACS Nano* **13,** 2812-21 (2019). [DOI: 10/1021/acsnano.8b08390](http://dx.doi.org/10.1021/acsnano.8b08390)
 4. Ginger DS, Giridharagopal R, Moore DT, Rayermann GE, Reid OG. Sub-microsecond-resolution probe microscopy. US Patent [US8686358B2](https://patents.google.com/patent/US8686358)
 5. Shea DE, Giridharagopal R, Ginger DS, Brunton SL, Kutz JN. Extraction of instantaneous frequencies and amplitudes in nonstationary time-series data. *IEEE Access.* In press (as of 6/14/2021). [DOI: 10.1109/ACCESS.2021.3087595](https://ieeexplore.ieee.org/document/9448199)
+
+### Getting started
+To get started and to see some examples, check out the (very much in progress) [documention](https://ieeexplore.ieee.org/document/9448199).
