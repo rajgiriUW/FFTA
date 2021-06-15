@@ -8,9 +8,9 @@ Created on Tue May 12 11:23:17 2020
 import configparser
 from ffta.pixel_utils.load import cantilever_params
 from ffta.pixel_utils.load import configuration
+import urllib
 
-
-def simulation_configuration(path):
+def simulation_configuration(path, is_url=False):
     """
     Reads an ASCII file with relevant parameters for simulation.
 
@@ -18,6 +18,8 @@ def simulation_configuration(path):
     ----------
     path : string
         Path to ASCII file.
+    is_url : bool, optional
+        Set to True if path is a URL
 
     Returns
     -------
@@ -54,7 +56,12 @@ def simulation_configuration(path):
 
     # Create a parser for configuration file and parse it.
     config = configparser.RawConfigParser()
-    config.read(path)
+    if not is_url:
+        config.read(path)
+    else:
+        f = urllib.request.urlopen(path)
+        fl = ''.join([l.decode('utf-8') for l in f])
+        config.read_string(fl)
 
     sim_params = {}
     can_params = {}

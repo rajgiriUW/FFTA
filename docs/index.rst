@@ -9,7 +9,7 @@ Fast Free Transient Analysis (FFTA)
 
    About <about.rst>
    Github <https://github.com/rajgiriUW/ffta>
-   Analyzing a Signal <about.rst>
+   Analyzing a Signal <notebooks/processing_a_signal.ipynb>
    Analyzing an Image <notebooks/basic_processing.ipynb>
    Simulating a Cantilever <notebooks/simulating.ipynb>
    Source <source/ffta.rst>

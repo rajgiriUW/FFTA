@@ -60,7 +60,7 @@ class Pixel:
         see ffta.pixel_utils.load.cantilever_params
     fit: bool, optional
         Find tFP by just raw minimum (False) or fitting product of 2 exponentials (True)
-    pycroscopy : bool, optional
+    pycroscopy: bool, optional
         Pycroscopy requires different orientation, so this corrects for this effect.
     fit_form: str, optional
         Functional form used when fitting. 
@@ -78,7 +78,7 @@ class Pixel:
             hilbert: Hilbert transform method (default)
             wavelet: Morlet CWT approach
             stft: short time Fourier transform (sliding FFT)
-            fv: Feldman Force-Vib method
+            nfmd: Nonstationary Fourier mode decomposition
     
     filter_amplitude: bool, optional
         The Hilbert Transform amplitude can sometimes have drive frequency artifact.
@@ -269,7 +269,7 @@ class Pixel:
             else:
                 self.total_time = self.sampling_rate * self.n_points
 
-        elif not self.sampling_rate:
+        elif not hasattr(self, 'sampling_rate'):
             self.sampling_rate = int(self.n_points / self.total_time)
 
         elif self.total_time != self.n_points / self.sampling_rate:
@@ -654,7 +654,8 @@ class Pixel:
 
         return
 
-    def calculate_cwt(self, f_center=None, verbose=False, optimize=False, fit=False):
+    def calculate_cwt(self, f_center=None, verbose=False, optimize=False, fit=False, 
+                      calc_phase = False):
         '''
         Calculate instantaneous frequency using continuous wavelet transfer
         
@@ -664,6 +665,12 @@ class Pixel:
         ----------
         Optimize : bool, optionals
             Currently placeholder for iteratively determining wavelet scales
+            
+        fit : bool, optional
+            Whether to curve-fit for ridge finding or use parabolic approximation
+            
+        calc_phase : bool, optional
+            Calculates teh Phase (not usually needed)
         '''
 
         # wavlist = pywt.wavelist(kind='continuous')
@@ -676,7 +683,7 @@ class Pixel:
         dt = 1 / self.sampling_rate
         sc = pywt.scale2frequency(self.wavelet, self.scales) / dt
 
-        if self.verbose:
+        if verbose:
             print('Wavelet scale from', np.min(sc), 'to', np.max(sc))
 
         if f_center < np.min(sc) or f_center > np.max(sc):
@@ -714,8 +721,13 @@ class Pixel:
         # rescale to correct frequency 
         inst_freq = pywt.scale2frequency(self.wavelet, inst_freq + self.scales[0]) / dt
 
-        phase = spg.cumtrapz(inst_freq)
-        phase = np.append(phase, phase[-1])
+
+        if calc_phase:
+            phase = spg.cumtrapz(inst_freq)
+            phase = np.append(phase, phase[-1])
+        else:
+            phase = np.zeros(len(inst_freq))
+
         tidx = int(self.tidx * len(inst_freq) / self.n_points)
 
         self.amplitude = amplitude
@@ -725,10 +737,11 @@ class Pixel:
         self.wavelet_freq = freq  # the wavelet frequencies
 
         # subtract the w*t line (drive frequency line) from phase
-        start = int(0.3 * tidx)
-        end = int(0.7 * tidx)
-        xfit = np.polyfit(np.arange(start, end), phase[start:end], 1)
-        phase -= (xfit[0] * np.arange(len(inst_freq))) + xfit[1]
+        if calc_phase:
+            start = int(0.3 * tidx)
+            end = int(0.7 * tidx)
+            xfit = np.polyfit(np.arange(start, end), phase[start:end], 1)
+            phase -= (xfit[0] * np.arange(len(inst_freq))) + xfit[1]
 
         self.phase = phase
 
@@ -795,10 +808,11 @@ class Pixel:
         self.stft_times = times
 
         # subtract the w*t line (drive frequency line) from phase
-        start = int(0.3 * tidx)
-        end = int(0.7 * tidx)
-        xfit = np.polyfit(np.arange(start, end), phase[start:end], 1)
-        phase -= (xfit[0] * np.arange(len(inst_freq))) + xfit[1]
+        if calc_phase:
+            start = int(0.3 * tidx)
+            end = int(0.7 * tidx)
+            xfit = np.polyfit(np.arange(start, end), phase[start:end], 1)
+            phase -= (xfit[0] * np.arange(len(inst_freq))) + xfit[1]
 
         self.phase = phase
 
