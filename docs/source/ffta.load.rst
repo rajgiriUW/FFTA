@@ -1,8 +1,14 @@
 ffta.load package
 =================
 
-Submodules
-----------
+Module contents
+---------------
+
+.. automodule:: ffta.load
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 
 ffta.load.get\_utils module
 ---------------------------
@@ -44,10 +50,3 @@ ffta.load.load\_ringdown module
    :undoc-members:
    :show-inheritance:
 
-Module contents
----------------
-
-.. automodule:: ffta.load
-   :members:
-   :undoc-members:
-   :show-inheritance:

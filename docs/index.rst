@@ -2,7 +2,6 @@ Fast Free Transient Analysis (FFTA)
 ===================================
 **Methods for analyzing non-stationary microscopy information**
 
-
 .. toctree::
    :hidden:
    :glob:
@@ -11,9 +10,9 @@ Fast Free Transient Analysis (FFTA)
    About <about.rst>
    Github <https://github.com/rajgiriUW/ffta>
    Analyzing a Signal <about.rst>
-   Analyzing an Image <image.rst>
+   Analyzing an Image <notebooks/basic_processing.ipynb>
    Simulating a Cantilever <notebooks/simulating.ipynb>
-   Source <source.ffta.rst>
+   Source <source/ffta.rst>
 
 | Rajiv Giridharagopal, Ph.D.
 | University of Washington

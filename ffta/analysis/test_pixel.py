@@ -14,9 +14,7 @@ def test_pixel(h5_file, param_changes={}, pxls = 1, showplots = True,
 	Takes a random pixel and does standard processing.
 	
 	Parameters
-	----------
-	This is to tune parameters prior to processing an entire image
-	
+	----------	
 	h5_file : h5Py File, path, Dataset
 		H5 file to process
 	

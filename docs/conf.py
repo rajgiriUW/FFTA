@@ -18,9 +18,7 @@ sys.path.insert(0, os.path.abspath('..'))
 sys.path.insert(0, os.path.abspath('../ffta'))
 
 
-autodoc_mock_imports = ['scipy', 'numpy', 'watchdog', 'igor', 'pandas', 'pywt',
-	'matplotlib', 'pyUSID', 'numexpr', 'pycroscopy', 'pywavelets',
-	'h5py', 'sklearn', 'sidpy']
+
 
 # -- Project information -----------------------------------------------------
 
@@ -36,6 +34,9 @@ author = 'Raj Giridharagopal'
 # ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.coverage', 
 			  'sphinx.ext.napoleon', 'nbsphinx']
+
+autodoc_default_flags = ['members']
+autosummary_generate = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

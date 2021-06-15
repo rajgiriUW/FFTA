@@ -1,8 +1,13 @@
 ffta.hdf\_utils package
 =======================
 
-Submodules
-----------
+Module contents
+---------------
+
+.. automodule:: ffta.hdf_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 ffta.hdf\_utils.analyze\_h5 module
 ----------------------------------
@@ -32,14 +37,6 @@ ffta.hdf\_utils.process module
 ------------------------------
 
 .. automodule:: ffta.hdf_utils.process
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: ffta.hdf_utils
    :members:
    :undoc-members:
    :show-inheritance:

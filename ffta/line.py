@@ -56,9 +56,8 @@ class Line:
 
     See Also
     --------
-    pixel: Pixel processing for FF-trEFM data.
-    simulate: Simulation for synthetic FF-trEFM data.
-    scipy.signal.get_window: Windows for signal processing.
+    ffta.pixel: Pixel processing for FF-trEFM data.
+    ffta.simulation: Simulation for synthetic FF-trEFM data.
 
     Examples
     --------

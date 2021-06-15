@@ -18,25 +18,28 @@ from matplotlib import pyplot as plt
 import pandas as pd
 
 '''
-Generates a calibration curve for a given cantilever given some particular
-parameters.
 
-Ideally you would have a tip parameters file as well.
-
-Usage:
-    param_cfg = 'path'
-    can_params = 'path'
-    taus, tfp, spl = cal_curve(param_cfg, can_params)
-    from matplotlib import pyplot as plt
-    plt.plot(tfp, taus, 'bX-')
-    
-    If you want to change the fit parameters per tau
-    taus, tfp, spl = cal_curve(param_cfg, can_params, roi=0.001, n_taps=199)
 '''
 
 
 def cal_curve(can_path, param_cfg, taus_range=[], plot=True, **kwargs):
     '''
+    Generates a calibration curve for a given cantilever given some particular
+    parameters.
+
+    Ideally you would have a tip parameters file as well.
+
+    Usage:
+    ------
+    >>> param_cfg = 'path'
+    >>> can_params = 'path'
+    >>> taus, tfp, spl = cal_curve(param_cfg, can_params)
+    >>> from matplotlib import pyplot as plt
+    >>> plt.plot(tfp, taus, 'bX-')
+        
+    If you want to change the fit parameters per tau
+    taus, tfp, spl = cal_curve(param_cfg, can_params, roi=0.001, n_taps=199)
+
     Parameters
     ----------
     can_params : string or tuple
@@ -49,7 +52,6 @@ def cal_curve(can_path, param_cfg, taus_range=[], plot=True, **kwargs):
     taus_range : ndarray (2-index array), optional
         taus_range to set a range for the simulations, taken as [low, high]
         
-    
     plot : bool, optional
         Plots the last taus vs tfps for verification
     

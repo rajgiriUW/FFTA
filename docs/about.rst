@@ -1,6 +1,8 @@
 About
 =====
 
+FFTA was developed by Dr. Rajiv Giridharagopal beginning ~2010. The original paper [1] is most useful as a place to start, followed by [2] for additional details. For further details and questions, please e-mail below and/or post an issue to Github.
+
 Credits
 -------
 | Rajiv Giridharagopal, Ph.D.

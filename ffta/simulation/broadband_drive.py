@@ -1,5 +1,3 @@
-"""simulate.py: Contains Cantilever class."""
-# pylint: disable=E1101,R0902,C0103
 __author__ = "Rajiv Giridharagopal"
 __copyright__ = "Copyright 2020, Ginger Lab"
 __email__ = "rgiri@uw.edu"

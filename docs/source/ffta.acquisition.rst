@@ -1,29 +1,26 @@
 ffta.acquisition package
 ========================
 
-Submodules
-----------
+Module contents
+---------------
 
-ffta.acquisition.generate\_chirp module
----------------------------------------
+.. automodule:: ffta.acquisition
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ffta.acquisition.generate\_chirp
+--------------------------------
 
 .. automodule:: ffta.acquisition.generate_chirp
    :members:
    :undoc-members:
    :show-inheritance:
 
-ffta.acquisition.polling module
--------------------------------
+ffta.acquisition.polling
+------------------------
 
 .. automodule:: ffta.acquisition.polling
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: ffta.acquisition
    :members:
    :undoc-members:
    :show-inheritance:

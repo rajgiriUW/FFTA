@@ -1,5 +1,3 @@
-"""simulate.py: Contains Cantilever class."""
-# pylint: disable=E1101,R0902,C0103
 __author__ = "Rajiv Giridharagopal"
 __copyright__ = "Copyright 2020, Ginger Lab"
 __email__ = "rgiri@uw.edu"
@@ -18,7 +16,7 @@ PI2 = 2 * pi
 
 class MechanicalDrive_Simple(Cantilever):
     """Damped Driven Harmonic Oscillator Simulator for AFM Cantilevers under 
-    Mechanial drive (i.e. conventional DDHO)
+    Mechanical drive (i.e. conventional DDHO)
 
     Simulates a DDHO under excitation with explicitly supplied resonance frequency shift
     and NO electrostatic force change
