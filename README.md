@@ -1,6 +1,6 @@
 [![PyPI version](https://badge.fury.io/py/FFTA.svg)](https://badge.fury.io/py/FFTA)
 [![Documentation Status](https://readthedocs.org/projects/ffta/badge/?version=latest)](https://ffta.readthedocs.io/en/latest/?badge=latest)
-[![Coverage Status](https://coveralls.io/repos/github/rajgiriUW/ffta/badge.svg?branch=tests)](https://coveralls.io/github/rajgiriUW/ffta?branch=tests)
+[![Coverage Status](https://coveralls.io/repos/github/rajgiriUW/ffta/badge.svg?branch=master)](https://coveralls.io/github/rajgiriUW/ffta?branch=master)
 
 
 # Fast-Free Transient Analysis
