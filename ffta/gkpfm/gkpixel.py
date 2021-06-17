@@ -16,6 +16,7 @@ from ffta.pixel_utils.load import cantilever_params
 from ffta.pixel import Pixel
 import warnings
 
+import pycroscopy as px
 from pycroscopy.processing.fft import get_noise_floor
 from BGlib.be.analysis.utils.be_sho import SHOfunc, SHOfit
 from igor.binarywave import load as loadibw

@@ -8,7 +8,7 @@ sys.path.insert(0, '..')
 
 import ffta
 import pyUSID as usid
-
+from ffta.simulation import mechanical_drive
 
 # Testing of standard process flow
 class TestFFTA:
@@ -67,3 +67,60 @@ class TestFFTA:
         self.delete_old_h5()
 
         return
+
+# Test individual signal processing
+class TestSignal:
+
+    # Create a fake signal to operate on
+    params_url = 'https://raw.githubusercontent.com/rajgiriUW/ffta/master/ffta/simulation/example_params/example_sim_params.cfg'
+    params = ffta.simulation.utils.load.simulation_configuration(params_url, is_url=True)
+
+    # Simulation will be 5 ms long, with an excitation of time constant 100 us
+    params[2]['total_time'] = 0.005
+    params[1]['tau'] = 1e-4
+
+    def test_simulate(self):
+    # Test that simulation works
+        c = mechanical_drive.MechanicalDrive(*self.params)
+        self.Z, _ = c.simulate()
+        self.Z /= self.params[0]['amp_invols']
+
+        return
+
+    def test_pixel_default(self):
+    # Checks if pixel with default (hilbert) runs
+        c = mechanical_drive.MechanicalDrive(*self.params)
+        self.Z, _ = c.simulate()
+        self.Z /= self.params[0]['amp_invols']
+        pix = ffta.pixel.Pixel(self.Z, trigger=5e-4, total_time=5e-3, roi=1e-3)
+        pix.analyze()
+
+        assert (pix.tfp > 1e-6 and pix.tfp < 500e-4)
+
+    def test_pixel_stft(self):
+        c = mechanical_drive.MechanicalDrive(*self.params)
+        self.Z, _ = c.simulate()
+        self.Z /= self.params[0]['amp_invols']
+        pix = ffta.pixel.Pixel(self.Z, trigger=5e-4, total_time=5e-3, roi=1e-3, method='stft')
+        pix.analyze()
+
+        assert (pix.tfp > 1e-6 and pix.tfp < 500e-4)
+
+    def test_pixel_wavelet(self):
+        c = mechanical_drive.MechanicalDrive(*self.params)
+        self.Z, _ = c.simulate()
+        self.Z /= self.params[0]['amp_invols']
+        pix = ffta.pixel.Pixel(self.Z, trigger=5e-4, total_time=5e-3, roi=1e-3, method='wavelet')
+        pix.scales = np.arange(100, 10, -5)
+        pix.analyze()
+
+        assert (pix.tfp > 1e-6 and pix.tfp < 500e-4)
+
+    def test_pixel_nfmd(self):
+        c = mechanical_drive.MechanicalDrive(*self.params)
+        self.Z, _ = c.simulate()
+        self.Z /= self.params[0]['amp_invols']
+        pix = ffta.pixel.Pixel(self.Z, trigger=5e-4, total_time=5e-3, roi=1e-3, method='nfmd')
+        pix.analyze()
+
+        assert (pix.tfp > 1e-6 and pix.tfp < 500e-4)

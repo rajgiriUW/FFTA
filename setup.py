@@ -32,7 +32,7 @@ setup(
                       'sidpy>=0.0.5',
                       'pandas>=1.1.0',
                       'BGlib>=0.0.3',
-                      'pycroscopy>=0.60.8',
+                      'pycroscopy==0.60.8',
                       'torch>=1.6.0'
                       ],
     test_suite='pytest',
