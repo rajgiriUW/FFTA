@@ -18,6 +18,9 @@ class TestFFTA:
 
     def delete_old_h5(self):
 
+        if 'testdata' in os.getcwd():
+            os.chdir('..')
+            os.chdir('..')
         try:
             os.remove(self.ff_file)
             os.remove(self.ff_folder + '/tfp_fixed.csv')
@@ -75,7 +78,11 @@ class TestSignal:
 
     # Load a simulated dataset with 100 us time constant
     def load_deflection(self):
-        self.Z = np.load(r'tests/signaldata/Deflection.npy')
+        if 'testdata' in os.getcwd():
+            os.chdir('..')
+            os.chdir('..')
+
+        self.Z = np.load('tests/signaldata/Deflection.npy')
 
         return
 
