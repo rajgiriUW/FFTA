@@ -323,6 +323,17 @@ class Pixel:
 
         return
 
+    def update_parm(self, **kwargs):
+        """
+        Update the parameters, see ffta.pixel.Pixel for details on what to update
+        e.g. to switch from default Hilbert to Wavelets, for example
+        """
+        for k, v in kwargs.items():
+            if hasattr(self, k):
+                setattr(self, k, v)
+
+        return
+
     def clear_filter_flags(self):
         """Removes flags from parameters for setting filters"""
 
