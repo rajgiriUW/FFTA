@@ -101,11 +101,11 @@ def configuration(path):
     paraf_keys = ['trigger', 'total_time', 'drive_freq',
                   'sampling_rate', 'Q']
     parai_keys = ['n_pixels', 'pts_per_pixel', 'lines_per_image']
-    procs_keys = ['window', 'fit_form']
-    procf_keys = ['roi', 'FastScanSize', 'SlowScanSize', 'liftheight']
+    procs_keys = ['window', 'fit_form', 'method']
+    procf_keys = ['roi', 'FastScanSize', 'SlowScanSize', 'liftheight', 'fft_time_res']
     proci_keys = ['n_taps', 'filter_bandwidth', 'bandpass_filter',
                   'wavelet_analysis', 'wavelet_parameter', 'recombination',
-                  'phase_fitting', 'EMD_analysis']
+                  'phase_fitting']
 
     # Check if the configuration file has n_pixel,
     # if not assume single pixel.
@@ -171,13 +171,13 @@ def cantilever_params(path, asDataFrame=False):
     except:
         df = pd.read_csv(path, sep='\t', skiprows=1)
     for c in df.columns:
-        for n, cc in enumerate(df[c]): # to get around numpy scalar-string FutureWarning
+        for n, cc in enumerate(df[c]):  # to get around numpy scalar-string FutureWarning
             if cc != 'NAN':
                 df[c].iloc[n] = float(cc)
             else:
                 df[c].iloc[n] = np.NaN
-   #     df[c][df[c] != 'NAN'] = pd.to_numeric(df[c][df[c] != 'NAN'])
-   #     df[c][df[c] == 'NAN'] = np.NaN
+    #     df[c][df[c] != 'NAN'] = pd.to_numeric(df[c][df[c] != 'NAN'])
+    #     df[c][df[c] == 'NAN'] = np.NaN
 
     if asDataFrame:
         return df
