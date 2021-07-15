@@ -9,7 +9,8 @@ import numpy as np
 from math import pi
 import numpy.polynomial.polynomial as npPoly
 from scipy.optimize import fmin_tnc
-from scipy.signal import fftconvolve
+from scipy.signal import fftconvolve, chirp
+
 from matplotlib import pyplot as plt
 from ffta.simulation.cantilever import Cantilever
 from ffta.pixel_utils.load import cantilever_params
@@ -107,7 +108,7 @@ class GKPixel(Pixel):
 
     def excitation(self, exc_params={}, phase=-pi):
         """
-        Generates excitation waveform (AC probing bias)
+        Generates excitation waveform (AC probing bias) for CPD vs excitation plots
 
         Parameters
         ----------
@@ -234,33 +235,40 @@ class GKPixel(Pixel):
 
         return
 
-    def load_tf(self, tf_path, excitation_path, remove_dc=False):
+    def load_tf(self, tf_path, tf_excitation_path=[], remove_dc=False):
         '''
         Process transfer function and broadband excitation from supplied file
         This function does not check shape or length
         '''
 
+        # Load the response
         if isinstance(tf_path, str):
             tf = loadibw(tf_path)['wave']['wData']
         else:
             tf = tf_path
-
-        if isinstance(excitation_path, str):
-            exc = loadibw(excitation_path)['wave']['wData']
-        else:
-            exc = excitation_path
 
         self.tf = tf
         if len(tf.shape) > 1:
             self.tf = np.mean(tf, axis=1)
         self.TF = np.fft.fftshift(np.fft.fft(self.tf))
 
+        # Load the broadband excitation file, or create one
+        if tf_excitation_path:
+    
+            if isinstance(tf_excitation_path, str):
+                tf_exc = loadibw(tf_excitation_path)['wave']['wData']
+            else:
+                tf_exc = tf_excitation_path
+        else:
+            tf_exc = gen_chirp(sampling_rate = self.sampling_rate, 
+                               length = self.tf.shape / self.sampling_rate)
+
         if remove_dc:
             self.TF[int(len(tf) / 2)] = 0
 
-        self.tf_exc = exc
-        if len(exc.shape) > 1:
-            self.tf_exc = np.mean(exc, axis=1)
+        self.tf_exc = tf_exc
+        if len(tf_exc.shape) > 1:
+            self.tf_exc = np.mean(tf_exc, axis=1)
 
         self.TF_EXC = np.fft.fftshift(np.fft.fft(self.tf_exc))
 
@@ -793,3 +801,39 @@ def tf_fit_mat(drive_freq, resonances=2, width=20e3):
                      for e in eigen_factors[:resonances]]
 
     return np.array(band_edge_mat)
+
+def gen_chirp(f_center=500e3, f_width = 450e3, length=1e-2, sampling_rate=1e7):
+    
+    '''
+    Generates a single broad-frequency signal using scipy chirp, writes to name.dat
+    
+   
+    f_center : float
+        Central frequency for the signal
+        
+    f_width : float
+        The single-sided width of the chirp. Generates signal from f_center - f_width
+         to f_center + f_width
+         
+    length : float
+        the timescale of the signal. Keep this length in mind for data acquisition;
+        if your chirp is longer than your data acquisition, you will miss many of 
+        the frequencies
+        
+    sampling_rate : int
+        Sampling rate of the chirp, based on length/sampling_rate number of steps
+        This rate must be consistent on the wave generator or the frequencies will
+        be off        
+    '''
+
+    if isinstance(sampling_rate, str):
+        sampling_rate = float(sampling_rate)
+
+    tx = np.arange(0, length, 1/sampling_rate) # fixed 100 MHz sampling rate for 10 ms
+	
+    f_hi = f_center + f_width
+    f_lo = np.max([f_center - f_width, 1]) # to ensure a positive number
+    
+    gen_chirp = chirp(tx, f_lo, tx[-1], f_hi)
+       
+    return gen_chirp
