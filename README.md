@@ -34,4 +34,4 @@ This includes a few types of frequency analysis:
 5. Shea DE, Giridharagopal R, Ginger DS, Brunton SL, Kutz JN. Extraction of instantaneous frequencies and amplitudes in nonstationary time-series data. *IEEE Access.* In press (as of 6/14/2021). [DOI: 10.1109/ACCESS.2021.3087595](https://ieeexplore.ieee.org/document/9448199)
 
 ### Getting started
-To get started and to see some examples, check out the (very much in progress) [documention](https://ieeexplore.ieee.org/document/9448199).
+To get started and to see some examples, check out the (very much in progress) [documention](ffta.readthedocs.io/en/latest).
