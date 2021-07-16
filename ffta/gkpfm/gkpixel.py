@@ -235,10 +235,19 @@ class GKPixel(Pixel):
 
         return
 
-    def load_tf(self, tf_path, tf_excitation_path=[], remove_dc=False):
+    def load_tf(self, tf_path, tf_excitation_path=[], 
+                remove_dc=False, adjust_tf_length=False):
         '''
         Process transfer function and broadband excitation from supplied file
         This function does not check shape or length
+        
+        If no tf_excitation_path is provided, this will generate one via SciPy chirp
+        
+        remove_dc : bool, optional
+            Removes the DC peak from the FFT
+            
+        adjust_tf_length : bool, optional
+            
         '''
 
         # Load the response
@@ -250,7 +259,7 @@ class GKPixel(Pixel):
         self.tf = tf
         if len(tf.shape) > 1:
             self.tf = np.mean(tf, axis=1)
-        self.TF = np.fft.fftshift(np.fft.fft(self.tf))
+
 
         # Load the broadband excitation file, or create one
         if tf_excitation_path:
@@ -270,7 +279,16 @@ class GKPixel(Pixel):
         if len(tf_exc.shape) > 1:
             self.tf_exc = np.mean(tf_exc, axis=1)
 
+        if adjust_tf_length: 
+            if self.n_points > len(self.tf):
+                self.tf = np.pad(self.tf, (0, self.n_points - len(self.tf)))
+            elif self.n_points < len(self.tf):
+                self.tf = self.tf[:self.n_points]
+                
+        self.TF = np.fft.fftshift(np.fft.fft(self.tf))
         self.TF_EXC = np.fft.fftshift(np.fft.fft(self.tf_exc))
+        
+        self.tf_f_ax = np.linspace(-self.sampling_rate / 2, self.sampling_rate / 2, num=self.tf.shape[0])
 
     def process_tf(self, resonances=2, width=20e3, exc_floor=10, plot=False):
         '''
@@ -294,8 +312,8 @@ class GKPixel(Pixel):
         '''
 
         #      
-        center = int(len(self.f_ax) / 2)
-        df = self.sampling_rate / self.n_points
+        center = int(len(self.tf_f_ax) / 2)
+        df = self.sampling_rate / self.tf.shape[0]
         # drive_bin = int(np.ceil(self.drive_freq / df)) 
 
         # Reconstruct from SHO
@@ -336,7 +354,7 @@ class GKPixel(Pixel):
             self.coef_mat[n, :] = coef
             response_guess = SHOfunc(coef_guess, band)
             response_fit = SHOfunc(coef, band)
-            response_full = SHOfunc(coef, self.f_ax)
+            response_full = SHOfunc(coef, self.tf_f_ax)
             TF = TF + response_full
 
             if plot:
