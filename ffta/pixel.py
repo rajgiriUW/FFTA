@@ -665,8 +665,8 @@ class Pixel:
 
         return
 
-    def calculate_cwt(self, f_center=None, verbose=False, optimize=False, fit=False, 
-                      calc_phase = False):
+    def calculate_cwt(self, f_center=None, verbose=False, optimize=False, fit=False,
+                      calc_phase=False):
         '''
         Calculate instantaneous frequency using continuous wavelet transfer
         
@@ -731,7 +731,6 @@ class Pixel:
 
         # rescale to correct frequency 
         inst_freq = pywt.scale2frequency(self.wavelet, inst_freq + self.scales[0]) / dt
-
 
         if calc_phase:
             phase = spg.cumtrapz(inst_freq)

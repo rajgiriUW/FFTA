@@ -52,25 +52,25 @@ class GKPixel(Pixel):
 
         Parameters
         ----------
-            See Pixel of parameter defintions
+        See Pixel of parameter defintions
+        
+        Additional parameters:
             
-            Additional parameters:
-                
-            TF_norm : array, optional
-                Transfer function supplied in Shifted Fourier domain, normalized to desired Q
-            periods: int
-                Number of periods to average over for CPD calc
-            phase_shift : float
-                Amount to shift the phase of the deflection by (cable lag)
+        TF_norm : array, optional
+            Transfer function supplied in Shifted Fourier domain, normalized to desired Q
+        periods: int
+            Number of periods to average over for CPD calc
+        phase_shift : float
+            Amount to shift the phase of the deflection by (cable lag)
 
         Returns
         -------
-            CPD : array
-                Array of the calculated CPD values over time
-            capacitance : array
-                The curvature of the parabola fit
-            CPD_mean : float
-                Simple average of the CPD trace, useful for plotting
+        CPD : array
+            Array of the calculated CPD values over time
+        capacitance : array
+            The curvature of the parabola fit
+        CPD_mean : float
+            Simple average of the CPD trace, useful for plotting
         '''
 
         if len(signal_array.shape) > 1:
@@ -235,7 +235,7 @@ class GKPixel(Pixel):
 
         return
 
-    def load_tf(self, tf_path, tf_excitation_path=[], 
+    def load_tf(self, tf_path, tf_excitation_path=[],
                 remove_dc=False, adjust_tf_length=False):
         '''
         Process transfer function and broadband excitation from supplied file
@@ -260,17 +260,16 @@ class GKPixel(Pixel):
         if len(tf.shape) > 1:
             self.tf = np.mean(tf, axis=1)
 
-
         # Load the broadband excitation file, or create one
         if tf_excitation_path:
-    
+
             if isinstance(tf_excitation_path, str):
                 tf_exc = loadibw(tf_excitation_path)['wave']['wData']
             else:
                 tf_exc = tf_excitation_path
         else:
-            tf_exc = gen_chirp(sampling_rate = self.sampling_rate, 
-                               length = self.tf.shape / self.sampling_rate)
+            tf_exc = gen_chirp(sampling_rate=self.sampling_rate,
+                               length=self.tf.shape / self.sampling_rate)
 
         if remove_dc:
             self.TF[int(len(tf) / 2)] = 0
@@ -279,15 +278,15 @@ class GKPixel(Pixel):
         if len(tf_exc.shape) > 1:
             self.tf_exc = np.mean(tf_exc, axis=1)
 
-        if adjust_tf_length: 
+        if adjust_tf_length:
             if self.n_points > len(self.tf):
                 self.tf = np.pad(self.tf, (0, self.n_points - len(self.tf)))
             elif self.n_points < len(self.tf):
                 self.tf = self.tf[:self.n_points]
-                
+
         self.TF = np.fft.fftshift(np.fft.fft(self.tf))
         self.TF_EXC = np.fft.fftshift(np.fft.fft(self.tf_exc))
-        
+
         self.tf_f_ax = np.linspace(-self.sampling_rate / 2, self.sampling_rate / 2, num=self.tf.shape[0])
 
     def process_tf(self, resonances=2, width=20e3, exc_floor=10, plot=False):
@@ -820,8 +819,8 @@ def tf_fit_mat(drive_freq, resonances=2, width=20e3):
 
     return np.array(band_edge_mat)
 
-def gen_chirp(f_center=500e3, f_width = 450e3, length=1e-2, sampling_rate=1e7):
-    
+
+def gen_chirp(f_center=500e3, f_width=450e3, length=1e-2, sampling_rate=1e7):
     '''
     Generates a single broad-frequency signal using scipy chirp, writes to name.dat
     
@@ -847,11 +846,11 @@ def gen_chirp(f_center=500e3, f_width = 450e3, length=1e-2, sampling_rate=1e7):
     if isinstance(sampling_rate, str):
         sampling_rate = float(sampling_rate)
 
-    tx = np.arange(0, length, 1/sampling_rate) # fixed 100 MHz sampling rate for 10 ms
-	
+    tx = np.arange(0, length, 1 / sampling_rate)  # fixed 100 MHz sampling rate for 10 ms
+
     f_hi = f_center + f_width
-    f_lo = np.max([f_center - f_width, 1]) # to ensure a positive number
-    
+    f_lo = np.max([f_center - f_width, 1])  # to ensure a positive number
+
     gen_chirp = chirp(tx, f_lo, tx[-1], f_hi)
-       
+
     return gen_chirp

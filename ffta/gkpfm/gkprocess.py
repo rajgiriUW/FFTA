@@ -24,6 +24,7 @@ from ffta.hdf_utils.process import FFtrEFM
 from matplotlib import pyplot as plt
 from numpy.linalg import LinAlgError
 import warnings
+
 '''
 To do:
     Separate the instantaneous frequency and tFP/shift calculations
@@ -142,7 +143,7 @@ class GKPFM(FFtrEFM):
         self.parm_dict.update(kwargs)
 
         return
-    
+
     def process_tf(self, exc_floor=10):
         """
         Generates a Transfer Function using GKPixel function
@@ -152,7 +153,7 @@ class GKPFM(FFtrEFM):
         exc_floor : float
             DESCRIPTION.
         """
-        
+
         defl = get_utils.get_pixel(self.h5_main, [0, 0], array_form=True).flatten()
         _gk = GKPixel(defl, self.parm_dict)
         _gk.load_tf(self.parm_dict['tip_response'], self.parm_dict['tip_excitation'])
@@ -160,10 +161,10 @@ class GKPFM(FFtrEFM):
 
         self.TF_norm = _gk.TF_norm
         del _gk
-        
+
         if any(np.isnan(self.TF_norm)):
             warnings.warn('TF is NaN! Lower exc_floor value to lower threshold of pass TF_norm explicitly')
-        
+
         return
 
     def test(self, pixel_ind=[0, 0], phases_to_test=[2.0708, 2.1208, 2.1708], smooth=None):
@@ -206,11 +207,11 @@ class GKPFM(FFtrEFM):
         _gk.min_phase(phases_to_test=phases_to_test, noise_tolerance=self.parm_dict['noise_tolerance'],
                       verbose=False)
         print("Set self.parm_dict['phase_shift'] to desired value")
-        
+
         # If User supplies a phase shift
         if 'phase_shift' in self.parm_dict:
             _gk.force_out(plot=True, noise_tolerance=self.parm_dict['noise_tolerance'],
-                          phase_shift = self.parm_dict['phase_shift'])
+                          phase_shift=self.parm_dict['phase_shift'])
         else:
             _gk.force_out(plot=True, noise_tolerance=self.parm_dict['noise_tolerance'])
             self.parm_dict['phase_shift'] = phases_to_test[-1]
@@ -435,7 +436,7 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     cpd = usid.hdf_utils.find_dataset(h5_ff[h5_path], 'CPD')[0][()]
     # tfp_fixed = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp_fixed')[0][()]
     capacitance = usid.hdf_utils.find_dataset(h5_ff[h5_path], 'capacitance')[0][()]
-    
+
     print(usid.hdf_utils.find_dataset(h5_ff[h5_path], 'CPD')[0].parent.name)
 
     path = h5_ff.file.filename.replace('\\', '/')
