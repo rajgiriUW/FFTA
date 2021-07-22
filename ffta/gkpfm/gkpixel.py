@@ -474,6 +474,12 @@ class GKPixel(Pixel):
         self.TF = TF
         self.TF_norm = TF_norm
 
+        self.tf_f_ax = np.linspace(-self.sampling_rate / 2, self.sampling_rate / 2, num=self.tf.shape[0])
+
+        self.tf_exc = gen_chirp(sampling_rate=self.sampling_rate,
+                                length=self.tf.shape / self.sampling_rate)
+        self.TF_EXC = np.fft.fftshift(np.fft.fft(self.tf_exc))
+
         return
 
     def force_out(self, plot=False, noise_tolerance=1e-6, phase_shift=0):
@@ -535,6 +541,8 @@ class GKPixel(Pixel):
             plt.title('Force (output/TF_norm) vs time, near trigger')
             plt.xlabel('Time (s)')
             plt.ylabel('Force (N)')
+
+            self.plot_response()
 
         return
 

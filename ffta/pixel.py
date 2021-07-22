@@ -310,8 +310,8 @@ class Pixel:
         self.shift = None
         self.cwt_matrix = None
 
-        # For accidental passing ancillary datasets from Pycroscopy, this will fail
-        # when pickling
+        # For accidental passing ancillary datasets from Pycroscopy, otherwise 
+        # this class will throw an error when pickling (e.g. in pyUSID.Process)
         if hasattr(self, 'Position_Indices'):
             del self.Position_Indices
         if hasattr(self, 'Position_Values'):
@@ -331,13 +331,6 @@ class Pixel:
         for k, v in kwargs.items():
             if hasattr(self, k):
                 setattr(self, k, v)
-
-        return
-
-    def clear_filter_flags(self):
-        """Removes flags from parameters for setting filters"""
-
-        self.bandpass_filter = 0
 
         return
 
@@ -828,14 +821,16 @@ class Pixel:
 
         return
 
-    def calculate_nfmd(self, calc_phase=False, override_window=True, verbose=True):
+    def calculate_nfmd(self, calc_phase=False, override_window=True, verbose=False):
         '''
         Nonstationary Fourier Mode Decomposition Approach
         
         calc_phase : bool, optional
             Calculates the Phase (not usually needed)
+            
         override_window: bool, optional
             Automatically adjusts window to be integer number of cycles
+            
         verbose : bool, optional
             Console feedback
     
@@ -846,7 +841,7 @@ class Pixel:
 
         z = self.signal
 
-        if not override_window:
+        if override_window:
 
             win_size_cycle = int(self.sampling_rate / self.drive_freq)
             self.window_size = (self.window_size // win_size_cycle) * win_size_cycle
@@ -902,6 +897,11 @@ class Pixel:
 
             elif self.fit_form == 'exp':
 
+                if self.method == 'nfmd':
+                    cut = np.copy(self.phase[self.tidx:(self.tidx + ridx)])
+                    cut -= self.phase[self.tidx]
+                    self.cut = cut
+
                 tfp_calc.fit_freq_exp(self, cut, t)
 
             elif self.fit_form == 'ringdown':
@@ -925,8 +925,13 @@ class Pixel:
             self.best_fit = np.zeros(cut.shape[0])
             print('error with fitting')
 
-        self.cut += self.inst_freq[self.tidx]
-        self.best_fit += self.inst_freq[self.tidx]
+        if not (self.method == 'nfmd' and self.fit_form == 'exp'):
+            self.cut += self.inst_freq[self.tidx]
+            self.best_fit += self.inst_freq[self.tidx]
+        else:
+            self.cut += self.phase[self.tidx]
+            self.best_fit += self.phase[self.tidx]
+
         del cut
 
         return
@@ -998,6 +1003,8 @@ class Pixel:
         if fit:
             if self.fit_form == 'ringdown':
                 a[1].plot(tx * 1e3, self.best_fit, 'g--')
+            elif self.fit_form == 'exp' and self.method == 'nfmd':
+                a[2].plot(tx * 1e3, self.best_fit, 'g--')
             else:
                 a[0].plot(tx * 1e3, self.best_fit, 'g--')
 
