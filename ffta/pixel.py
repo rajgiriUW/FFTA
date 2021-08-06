@@ -1004,12 +1004,15 @@ class Pixel:
             if self.fit_form == 'ringdown':
                 a[1].plot(tx * 1e3, self.best_fit, 'g--')
             elif self.fit_form == 'exp' and self.method == 'nfmd':
-                a[2].plot(tx * 1e3, self.best_fit, 'g--')
+                a[2].plot(tx * 1e3, self.best_fit + self.phase[self.tidx], 'g--')
             else:
                 a[0].plot(tx * 1e3, self.best_fit, 'g--')
 
         a[1].plot(tx * 1e3, self.amplitude[cut[0]:cut[1]], 'b')
-        a[2].plot(tx * 1e3, self.phase[cut[0]:cut[1]] * 180 / np.pi, 'm')
+        if self.fit_form == 'exp' and self.method == 'nfmd':
+            a[2].plot(tx * 1e3, self.phase[cut[0]:cut[1]], 'm')
+        else:
+            a[2].plot(tx * 1e3, self.phase[cut[0]:cut[1]] * 180 / np.pi, 'm')
 
         a[0].set_title('Instantaneous Frequency')
         a[0].set_ylabel('Frequency Shift (Hz)')

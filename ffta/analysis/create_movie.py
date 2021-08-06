@@ -54,9 +54,18 @@ def setup_movie(h5_ds, size=(10, 6), vscale=[None, None], cmap='inferno'):
 	return fig, ax, cbar, vmin, vmax
 
 
-def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
-					  idx_start=500, idx_stop=100, smooth=None, size=(10, 6),
-					  vscale=[None, None], cmap='inferno', interval=60, repeat_delay=100, crop=None):
+def create_freq_movie(h5_ds,
+                      filename='inst_freq', 
+                      time_step=50,
+					  idx_start=500, 
+                      idx_stop=100, 
+                      smooth=None, 
+                      size=(10, 6),
+					  vscale=[None, None], 
+                      cmap='inferno', 
+                      interval=60, 
+                      repeat_delay=100, 
+                      crop=None):
 	'''
 	Creates an animation that goes through all the instantaneous frequency data.
 	
@@ -86,6 +95,9 @@ def create_freq_movie(h5_ds, filename='inst_freq', time_step=50,
 
 	vscale : list [float, float], optional
 		To hard-code the color scale, otherwise these are automatically generated
+
+    repeat_delay int
+        Used when saving to set the delay for when the mp4 repeats from the start
 
 	crop : int
 		Crops the image to a certain line, in case part of the scan is bad
