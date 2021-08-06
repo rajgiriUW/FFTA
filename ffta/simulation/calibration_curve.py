@@ -17,10 +17,6 @@ from scipy.signal import medfilt
 from matplotlib import pyplot as plt
 import pandas as pd
 
-'''
-
-'''
-
 
 def cal_curve(can_path, param_cfg, taus_range=[], plot=True, **kwargs):
     '''
@@ -79,9 +75,13 @@ def cal_curve(can_path, param_cfg, taus_range=[], plot=True, **kwargs):
     _rlo = -7
     _rhi = -3
 
-    if len(taus_range) == 2 and (taus_range[1] > taus_range[0]):
-        _rlo = np.floor(np.log10(taus_range[0]))
-        _rhi = np.ceil(np.log10(taus_range[1]))
+    if len(taus_range) != 2 or (taus_range[1] <= taus_range[0]):
+        raise ValueError('Range must be ascending and 2-items')
+    else:
+        _rlo = np.log10(taus_range[0])
+        _rhi = np.log10(taus_range[1])
+    #    _rlo = np.floor(np.log10(taus_range[0]))
+    #    _rhi = np.ceil(np.log10(taus_range[1]))
 
     taus = np.logspace(_rlo, _rhi, 50)
     tfps = []
