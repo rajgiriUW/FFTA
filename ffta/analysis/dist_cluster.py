@@ -41,29 +41,26 @@ class dist_cluster:
 
 	def __init__(self, h5_main, data_avg, mask, results=None, isCPD=False, parms_dict=None):
 		"""
-		Parameters
-		----------
-		h5_main : h5Py dataset or str
-			File type to be processed.
-
-		mask : ndarray
-			mask file to be loaded, is expected to be of 1 (transparent) and 0 (opaque)
-			loaded e.g. mask = mask_utils.loadmask('E:/ORNL/20191221_BAPI/nice_masks/Mask_BAPI20_0008.txt')
-
-		parms_dict : dict
-			Parameters file used for the image. Must contain at minimum:
-				num_rows, num_cols, sampling_rate, FastScanSize, SlowScanSize, total_time
-
-		data_avg : str
-			The file to use as the "averaged" data upon which to apply the mask and do calculations
+		:param h5_main: File type to be processed.
+		:type h5_main : h5Py dataset or str
+		
+		:param data_avg: The file to use as the "averaged" data upon which to apply the mask and do calculations
 			e.g. 'tfp' searches within the h5_main parent folder for 'tfp'
+		:type data_avg: str
 			
-		results : clustering results
-			If you want to pass some previously-calculated results..
-			
-		isCPD : bool, optional,
-			toggle between GMode and FFtrEFM data, this is just for plotting
+		:param mask: mask file to be loaded, is expected to be of 1 (transparent) and 0 (opaque)
+			loaded e.g. mask = mask_utils.loadmask('E:/ORNL/20191221_BAPI/nice_masks/Mask_BAPI20_0008.txt')
+		:type mask: ndarray
+		
+		:param results: If you want to pass some previously-calculated results..
+		:type results: clustering results
+					
+		:param isCPD: toggle between GMode and FFtrEFM data, this is just for plotting
+		:type isCPD: bool, optional,
 
+		:param parms_dict: Parameters file used for the image. Must contain at minimum:
+			num_rows, num_cols, sampling_rate, FastScanSize, SlowScanSize, total_time
+		:type parms_dict: dict
 		"""
 		self.h5_main = h5_main
 
@@ -99,7 +96,9 @@ class dist_cluster:
 		return
 
 	def _params(self):
-		""" creates CPD averaged data and extracts parameters """
+		"""
+		creates CPD averaged data and extracts parameters
+		"""
 
 		parms_dict = self.parms_dict
 		self.num_rows = parms_dict['num_rows']
@@ -137,15 +136,12 @@ class dist_cluster:
 	def _data_1D_values(self, mask):
 		"""
 		Uses 1D Mask file (with NaN and 0) and generates data of non-grain boundary regions
-
-		Parameters
-		----------
-		mask : ndarray, 2D
-			Unmasked locations (indices) as 1D location
-
+		
 		data_1D_vals : data as a 1D array with data points (num_rows*num_cols X pnts_per_data)
 		data_avg_1D_vals : Average data (CPD_on_avg/tfP_fixed, say) that is 1D
 
+		:param mask: Unmasked locations (indices) as 1D location
+		:type mask: ndarray, 2D
 		"""
 
 		ones = np.where(mask == 1)
@@ -160,6 +156,12 @@ class dist_cluster:
 		return
 
 	def plot_img(self):
+		'''
+		:returns: tuple (fig, ax)
+			WHERE
+			[type] fig is...
+			[type] ax is...
+		'''
 
 		if self.data_avg is not None:
 			fig, ax = plt.subplots(nrows=1, figsize=(12, 6))
@@ -221,6 +223,8 @@ class dist_cluster:
 		data_avg_scatter : distances x 1 (data_average at each distance)
 		data_dist : minimum pairwise distances to mask 
 		data_avg_dist : mean of pairwise distances to maks
+		
+		:returns: tuple (self.data_dist, self.data_avg_dist)
 
 		"""
 		self.data_dist = np.zeros(data_1D_pos.shape[0])
@@ -243,7 +247,18 @@ class dist_cluster:
 		return self.data_dist, self.data_avg_dist
 
 	def write_results(self, verbose=False, name='inst_freq_masked'):
-		''' Writes a new main data set'''
+		'''
+		Writes a new main data set
+		
+		:param verbose:
+		:type verbose: bool
+		
+		:param name:
+		:type name: str
+		
+		:returns:
+		:rtype:
+		'''
 
 		h5_dist_clust_group = px.hdf_utils.create_indexed_group(self.h5_main.parent, 'dist-cluster')
 
@@ -291,17 +306,17 @@ class dist_cluster:
 
 		Data typically is self.CPD_scatter
 		
-		Parameters
-		----------
-		plot_pts : list
-			Index of where to plot (i.e. when light is on). Defaults to p_on:p_off
-
-		Returns
-		-------
-		self.results : KMeans type
-
-		self.segments : dict, Nclusters
-			Contains the segmented arrays for displaying
+		:param clusters:
+		:type clusters: int
+		
+		:param show_results:
+		:type show_results: bool
+		
+		:param plot_mid: Index of where to plot (i.e. when light is on). Defaults to p_on:p_off
+		:type plot_mid: list
+			
+		:returns:
+		:rtype: KMeans type
 
 		"""
 
@@ -319,7 +334,16 @@ class dist_cluster:
 		return self.results
 
 	def plot_kmeans(self, plot_mid=[]):
-
+		'''
+		:param plot_mid: Index of where to plot (i.e. when light is on). Defaults to p_on:p_off
+		:type plot_mid: list
+		
+		:returns: tuple (fig, ax)
+			WHERE
+			[type] fig is...
+			[type] ax is...
+		
+		'''
 		labels = self.results.labels_
 		cluster_centers = self.results.cluster_centers_
 		labels_unique = np.unique(labels)
@@ -381,7 +405,12 @@ class dist_cluster:
 		return fig, ax
 
 	def plot_centers(self):
-
+		'''
+		:returns: tuple (fig, ax)
+			WHERE
+			[type] fig is...
+			[type] ax is...
+		'''
 		fig, ax = plt.subplots(nrows=1, figsize=(6, 4))
 
 		for i in self.results.cluster_centers_:
@@ -395,10 +424,15 @@ class dist_cluster:
 		a long time for big data sets.
 
 		Data defaults to self.data_scatter
+		
+		:param data:
+		:type data:
+		
+		:param clusters:
+		:type clusters: int
 
-		Returns
-		-------
-		score : KMeans type
+		:returns:
+		:rtype: KMeans type
 
 		"""
 
@@ -421,7 +455,7 @@ class dist_cluster:
 
 		"""
 		This creates 2D maps of the segments to overlay on an image
-
+		
 		Returns to Class:
 		
 		segments is in actual length
@@ -431,7 +465,10 @@ class dist_cluster:
 
 		To display, make sure to do [:,1], [:,0] given row, column ordering
 		Also, segments_idx is to display since pyplot uses the index on the axis
-
+		
+		:param results:
+		:type results:
+		
 		"""
 
 		if not results:
@@ -459,7 +496,18 @@ class dist_cluster:
 		return
 
 	def plot_segment_maps(self, ax, newImage=False):
-		""" Plots the segments using a color map on given axis ax"""
+		"""
+		Plots the segments using a color map on given axis ax
+		
+		:param ax:
+		:type ax:
+		
+		:param newImage:
+		:type newImage: bool
+		
+		:returns:
+		:rtype:
+		"""
 
 		colors = ['#1f77b4', '#ff7f0e', '#2ca02c',
 				  '#d62728', '#9467bd', '#8c564b',
@@ -487,6 +535,14 @@ class dist_cluster:
 
 		"""
 		Plots a heat map using CPD_avg_scatter data
+		
+		:param bins:
+		:type bins: int
+		
+		:returns: tuple (fig, ax)
+			WHERE
+			[type] fig is...
+			[type] ax is...
 		"""
 
 		heatmap, _, _ = np.histogram2d(self.data_avg_scatter[:, 1], self.data_avg_scatter[:, 0], bins)
@@ -514,7 +570,13 @@ class dist_cluster:
 		return fig, ax
 
 	def animated_clusters(self, clusters=3, one_color=False):
-
+		'''
+		:param clusters:
+		:type clusters: int
+		
+		:param one_color:
+		:type one_color: bool
+		'''
 		plt.rcParams[
 			'animation.ffmpeg_path'] = r'C:\Users\Raj\Downloads\ffmpeg-20180124-1948b76-win64-static\bin\ffmpeg.exe'
 
@@ -580,6 +642,8 @@ class dist_cluster:
 
 		As of 4/3/2018 this code is just a placeholder
 
+		:param clusters:
+		:type clusters: int
 		"""
 
 		plt.rcParams[
@@ -613,6 +677,31 @@ class dist_cluster:
 
 
 def plot_clust(h5_main, labels, mean_resp, x_pts, data_avg=None, tidx_off=0):
+	"""
+	
+	:param h5_main:
+	:type h5_main:
+	
+	:param labels:
+	:type labels:
+	
+	:param mean_resp:
+	:type mean_resp:
+	
+	:param x_pts:
+	:type x_pts:
+	
+	:param data_avg:
+	:type data_avg:
+	
+	:param tidx_off:
+	:type tidx_off:
+	
+	:returns: tuple (fig, ax)
+			WHERE
+			[type] fig is...
+			[type] ax is...
+	"""
 	try:
 		_labels = np.array(labels.value).T[0]
 	except:

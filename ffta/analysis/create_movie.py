@@ -12,6 +12,11 @@ Note: A 'str is not callable' bug is often due to not running set_mpeg
 
 
 def set_mpeg(path=None):
+	'''
+	
+	:param path:
+	:type path: str
+	'''
 	if not path:
 		plt.rcParams[
 			'animation.ffmpeg_path'] = r'C:/Users/Raj/Downloads/ffmpeg/ffmpeg/bin/ffmpeg.exe'
@@ -22,6 +27,28 @@ def set_mpeg(path=None):
 
 
 def setup_movie(h5_ds, size=(10, 6), vscale=[None, None], cmap='inferno'):
+	'''
+	
+	:param h5_ds: The instantaneous frequency data. NOT deflection, this is for post-processed data
+	:type h5_ds: USID dataset
+	
+	:param size:
+	:type size: tuple
+	
+	:param vscale:
+	:type vscale: list
+	
+	:param cmap:
+	:type cmap: str
+	
+	:returns: tuple (fig, ax, cbar, vmin, vmax)
+		WHERE
+		[type] fig is...
+		[type] ax is...
+		[type] cbar is...
+		[type] vmin is...
+		[type vmax is...
+	'''
 	fig, ax = plt.subplots(nrows=1, figsize=size, facecolor='white')
 
 	if 'USID' not in str(type(h5_ds)):
@@ -69,38 +96,44 @@ def create_freq_movie(h5_ds,
 	'''
 	Creates an animation that goes through all the instantaneous frequency data.
 	
-	Parameters
-	----------
-	h5_ds : USID Dataset 
-		The instantaneous frequency data. NOT deflection, this is for post-processed data
+	:param h5_ds: The instantaneous frequency data. NOT deflection, this is for post-processed data
+	:type h5_ds: USID dataset
 
-	rotate : bool, optional
-		The data are saved in ndim_form in pycroscopy rotated 90 degrees
-
-	time_step : int, optional
+	:param filename:
+	:type filename: str
+	
+	:param time_step:
 		10 @ 10 MHz = 1 us
 		50 @ 10 MHz = 5 us
+	:type time_step: int, optional
+		
+	:param idx_start: What index to start at. Typically to avoid the Hilbert Transform edge artifacts, you start a little ahead
+	:type idx_start: int
+		
+	:param idx_stop: Same as the above,in terms of how many points BEFORE the end to stop
+	:type idx_stop: int
+		
+	:param smooth: Whether to apply a simple boxcar smoothing kernel to the data
+	:type smooth: int, optional
+		
+	:param size: figure size
+	:type size: tuple, optional
 
-	idx_start : int
-		What index to start at. Typically to avoid the Hilbert Transform edge artifacts, you start a little ahead
+	:param vscale: To hard-code the color scale, otherwise these are automatically generated
+	:type vscale: list [float, float], optional
+	
+	:param cmap:
+	:type cmap: str, optional
+	
+	:param interval:
+	:type interval:
 
-	idx_stop : int
-		Same as the above,in terms of how many points BEFORE the end to stop
-
-	smooth : int, optional
-		Whether to apply a simple boxcar smoothing kernel to the data
-
-	size : tuple, optional
-		Figure size
-
-	vscale : list [float, float], optional
-		To hard-code the color scale, otherwise these are automatically generated
-
-    repeat_delay int
-        Used when saving to set the delay for when the mp4 repeats from the start
-
-	crop : int
-		Crops the image to a certain line, in case part of the scan is bad
+	:param repeat_delay: Used when saving to set the delay for when the mp4 repeats from the start
+    :type repeat_delay: int
+        
+	:param crop: Crops the image to a certain line, in case part of the scan is bad
+	:type crop: int
+		
 	'''
 
 	if not isinstance(h5_ds, usid.USIDataset):
@@ -176,14 +209,24 @@ def create_cpd_movie(h5_ds, filename='cpd', size=(10, 6),
 					 vscale=[None, None], cmap='inferno', smooth=None, interval=60, repeat_delay=100):
 	'''
 
-	:param h5_ds:
-	:param rotate:
+	:param h5_ds: The instantaneous frequency data. NOT deflection, this is for post-processed data
+	:type h5_ds: USID dataset
+	
 	:param filename:
-	:param size:
-	:param vscale:
+	:type filename: str
+	
+	:param size: figure size
+	:type size: tuple, optional
+	
+	:param vscale: To hard-code the color scale, otherwise these are automatically generated
+	:type vscale: list [float, float], optional
+	
 	:param interval:
-	:param repeat_delay:
-	:return:
+	:type interval:
+	
+	:param repeat_delay: Used when saving to set the delay for when the mp4 repeats from the start
+    :type repeat_delay: int
+	
 	'''
 
 	if not isinstance(h5_ds, usid.USIDataset):

@@ -23,19 +23,20 @@ def get_params(h5_path, key='', verbose=False, del_indices=True):
     Gets dict of parameters from the FF-file
     Returns a specific key-value if requested
     
-    Parameters
-    ----------
-    h5_path : str or h5py
-        Can pass either an h5_path to a file or a file already in use
+    :param h5_path: Can pass either an h5_path to a file or a file already in use
+    :type h5_path: str or h5py
+        
+    :param key: Returns specific key in the parameters dictionary
+    :type key: str, optional
+        
+    :param verbose: prints all parameters to console
+    :type verbose: bool, optional
     
-    key : str, optional
-        Returns specific key in the parameters dictionary
-        
-    verbose : bool, optional
-        Prints all parameters to console
-        
-    del_indices : bool, optional
-        Deletes relative links within the H5Py and any quantity/units
+    :param del_indices: Deletes relative links within the H5Py and any quantity/units
+    :type del_indices: bool, optional
+    
+    :returns:
+    :rtype:
     """
 
     if isinstance(h5_path, str):
@@ -89,20 +90,17 @@ def change_params(h5_path, new_vals={}, verbose=False):
     
     This is equivalent to h5_main.parent.attrs[key] = new_value
     
-    Parameters
-    ----------
-    h5_path : str or h5py
-        Can pass either an h5_path to a file or a file already in use
+    :param h5_path: Can pass either an h5_path to a file or a file already in use
+    :type h5_path: str or h5py
+        
+    :param new_vals:
+    :type new_vals:
     
-    key : dict, optional
-        Returns specific keys in the parameters dictionary
+    :param verbose: Prints all parameters to console
+    :type verbose: bool, optional
     
-    value : str, int, float
-        The new value for the key. There is no error checking for this
-    
-    verbose : bool
-        Prints all parameters to console
-    
+    :returns:
+    :rtype:
     """
     parameters = usid.hdf_utils.get_attributes(h5_path)
 
@@ -130,35 +128,28 @@ def get_line(h5_path, line_num, params={},
     If h5_path is a dataset it processes based on user-defined pnts_avg
     If h5_path is a group/file/string_path then it can be a Line class or array
     
-    Parameters
-    ----------
-    h5_path : str or h5py or Dataset
-        Can pass either an h5_path to a file or a file already in use or a specific Dataset
-    
-    line_num : int
-        Returns specific line in the dataset
-    
-    params: dict
-        If explicitly changing parameters (to test a feature), you can pass any subset and this will overwrite it
+    :param h5_path: Can pass either an h5_path to a file or a file already in use or a specific Dataset
+    :type h5_path: str or h5py or Dataset
+        
+    :param line_num: Returns specific line in the dataset
+    :type line_num: int
+        
+    :param params: If explicitly changing parameters (to test a feature), you can pass any subset and this will overwrite it
         e.g. parameters  = {'drive_freq': 10} will extract the Line, then change Line.drive_freq = 10
-    
-    array_form : bool, optional
-        Returns the raw array contents rather than Line class
+    :type params: dict
         
-    avg : bool, optional
-        Averages the pixels of the entire line 
+    :param array_form: Returns the raw array contents rather than Line class
+    :type array_form: bool, optional
+        
+    :param avg: Averages the pixels of the entire line 
         This will force output to be an array
+    :type avg: bool, optional
         
-    transpose : bool, optional
-        For legacy FFtrEFM code, pixel is required in (n_points, n_signals) format
+    :param transpose: For legacy FFtrEFM code, pixel is required in (n_points, n_signals) format
+    :type transpose: bool, optional
         
-    Returns
-    -------
-    signal_line : numpy 2D array, iff array_form == True
-        ndarray containing the line 
         
-    line_inst : Line, iff array_form == False
-        Line class containing the signal_array object and parameters
+
     """
 
     # If not a dataset, then find the associated Group
@@ -208,39 +199,36 @@ def get_pixel(h5_path, rc, params={}, pixel_params={},
     Supplying a direct link to a Dataset is MUCH faster than just the file
     Note that you should supply the deflection data, not instantaneous_frequency
     
-    Parameters
-    ----------
-    h5_path : str or h5py or Dataset
-        Can pass either an h5_path to a file or a file already in use or specific Dataset
+    :param h5_path: Can pass either an h5_path to a file or a file already in use or specific Dataset
         Again, should pass the deflection data (Rebuilt_Data, or FF_Avg)
-    
-    rc : list [r, c]
-        Pixel location in terms of ROW, COLUMN
-
-    params: dict
-        If explicitly changing parameters (to test a feature), you can pass any subset and this will overwrite it
+    :type h5_path: str or h5py or Dataset
+        
+    :param rc: Pixel location in terms of ROW, COLUMN
+    :type rc: list [r, c]
+        
+    :param params: If explicitly changing parameters (to test a feature), you can pass any subset and this will overwrite it
         e.g. parameters  = {'drive_freq': 10} will extract the Pixel, then change Pixel.drive_freq = 10
-
-    pixel_params : dict, optional
-        Parameters 'fit', 'pycroscopy', 'method', 'fit_form'
+    :type params: dict
+    
+    :param pixel_params: Parameters 'fit', 'pycroscopy', 'method', 'fit_form'
         See ffta.pixel for details. 'pycroscopy' is set to True in this function
+    :type pixel_params: dict, optional
+    
+    :param array_form: Returns the raw array contents rather than Pixel class
+    :type array_form: bool, optional
+        
+    :param avg: Averages the pixels of n_pnts_per_pixel and then creates Pixel of that
+    :type avg: bool, optional
+        
+    :param transpose: For legacy FFtrEFM code, pixel is required in (n_points, n_signals) format
+    :type transpose: bool, optional
+        
+        
+    :returns: 
+    2D numpy array signal_line iff array_form == True, contains hte line 
+    OR 
+    Line line_inst iff array_form == False, contains signal_array object and parameters
 
-    array_form : bool, optional
-        Returns the raw array contents rather than Pixel class
-    
-    avg : bool, optional
-        Averages the pixels of n_pnts_per_pixel and then creates Pixel of that
-        
-    transpose : bool, optional
-        For legacy FFtrEFM code, pixel is required in (n_points, n_signals) format
-        
-    Returns
-    -------
-    signal_pixel : 1D numpy array, iff array_form == True
-        Ndarray of the (n_points) in specific pixel    
-    
-    pixel_inst : Pixel, iff array_form == False
-        Line class containing the signal_array object and parameters
     """
 
     # If not a dataset, then find the associated Group

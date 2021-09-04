@@ -14,62 +14,58 @@ PI2 = 2 * pi
 
 
 class BroadbandPulse(Cantilever):
-    """Damped Driven Harmonic Oscillator Simulator for AFM Cantilevers
-    Uses a broadband pulse to excite the cantilever
-
-    Parameters
-    ----------
-    can_params : dict
-        Parameters for cantilever properties. See Cantilever
-
-    force_params : dict
-        Parameters for forces. Beyond Cantilever, the dictionary contains:
-
-        es_force = float (in N)
-        delta_freq = float (in Hz)
-        tau = float (in seconds)
-
-    sim_params : dict
-        Parameters for simulation. The dictionary contains:
-
-        trigger = float (in seconds)
-        total_time = float (in seconds)
-        sampling_rate = int (in Hz)
-
-    chirp_lo, chirp_hi : float
-        Control the lower and upper frequencies for defining the chirp applied
-
-    Attributes
-    ----------
-    Z : ndarray
-        ODE integration of the DDHO response
-
-    Method
-    ------
-    simulate(trigger_phase=180)
-        Simulates the cantilever motion with excitation happening
-        at the given phase.
-
-    See Also
-    --------
-    pixel: Pixel processing for FF-trEFM data.
-    Cantilever: base class
-
-    Examples
-    --------
-    >>> from ffta.simulation import mechanical_drive
-    >>> from ffta.simulation.utils import load
-    >>>
-    >>> params_file = '../examples/sim_params.cfg'
-    >>> params = load.simulation_configuration(params_file)
-    >>>
-    >>> c = mechanical_drive.MechanicalDrive(*params)
-    >>> Z, infodict = c.simulate()
-    >>> c.analyze()
-    >>> c.analyze(roi=0.004) # can change the parameters as desired
-    """
 
     def __init__(self, can_params, force_params, sim_params, chirp_lo=10, chirp_hi=1e6):
+        """Damped Driven Harmonic Oscillator Simulator for AFM Cantilevers
+        Uses a broadband pulse to excite the cantilever
+        
+        Attributes
+        ----------
+        Z : ndarray
+            ODE integration of the DDHO response
+
+        Method
+        ------
+        simulate(trigger_phase=180)
+            Simulates the cantilever motion with excitation happening
+            at the given phase.
+
+        See Also
+        --------
+        pixel: Pixel processing for FF-trEFM data.
+        Cantilever: base class
+
+        Examples
+        --------
+        >>> from ffta.simulation import mechanical_drive
+        >>> from ffta.simulation.utils import load
+        >>>
+        >>> params_file = '../examples/sim_params.cfg'
+        >>> params = load.simulation_configuration(params_file)
+        >>>
+        >>> c = mechanical_drive.MechanicalDrive(*params)
+        >>> Z, infodict = c.simulate()
+        >>> c.analyze()
+        >>> c.analyze(roi=0.004) # can change the parameters as desired
+        
+        :param can_params: Parameters for cantilever properties. See Cantilever
+        :type can_params: dict
+            
+        :param force_params: Parameters for forces. Beyond Cantilever, the dictionary contains
+            es_force = float (in N)
+            delta_freq = float (in Hz)
+            tau = float (in seconds)
+        :type force_params: dict
+            
+        :param sim_params: Parameters for simulation. The dictionary contains:
+            trigger = float (in seconds)
+            total_time = float (in seconds)
+            sampling_rate = int (in Hz)
+        :type sim_params: dict
+            
+        :param chirp_lo, chirp_hi: Control the lower and upper frequencies for defining the chirp applied
+        :type chirp_lo, chirp_hi: float
+        """
         parms = [can_params, force_params, sim_params]
         super(BroadbandPulse, self).__init__(*parms)
 
@@ -83,15 +79,18 @@ class BroadbandPulse(Cantilever):
         """
         Force on the cantilever at a given time.
 
-        Parameters
-        ----------
-        t : float
-            Time in seconds.
+        :param t: time in seconds:
+        :type t: float
 
-        Returns
-        -------
-        f : float
-            Force on the cantilever at a given time, in N/kg.
+        :param t0:
+        :type t0:
+        
+        :param tau:
+        :type tau:
+        
+        :returns: Force on the cantilever at a given time, in N/kg.
+        :rtype: float
+            
 
         """
 

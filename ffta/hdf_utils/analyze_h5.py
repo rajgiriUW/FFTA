@@ -41,39 +41,34 @@ def process(h5_file, ds='FF_Raw', ref='', clear_filter=False,
 	>> from ffta import analyze_h5
 	>> tfp, shift, inst_freq = analyze_h5.process(h5_file, ref = '/FF_Group/FF_Avg/FF_Avg')
 	
-	Parameters
-	----------
-	h5_file : h5Py file or str
-		Path to a specific h5 file on the disk or an hdf.file
+	:param h5_file: Path to a specific h5 file on the disk or an hdf.file
+	:type h5_file: h5Py file or str
 		
-	ds : str, optional
-		The Dataset to search for in the file
+	:param ds: The Dataset to search for in the file
+	:type ds: str, optional
 		
-	ref : str, optional
-		A path to a specific dataset in the file.
+	:param ref: A path to a specific dataset in the file.
 		e.g. h5_file['/FF_Group/FF_Avg/FF_Avg']
+	:typr ref: str, optional
 		
-	clear_filter : bool, optional
-		For data already filtered, calls Line's clear_filter function to 
+	:param clear_filter: For data already filtered, calls Line's clear_filter function to 
 			skip FIR/windowing steps
+	:type clear_filter: bool, optional
 	
-	verbose : bool, optional,
-		Whether to write data to the command line
+	:param verbose: Whether to write data to the command line
+	:type verbose: bool, optional,
 	
-	liveplots : bool
-		Displaying can sometimes cause the window to pop in front of other active windows
+	:param liveplots: Displaying can sometimes cause the window to pop in front of other active windows
 		in Matplotlib. This disables it, with an obvious drawback of no feedback.
-	
-	Returns
-	-------
-	tfp : ndarray
-		time-to-first-peak image array
-	shift : ndarray
-		frequency shift image array
-	inst_freq : ndarray (2D)
-		instantaneous frequency array, an N x p array of N=rows\*cols points
+	:type liveplots : bool
+			
+	:returns: tuple (tfp, shift, inst_freq, h5_if)
+		WHERE
+		ndarray tfp is time-to-first-peak image array
+		ndarray shift is frequency shift image array
+		2D ndarray inst_freq is instantaneous frequency array, an N x p array of N=rows\*cols points
 			and where p = points_per_signal (e.g. 16000 for 1.6 ms @10 MHz sampling)
-	h5_if : USIDataset of h5_if (instantaneous frequency)
+		USIDataset h5_if is instantaneous frequency
 	
 	"""
 	#    logging.basicConfig(filename='error.log', level=logging.INFO)
@@ -221,7 +216,21 @@ def process(h5_file, ds='FF_Raw', ref='', clear_filter=False,
 
 
 def save_IF(h5_gp, inst_freq, parm_dict):
-	""" Adds Instantaneous Frequency as a main dataset """
+	"""
+	Adds Instantaneous Frequency as a main dataset
+	
+	:param h5_gp:
+	:type h5_gp:
+	
+	:param inst_freq:
+	:type inst_freq:
+	
+	:param parm_dict:
+	:type parm_dict: dict
+	
+	:returns:
+	:rtype:
+	"""
 	# Error check
 	if isinstance(h5_gp, h5py.Dataset):
 		raise ValueError('Must pass an h5Py group')
@@ -260,7 +269,24 @@ def save_IF(h5_gp, inst_freq, parm_dict):
 
 
 def save_ht_outs(h5_gp, tfp, shift):
-	""" Save processed Hilbert Transform outputs"""
+	"""
+	Save processed Hilbert Transform outputs
+	
+	:param h5_gp:
+	:type h5_gp:
+	
+	:param tfp:
+	:type tfp:
+	
+	:param shift:
+	:type shift:
+	
+	:returns: tuple (tfp_px, shift_px, tfp_fixed_px)
+		WHERE
+		[type] tfp_px is...
+		[type] shift_px is...
+		[type] tfp_fixed_px is...
+	"""
 	# Error check
 	if isinstance(h5_gp, h5py.Dataset):
 		raise ValueError('Must pass an h5Py group')
@@ -282,16 +308,18 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
 	"""
 	Saves the tfp, shift, and fixed_tfp as CSV files
 	
-	Parameters
-	----------
-	h5_file : H5Py file
-		Reminder you can always type: h5_svd.file or h5_avg.file for this
+	:param h5_file: Reminder you can always type: h5_svd.file or h5_avg.file for this
+	:type h5_file: H5Py file
+		
+	:param h5_path: specific folder path to search for the tfp data. Usually not needed.
+	:type h5_path: str, optional
+		
+	:param append: text to append to file name
+	:type append: str, optional
 	
-	h5_path : str, optional
-		specific folder path to search for the tfp data. Usually not needed.
+	:param mirror:
+	:type mirror: bool, optional
 	
-	append : str, optional
-		text to append to file name
 	"""
 
 	tfp = usid.hdf_utils.find_dataset(h5_file[h5_path], 'tfp')[0][()]
@@ -319,21 +347,21 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
 	"""
 	Plots the relevant tfp, inst_freq, and shift values as separate image files
 	
-	Parameters
-	----------
-	h5_file : h5Py File
+	:param h5_file:
+	:type h5_file: h5Py File
 	
-	h5_path : str, optional
-		Location of the relevant datasets to be saved/plotted. e.g. h5_rb.name
-	
-	append : str, optional
-		A string to include in the saved figure filename
+	:param h5_path: Location of the relevant datasets to be saved/plotted. e.g. h5_rb.name
+	:type h5_path: str, optional
 		
-	savefig : bool, optional
-		Whether or not to save the image
+	:param append: A string to include in the saved figure filename
+	:type append: str, optional
 		
-	stdevs : int, optional
-		Number of standard deviations to display
+	:param savefig: Whether or not to save the image
+	:type savefig: bool, optional
+		
+	:param stdevs: Number of standard deviations to display
+	:type stdevs: int, optional
+		
 	"""
 
 	h5_file = h5py.File(h5_file)
@@ -402,6 +430,16 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
 
 
 def find_FF(h5_path):
+	"""
+	
+	:param h5_path: Location of the relevant datasets to be saved/plotted. e.g. h5_rb.name
+	:type h5_path: str
+	
+	:returns: tuple (h5_gp, parameters)
+		WHERE
+		[type] h5_gp is...
+		[type] parameters is...
+	"""
 	parameters = get_utils.get_params(h5_path)
 	h5_gp = hdf_utils._which_h5_group(h5_path)
 

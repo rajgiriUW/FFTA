@@ -20,7 +20,17 @@ class F3R(object):
 	"""
 	
 	def __init__(self, signal_array, params, n_pixels=1):
+		"""
 		
+		:param signal_array:
+		:type signal_array:
+		
+		:param params:
+		:type params:
+		
+		:param n_pixels:
+		:type n_pixels: int
+		"""
 		for key, value in params.items():
 
 			setattr(self, key, value)
@@ -64,10 +74,11 @@ class F3R(object):
 	def lia(self, tc=2):
 		'''
 		Simple lockin integration
-		
-		time constant tc = number of points
-		
 		Does not auto calculate for you based on time. 
+		
+		:param tc: time constant, number of points
+		:type tc: int
+		
 		'''
 		
 		xpts = np.arange(0,self.total_time, 1/self.sampling_rate)[:-1]
@@ -95,7 +106,12 @@ class F3R(object):
 		return
 	
 	def analyze(self, periods=4):
-	 
+		"""
+		
+		:param periods:
+		:type periods: int
+		
+		"""
 		complete_periods = True
 		 
 		num_periods_per_sample = int(np.floor(self.num_periods / periods))
@@ -145,7 +161,12 @@ class F3R(object):
 		return
 	
 	def smooth(self, kernel):
+		"""
 		
+		:param kernel:
+		:type kernel:
+		
+		"""
 		self.CPD_filt = np.convolve(self.CPD, kernel, mode='valid')
 		
 		return

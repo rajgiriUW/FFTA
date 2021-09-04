@@ -16,22 +16,20 @@ def phase_lock(signal_array, tidx, cidx):
 	Aligns signals of a pixel on the rising edge of first zeros, if they are
 	not aligned due to phase jitter of analog-to-digital converter.
 
-	Parameters
-	----------
-	signal_array : (n_points, n_signals), array_like
-		2D real-valued signal array.
-	tidx: int
-		Time to trigger from the start of signals as index.
-	cidx: int
-		Period of the signal as number of points,
+	:param signal_array: 2D real-valued signal array.
+	:type signal_array: (n_points, n_signals), array_like
+	
+	:param tidx: Time to trigger from the start of signals as index.
+	:type tidx: int
+	
+	:param cidx: Period of the signal as number of points,
 		i.e. drive_freq/sampling_rate
-
-	Returns
-	-------
-	signal_array : (n_points, n_signals), array_like
-		Phase-locked signal array
-	tidx : int
-		Index of trigger after phase-locking.
+	:type cidx: int
+		
+	:returns: tuple (new_signal_array, tidx)
+		WHERE
+		array_like new_signal_array is phase-locked signal array in format (n_points, n_signals)
+		int tidx is index of trigger after phase-locking.
 
 	"""
 
@@ -62,17 +60,14 @@ def pca_discard(signal_array, k):
 	Discards noisy signals using Principal Component Analysis and Mahalonobis
 	distance.
 
-	Parameters
-	----------
-	signal_array : (n_points, n_signals), array_like
-		2D real-valued signal array.
-	k : int
-		Number of eigenvectors to use, can't be bigger than n_signals.
+	:param signal_array: 2D real-valued signal array.
+	:type signal_array: (n_points, n_signals), array_like
 
-	Returns
-	-------
-	idx : array
-		Return the indices of noisy signals.
+	:param k: Number of eigenvectors to use, can't be bigger than n_signals.
+	:type k: int
+		
+	:returns: indices of noisy signals.
+	:rtype: array
 
 	"""
 

@@ -33,29 +33,32 @@ def transfer_function(h5_file, tf_file='', params_file='',
 	1) TF (transfer function)
 	2) Freq (frequency axis for computing Fourier Transforms)
 	
-	Parameters
-	----------
-	tf_file : ibw
-		Transfer Function .ibw File
-		
-	params_file : string
-		The filepath in string format for the parameters file containing
-			Q, AMPINVOLS, etc.
+	:param h5_file:
+	:type h5_file:
 	
-	psd_freq : float
-		The maximum range of the Power Spectral Density.
-		For Asylum Thermal Tunes, this is often 1 MHz on MFPs and 2 MHz on Cyphers
+	:param tf_file: Transfer Function .ibw File
+	:type tf_file: ibw
 		
-	offset : float
-		To avoid divide-by-zero effects since we will divide by the transfer function
+	:param params_file: The filepath in string format for the parameters file containing
+			Q, AMPINVOLS, etc.
+	:type params_file: string
+		
+	:param psd_freq: The maximum range of the Power Spectral Density.
+		For Asylum Thermal Tunes, this is often 1 MHz on MFPs and 2 MHz on Cyphers
+	:type psd_freq: float
+		
+	:param offset: To avoid divide-by-zero effects since we will divide by the transfer function
 			when generating GKPFM data
-			
-	sample_freq : float
-		The desired output sampling. This should match your data.   
-			
-	Returns
-	-------
-	h5_file['Transfer_Function'] : the Transfer Function group
+	:type offset: float
+		
+	:param sample_freq: The desired output sampling. This should match your data.   
+	:type sample_freq: float
+		
+	:param plot:
+	:type plot: bool, optional
+	
+	:returns: the Transfer Function group
+	:rtype:
 	'''
 	if not any(tf_file):
 		tf_file = usid.io_utils.file_dialog(caption='Select Transfer Function file ',
@@ -105,15 +108,20 @@ def resample_tf(h5_file, psd_freq=1e6, sample_freq=10e6):
 	
 	This is important for dividing the transfer function elements together
 	
-	Parameters
-	----------
-	psd_freq : float
-		The maximum range of the Power Spectral Density.
-		For Asylum Thermal Tunes, this is often 1 MHz on MFPs and 2 MHz on Cyphers
-		
-	sample_freq : float
-		The desired output sampling. This should match your data.   
+	:param h5_file:
+	:type h5_file:
 	
+	:param psd_freq: The maximum range of the Power Spectral Density.
+		For Asylum Thermal Tunes, this is often 1 MHz on MFPs and 2 MHz on Cyphers
+	:type psd_freq: float
+		
+	:param sample_freq:	The desired output sampling. This should match your data.
+	:type sample_freq: float
+		   
+	:returns: tuple (TFN_RS, FQ_RS)
+		WHERE
+		[type] TFN_RS is...
+		[type] FQ_RS is...
 	'''
 	TFN = h5_file['Transfer_Function/TFnorm'][()]
 	# FQ = h5_file['Transfer_Function/Freq'][()]
@@ -138,6 +146,17 @@ def params_list(path='', psd_freq=1e6, lift=50):
 	
 	For use in creating attributes of transfer Function
 	
+	:param path:
+	:type path: str
+	
+	:param psd_freq:
+	:type psd_freq:
+	
+	:param lift:
+	:type lift:
+	
+	:returns: parameters dictionary
+	:rtype: dict
 	'''
 	if not any(path):
 		path = usid.io.io_utils.file_dialog(caption='Select Parameters Files ',
@@ -159,33 +178,47 @@ def test_Ycalc(h5_main, pixel_ind=[0, 0], transfer_func=None, resampled=True, ra
 	'''
 	Divides the response by the transfer function
 	
-	Parameters
-	----------
-	h5_main : h5py dataset of USIDataset
+	:param h5_main:
+	:type h5_main: h5py dataset of USIDataset
 	
-	tf : transfer function, optional
-		This can be the resampled or normal transfer function
+	:param pixel_ind:
+	:type pixel_ind: list
+	
+	:param transfer_func: This can be the resampled or normal transfer function
 		For best results, use the "normalized" transfer function
 		"None" will default to /Transfer_Function folder
+	:type transfer_func: transfer function, optional
 		
-	resampled : bool, optional
-		Whether to use the upsampled Transfer Function or the original
+	:param resampled: Whether to use the upsampled Transfer Function or the original
+	:type resampled: bool, optional
 		
-	verbose: bool, optional
-		Gives user feedback during processing
-		
-	noise_floor : float, optional
-		For calculating what values to filter as the noise floor of the data
-		0 or None circumvents this
-		
-	phase : float, optional
-		Practically any value between -pi and +pi works
-		
-	scaling : int, optional
-		scales the transfer function by this number if, for example, the TF was
-		acquired on a line and you're dividing by a point (or vice versa)'
+	:param ratios:
+	:type ratios:
 	
-		'''
+	:param verbose: Gives user feedback during processing
+	:type verbose: bool, optional
+		
+	:param noise_floor: For calculating what values to filter as the noise floor of the data
+		0 or None circumvents this
+	:type noise_floor: float, optional
+		
+	:param phase: Practically any value between -pi and +pi works
+	:type phase: float, optional
+		
+	:param plot:
+	:type plot: bool, optional
+	
+	:param scaling: scales the transfer function by this number if, for example, the TF was
+		acquired on a line and you're dividing by a point (or vice versa)'
+	:type scaling: int, optional
+			
+	:returns: tuple (TFratios, Yout, yout)
+		WHERE
+		[type] TFratios is...
+		[type] Yout is...
+		[type] yout is...
+	
+	'''
 	t0 = time.time()
 
 	parm_dict = usid.hdf_utils.get_attributes(h5_main)
@@ -270,36 +303,43 @@ def Y_calc(h5_main, transfer_func=None, resampled=True, ratios=None, verbose=Fal
 	'''
 	Divides the response by the transfer function
 	
-	Parameters
-	----------
-	h5_main : h5py dataset of USIDataset
+	:param h5_main:
+	:type h5_main: h5py dataset of USIDataset
 	
-	tf : transfer function, optional
-		This can be supplied or use the calculated version
+	:param transfer_func: This can be supplied or use the calculated version
 		For best results, use the "normalized" transfer function
 		"None" will default to /Transfer_Function folder
+	:type transfer_func: transfer function, optional
 		
-	resampled : bool, optional
-		Whether to use the upsampled Transfer Function or the original
+	:param resampled: Whether to use the upsampled Transfer Function or the original
+	:type resampled: bool, optional
 		
-	verbose: bool, optional
-		Gives user feedback during processing
-	
-	ratios : array, optional
-		Array of the size of h5_main (1-D) with the transfer function data
+	:param ratios: Array of the size of h5_main (1-D) with the transfer function data
 		If not given, it's found via the test_Y_calc function
+
+	:type ratios: array, optional
 	
-	noise_floor : float, optional
-		For calculating what values to filter as the noise floor of the data
+	:param verbose: Gives user feedback during processing
+	:type verbose: bool, optional
+		
+	:param noise_floor:	For calculating what values to filter as the noise floor of the data
 		0 or None circumvents this
-		
-	phase : float, optional
-		Practically any value between -pi and +pi works
-		
-	scaling : int, optional
-		scales the transfer function by this number if, for example, the TF was
-		acquired on a line and you're dividing by a point (or vice versa)'
+	:type noise_floor: float, optional
 	
+	:param phase: Practically any value between -pi and +pi works
+	:type phase: float, optional
+		
+	:param plot:
+	:type plot: bool, optional
+	
+	:param scaling: scales the transfer function by this number if, for example, the TF was
+		acquired on a line and you're dividing by a point (or vice versa)'
+	scaling : int, optional
+	
+	:returns: tuple (Yout, yout)
+		WHERE
+		[type] Yout is...
+		[type] yout is...
 	'''
 	parm_dict = usid.hdf_utils.get_attributes(h5_main)
 	drive_freq = parm_dict['drive_freq']
@@ -365,6 +405,26 @@ def check_phase(h5_main, transfer_func, phase_list=[-pi, -pi / 2, 0],
 	'''
 	Uses the list of phases in phase_list to plot the various phase offsets
 	relative to the driving excitation
+	
+	:param h5_main:
+	:type h5_main: h5py dataset of USIDataset
+	
+	:param transfer_func: This can be supplied or use the calculated version
+		For best results, use the "normalized" transfer function
+		"None" will default to /Transfer_Function folder
+	:type transfer_func: transfer function, optional
+	
+	:param phase_list:
+	:type phase_list: List of float
+	
+	:param plot:
+	:type plot: bool, optional
+	
+	:param noise_tolerance:
+	:type noise_tolerance:
+	
+	:param samp_rate:
+	:type samp_rate: 
 	'''
 	ph = -3.492  # phase from cable delays between excitation and response
 	row_ind = 0
@@ -422,6 +482,15 @@ def check_phase(h5_main, transfer_func, phase_list=[-pi, -pi / 2, 0],
 def save_Yout(h5_main, Yout, yout):
 	'''
 	Writes the results to teh HDF5 file
+	
+	:param h5_main:
+	:type h5_main: h5py dataset of USIDataset
+	
+	:param Yout:
+	:type Yout:
+	
+	:param yout:
+	:type yout:
 	'''
 	parm_dict = usid.hdf_utils.get_attributes(h5_main)
 
@@ -474,6 +543,18 @@ def save_Yout(h5_main, Yout, yout):
 
 
 def check_response(h5_main, pixel=0, ph=0):
+	"""
+	
+	:param h5_main:
+	:type h5_main: h5py dataset of USIDataset
+	
+	:param pixel:
+	:type pixel:
+	
+	:param ph:
+	:type ph:
+	
+	"""
 	parm_dict = usid.hdf_utils.get_attributes(h5_main)
 	freq = parm_dict['drive_freq']
 	txl = np.linspace(0, parm_dict['total_time'], h5_main[pixel, :].shape[0])

@@ -21,19 +21,14 @@ def hdf_commands(h5_path, ds='FF_Raw'):
     """
     Creates a bunch of typical workspace HDF5 variables for scripting use
 
-    Parameters
-    ----------
-    h5_path : str
-        String path to H5PY file
-
-    ds : str, optional
-        The dataset to search for and set as h5_main.
-
-    This prints the valid commands to the workspace. Then just highlight and
+	:param h5_path: String path to H5PY file
+    :type h5_path: str
+        
+	:param ds: The dataset to search for and set as h5_main.
+		This prints the valid commands to the workspace. Then just highlight and
         copy-paste to execute
+    :type ds: str, optional
 
-    h5_path : str
-        Path to hdf5 file on disk
     """
 
     commands = ['***Copy-paste all commands below this line, then hit ENTER***',

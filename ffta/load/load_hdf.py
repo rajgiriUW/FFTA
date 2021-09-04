@@ -55,43 +55,41 @@ def load_wrapper(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False,
     
     Loads .ibw single file an HDF5 format. Then appends the FF data to that HDF5
 
-    Parameters
-    ----------
-    ibw_file_path : string, optional
-        Path to signal file IBW with images to add.
-
-    ff_file_path : string, optional
-        Path to folder containing the FF-trEFM files and config file. If empty prompts dialogue
-
-    ftype : str, optional
-        Delineates Ginger Lab imaging file type to be imported (not case-sensitive)
+    :param ibw_file_path: Path to signal file IBW with images to add.
+    :type ibw_file_path: string, optional
+    
+    :param ff_file_path: Path to folder containing the FF-trEFM files and config file. If empty prompts dialogue
+    :type ff_file_path: string, optional
+        
+    :param ftype: Delineates Ginger Lab imaging file type to be imported (not case-sensitive)
         'FF' : FF-trEFM
         'SKPM' : FM-SKPM
         'ringdown' : Ringdown
         'trEFM' : normal trEFM
-
-    verbose : Boolean (Optional)
-        Whether or not to show  print statements for debugging. Passed to Pycroscopy functions
+    :type ftype: str, optional
         
-    loadverbose : Boolean (optional)
-        Whether to print any simple "loading Line X" statements for feedback
+    :param verbose:
+    :type verbose: bool, optional
+        Whether or not to show  print statements for debugging. Passed to Pycroscopy functions
+    
+    :param subfolder: Specifies folder under root (/) to save data in. Default is standard pycroscopy format
+    :type subfolder: string
+    
+    :param loadverbose: Whether to print any simple "loading Line X" statements for feedback
+    :type loadverbose: bool, optional
+        
+    :param average: Whether to automatically call the load_pixel_averaged_FF function to average data at each pixel
+    :type average: bool, optional
+        
+    :param mirror: Whether to reverse the data on each line read (since data are usually saved during a RETRACE scan)
+    :type mirror: bool, optional
+        
 
-    subfolder : str, optional
-        Specifies folder under root (/) to save data in. Default is standard pycroscopy format
-
-    average : bool, optional
-        Whether to automatically call the load_pixel_averaged_FF function to average data at each pixel
-               
-    mirror : bool, optional
-        Whether to reverse the data on each line read (since data are usually saved during a RETRACE scan)
-
-    Returns
-    -------
-    h5_path: str
-        The filename path to the H5 file created
-
-    parm_dict: dict
-        Dictionary of relevant scan parameters
+    :returns: tuple (h5_path, parm_dict, h5_ff)
+        WHERE
+        string h5_path is the filename path to the H5 file created
+        dict parm_dict Dictionary of relevant scan parameters
+        [type] h5_ff is...
 
     """
 
@@ -141,34 +139,27 @@ def load_folder(folder_path='', xy_scansize=[0, 0], file_name='FF_H5',
     """
     Sets up loading the HDF5 files. Parses the data file list and creates the .H5 file path
 
-    Parameters
-    ----------
-    folder_path : string
-        Path to folder you want to process
+    :param folder_path: Path to folder you want to process
+    :type folder_path: string
+        
+    :param xy_scansize: Width by Height in meters (e.g. [8e-6, 4e-6]), if not in parameters file
+    :type xy_scansize: 2-float array
+        
+    :param file_name: Desired file name, otherwise is auto-generated
+    :type file_name: str
+        
+    :param textload:  If you have a folder of .txt instead of .ibw (older files, some synthetic data)
+    :type textload: bool, optional
+       
+    :param verbose: Whether to output the datasets being processed
+    :type verbose: bool, optional
+        
 
-    xy_scansize : 2-float array
-        Width by Height in meters (e.g. [8e-6, 4e-6]), if not in parameters file
-
-    file_name : str
-        Desired file name, otherwise is auto-generated
-
-    textload : bool, optional
-        If you have a folder of .txt instead of .ibw (older files, some synthetic data)
-
-    verbose : bool, optional
-        Whether to output the datasets being processed
-
-    Returns
-    -------
-    h5_path: str
-        The filename path to the H5 file created
-
-    data_files: list
-        List of \*.ibw files in the folder to be processed
-
-    parm_dict: dict
-        Dictionary of relevant scan parameters
-
+    :returns: tuple (h5_path, data_files, parm_dict)
+        WHERE
+        str h5_path is the filename path to the H5 file created
+        List data_files is the list of \*.ibw files in the folder to be processed
+        dict parm_dict is the dictionary of relevant scan parameters
     """
 
     if any(xy_scansize) and len(xy_scansize) != 2:
@@ -267,38 +258,34 @@ def load_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True,
 
     Creates a Datagroup FFtrEFM_Group with a single dataset in chunks
 
-    Parameters
-    ----------
-    data_files : list
-        List of the \*.ibw files to be invidually scanned. This is generated
+    :param data_files: List of the \*.ibw files to be invidually scanned. This is generated
         by load_folder above
-
-    parm_dict : dict
-        Scan parameters to be saved as attributes. This is generated
-        by load_folder above, or you can pass this explicitly.
-
-    h5_path : string
-        Path to H5 file on disk
-
-    verbose : bool, optional
-        Display outputs of each function or not
-
-    loadverbose : Boolean (optional)
-        Whether to print any simple "loading Line X" statements for feedback
-
-    average: bool, optional
-        Whether to average each pixel before saving to H5. This saves both time and space
+    :type data_files: list
         
-    mirror : bool, optional
-        Mirrors the data when saving. This parameter is to match the FFtrEFM data
+    :param parm_dict: Scan parameters to be saved as attributes. This is generated
+        by load_folder above, or you can pass this explicitly.
+    :type parm_dict: dict
+        
+    :param h5_path:
+    :type h5_path : string
+        
+    :param verbose: Display outputs of each function or not
+    :type verbose: bool, optional
+        
+    :param loadverbose: Whether to print any simple "loading Line X" statements for feedback
+    :type loadverbose: bool, optional
+        
+    :param average: Whether to average each pixel before saving to H5. This saves both time and space
+    :type average: bool, optional
+        
+    :param mirror: Mirrors the data when saving. This parameter is to match the FFtrEFM data
         with the associate topography as FFtrEFM is acquired during a retrace while
         topo is saved during a forward trace
-
-    Returns
-    -------
-    h5_path: str
-        The filename path to the H5 file created
-
+    :type mirror: bool, optional
+        
+    :returns: The filename path to the H5 file created
+    :rtype: str
+        
     """
 
     # Prepare data for writing to HDF
@@ -397,23 +384,19 @@ def load_pixel_averaged_from_raw(h5_file, verbose=True, loadverbose=True):
 
     This Dataset is (n_pixels*n_rows, n_pnts_per_avg)
 
-    Parameters
-    ----------
-    h5_file : h5py File
-        H5 File to be examined. File typically set as h5_file = hdf.file
+    :param h5_file: H5 File to be examined. File typically set as h5_file = hdf.file
         hdf = px.ioHDF5(h5_path), h5_path = path to disk
-
-    verbose : bool, optional
-        Display outputs of each function or not
-
-    loadverbose : Boolean (optional)
-        Whether to print any simple "loading Line X" statements for feedback
-
-    Returns
-    -------
-    h5_avg : Dataset
-        The new averaged Dataset
-
+    :type h5_file: h5py File
+        
+    :param verbose: Display outputs of each function or not
+    :type verbose: bool, optional
+        
+    :param loadverbose: Whether to print any simple "loading Line X" statements for feedback
+    :type loadverbose: bool, optional
+        
+    :returns: The new averaged Dataset
+    :rtype: Dataset
+        
     """
 
     hdf = h5py.File(h5_file)

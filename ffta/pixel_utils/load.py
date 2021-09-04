@@ -19,16 +19,15 @@ def signal(path, skiprows=0):
     """
     Loads .ibw or ASCII files and return it as a numpy.ndarray.
 
-    Parameters
-    ----------
-    path : string
-        Path to signal file.
+    :param path: Path to signal file.
+    :type path: string
+    
+    :param skiprows:
+    :type skiprows: int, optional
 
-    Returns
-    -------
-    signal_array : (n_points, n_signals) array_like
-        2D real-valued signal array loaded from given .ibw file.
-
+    :returns: 2D real-valued signal array loaded from given .ibw file.
+    :rtype: (n_points, n_signals) array_like
+        
     """
 
     # Get the path and check what the extension is.
@@ -58,37 +57,32 @@ def signal(path, skiprows=0):
 def configuration(path):
     """
     Reads an ASCII file with relevant parameters for processing.
-
-    Parameters
-    ----------
-    path : string
-        Path to ASCII file.
-
-    Returns
-    -------
-    n_pixels: int
-        Number of pixels in the image.
-    parameters : dict
-        The list of parameters is:
-
-        trigger = float (in seconds)
-        total_time = float (in seconds)
-        sampling_rate = int (in Hz)
-        drive_freq = float (in Hz)
-        Q = float (default: 500)
-        
-        roi = float (in seconds)
-        window = string (see documentation of scipy.signal.get_window)
-        bandpass_filter = int (0: no filtering, 1: FIR filter, 2: IIR filter)
-        filter_bandwidth = float (in Hz)
-        n_taps = integer (default: 999)
-        wavelet_analysis = bool (0: Hilbert method, 1: Wavelet Method)
-        wavelet_parameter = int (default: 5)
-        recombination = bool (0: FF-trEFMm, 1: Recombination)
-        phase_fitting = bool (0: frequency fitting, 1: phase fitting)
-        EMD_analysis = bool (0: Hilbert method, 1: Hilbert-Huang fitting)
-        
-        fit_form = string (EXP, PRODUCT, SUM for type of fit function)
+    
+    :param path: Path to ASCII file 
+    :type path: string
+    
+    :returns: tuple (n_pixels, parameters)
+        WHERE
+        int n_pixels is number of pixels in the image.
+        dict parameters is the list of parameters:  
+            trigger = float (in seconds)
+            total_time = float (in seconds)
+            sampling_rate = int (in Hz)
+            drive_freq = float (in Hz)
+            Q = float (default: 500)
+            
+            roi = float (in seconds)
+            window = string (see documentation of scipy.signal.get_window)
+            bandpass_filter = int (0: no filtering, 1: FIR filter, 2: IIR filter)
+            filter_bandwidth = float (in Hz)
+            n_taps = integer (default: 999)
+            wavelet_analysis = bool (0: Hilbert method, 1: Wavelet Method)
+            wavelet_parameter = int (default: 5)
+            recombination = bool (0: FF-trEFMm, 1: Recombination)
+            phase_fitting = bool (0: frequency fitting, 1: phase fitting)
+            EMD_analysis = bool (0: Hilbert method, 1: Hilbert-Huang fitting)
+            
+            fit_form = string (EXP, PRODUCT, SUM for type of fit function)
 
     """
 
@@ -152,17 +146,14 @@ def cantilever_params(path, asDataFrame=False):
     Cantilever parameters should contain an Initial, Final, and Differential\
         column for describing an excited cantilever
     
-    Parameters
-    ----------
-    path: str
-        Path to the parameters file
-    
-    asDataFrame : bool
-        Returns Pandas dataframe instead of a dictionary
-    
-    returns:
-    -------
-    can_params : dict
+    :param path: Path to the parameters file
+    :type path: str
+        
+    :param asDataFrame: Returns Pandas dataframe instead of a dictionary
+    :type asDataFrame: bool
+        
+    :returns:
+    :rtype: dict
     
     '''
 

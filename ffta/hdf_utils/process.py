@@ -47,23 +47,19 @@ class FFtrEFM(Process):
                  pixel_params={}, if_only=False, override=False, process_name='Fast_Free',
                  **kwargs):
         """
-        Parameters
-        ----------
-        h5_main : h5py.Dataset object
-            Dataset to process
 
-        if_only : bool, optional
-            If True, only calculates the instantaneous frequency and not tfp/shift
-
-        parm_dict : dict, optional
-            Additional updates to the parameters dictionary. e.g. changing the trigger.
+        :param h5_main: Dataset to process
+        :type h5_main: h5py.Dataset object
+            
+        :param parm_dict: Additional updates to the parameters dictionary. e.g. changing the trigger.
             You can also explicitly update self.parm_dict.update({'key': value})
-        
-        can_params : dict, optional
-            Cantilever parameters describing the behavior
+        :type parm_dict: dict, optional
+            
+        :param can_params: Cantilever parameters describing the behavior
             Can be loaded from ffta.pixel_utils.load.cantilever_params
+        :type can_params: dict, optional
         
-        pixel_params : dict, optional
+        :param pixel_params:
             Pixel class accepts the following:
                 fit: bool, (default: True)
                     Whether to fit the frequency data or use derivative. 
@@ -80,12 +76,20 @@ class FFtrEFM(Process):
                         fit_form: str (default: 'product')
                 filter_amp : bool (default: False)
                     Whether to filter the amplitude signal around DC (to remove drive sine artifact)
-    
-        override : bool, optional
-            If True, forces creation of new results group. Use in _get_existing_datasets
-    
-        kwargs : dictionary or variable
-            Keyword pairs to pass to Process constructor
+        :type pixel_params: dict, optional
+            
+        :param if_only: If True, only calculates the instantaneous frequency and not tfp/shift
+        :type if_only: bool, optional
+        
+        :param override: If True, forces creation of new results group. Use in _get_existing_datasets
+        :type override : bool, optional
+            
+        :param process_name:
+        :type process_name: str, optional
+        
+        :param kwargs: Keyword pairs to pass to Process constructor
+        :type kwargs: dictionary or variable
+            
         """
 
         self.parm_dict = parm_dict
@@ -136,6 +140,10 @@ class FFtrEFM(Process):
         """
         Update the parameters, see ffta.pixel.Pixel for details on what to update
         e.g. to switch from default Hilbert to Wavelets, for example
+        
+        :param kwargs:
+        :type kwargs:
+        
         """
         self.parm_dict.update(kwargs)
 
@@ -145,21 +153,16 @@ class FFtrEFM(Process):
         """
         Test the Pixel analysis of a single pixel
 
-        Parameters
-        ----------
-        pixel_ind : uint or list
-            Index of the pixel in the dataset that the process needs to be tested on.
+        :param pixel_ind: Index of the pixel in the dataset that the process needs to be tested on.
             If a list it is read as [row, column]
+        :type pixel_ind: uint or list
+            
 
-        Returns
-        -------
-        [inst_freq, tfp, shift] : List
-            inst_freq : array
-                the instantaneous frequency array for that pixel
-            tfp : float
-                the time to first peak
-            shift : float
-                the frequency shift at time t=tfp (i.e. maximum frequency shift)
+        :returns: List [inst_freq, tfp, shift]
+            WHERE
+            array inst_freq is the instantaneous frequency array for that pixel
+            float tfp is the time to first peak
+            float shift the frequency shift at time t=tfp (i.e. maximum frequency shift)
 
         """
         # First read the HDF5 dataset to get the deflection for this pixel
@@ -285,7 +288,8 @@ class FFtrEFM(Process):
         '''
         Reshapes the tFP and shift data to be a matrix, then saves that dataset instead of the 1D
         
-        cal : UNivariateSpline file from ffta.simulation.cal_curve
+        :param cal:
+        :type cal: UNivariateSpline file from ffta.simulation.cal_curve
         '''
 
         h5_tfp = self.h5_tfp[()]
@@ -354,7 +358,8 @@ class FFtrEFM(Process):
         """
         Extracts references to the existing datasets that hold the results
         
-        index = which existing dataset to get
+        :param index: which existing dataset to get
+        :type index:
         
         """
 
@@ -378,6 +383,12 @@ class FFtrEFM(Process):
         """
         The unit computation that is performed per data chunk. This allows room for any data pre / post-processing
         as well as multiple calls to parallel_compute if necessary
+        
+        :param args:
+        :type args:
+        
+        :param kwargs:
+        :type kwargs:
         """
         # TODO: Try to use the functools.partials to preconfigure the map function
         # cores = number of processes / rank here
@@ -394,7 +405,26 @@ class FFtrEFM(Process):
 
     @staticmethod
     def _map_function(defl, *args, **kwargs):
-
+        """
+        
+        :param defl:
+        :type defl:
+        
+        :param args:
+        :type args:
+        
+        :param kwargs:
+        :type kwargs:
+        
+        :returns: List [inst_freq, amplitude, phase, tfp, shift, pwr_diss]
+            WHERE
+            [type] inst_freq is...
+            [type] amplitude is...
+            [type] phase is...
+            [type] tfp is...
+            [type] shift is...
+            [type] pwr_diss is...
+        """
         parm_dict = args[0]
         pixel_params = args[1]
 
@@ -421,19 +451,21 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False, offset=0):
     """
     Saves the tfp, shift, and fixed_tfp as CSV files
     
-    Parameters
-    ----------
-    h5_file : H5Py file of FFtrEFM class
-        Reminder you can always type: h5_svd.file or h5_avg.file for this
-    
-    h5_path : str, optional
-        specific folder path to search for the tfp data. Usually not needed.
-    
-    append : str, optional
-        text to append to file name
+    :param h5_file: Reminder you can always type: h5_svd.file or h5_avg.file for this
+    :type h5_file: H5Py file of FFtrEFM class
         
-    offset : float
-        if calculating tFP with a fixed offset for fitting, this subtracts it out
+    :param h5_path: specific folder path to search for the tfp data. Usually not needed.
+    :type h5_path: str, optional
+        
+    :param append: text to append to file name
+    :type append: str, optional
+    
+    :param mirror:
+    :type mirror: bool, optional
+    
+    :param offset: if calculating tFP with a fixed offset for fitting, this subtracts it out
+    :type offset: float
+        
     """
 
     h5_ff = h5_file
@@ -495,13 +527,25 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
     Quickly plots the tfp and shift data. If there's a height image in the h5_file associated
      with ffprocess, will plot that as well
     
-    Parameters
-    ----------
-    ffprocess : FFtrEFM class object (inherits Process) or the parent Group
+    :param ffprocess:
+    :type ffprocess: FFtrEFM class object (inherits Process) or the parent Group
     
-    Returns
-    -------
-    fig, a : figure and axes objects
+    :param scale_tfp:
+    :type scale_tfp:
+    
+    :param scale_shift:
+    :type scale_shift:
+    
+    :param threshold:
+    :type threshold:
+    
+    :param kwargs:
+    :type kwargs:
+    
+    :returns: tuple (fig, a)
+        WHERE
+        fig is figure object
+        ax is axes object
     '''
     fig, a = plt.subplots(nrows=2, ncols=2, figsize=(13, 6))
 

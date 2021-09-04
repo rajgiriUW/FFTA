@@ -47,20 +47,22 @@ class SVD(Process):
     def __init__(self, h5_main, num_components=None, **kwargs):
         """
         Perform the SVD decomposition on the selected dataset and write the results to h5 file.
-
-        Parameters
-        ----------
-        h5_main : :class:`pyUSID.USIDataset` object
-            USID Main HDF5 dataset that will be decomposed
-        num_components : int, optional
-            Number of components to decompose h5_main into.  Default None.
+        
         h5_target_group : h5py.Group, optional. Default = None
             Location where to look for existing results and to place newly
             computed results. Use this kwarg if the results need to be written
             to a different HDF5 file. By default, this value is set to the
             parent group containing `h5_main`
-        kwargs
-            Arguments to be sent to Process
+            
+        :param h5_main: USID Main HDF5 dataset that will be decomposed
+        :type h5_main: :class:`pyUSID.USIDataset` object
+        
+        :param num_components: Number of components to decompose h5_main into.  Default None.
+        :type num_components: int, optional
+        
+        :param kwargs: Arguments to be sent to Process
+        :type kwargs:
+            
         """
         super(SVD, self).__init__(h5_main, 'SVD', **kwargs)
 
@@ -98,19 +100,14 @@ class SVD(Process):
         write to the file. Handles complex, compound datasets such that the V matrix is of the same data-type as the
         input matrix.
 
-        Parameters
-        ----------
-        override : bool, optional. default = False
-            Set to true to recompute results if prior results are available. Else, returns existing results
-
-        Returns
-        -------
-        U : :class:`numpy.ndarray`
-            Abundance matrix
-        S : :class:`numpy.ndarray`
-            variance vector
-        V : :class:`numpy.ndarray`
-            eigenvector matrix
+        :param override: Set to true to recompute results if prior results are available. Else, returns existing results
+        :type override: bool, optional. default = False
+            
+        :returns: tuple (u_mat, self.__s, v_mat)
+            WHERE
+            numpy.ndarray u_mat is abundance matrix
+            numpy.ndarray self.__s is variance vector
+            numpy.ndarray v_mat is eigenvector matrix
         """
         '''
         Check if a number of compnents has been set and ensure that the number is less than
@@ -162,15 +159,12 @@ class SVD(Process):
         Consider calling test() to check results before writing to file. Results are deleted from memory
         upon writing to the HDF5 file
 
-        Parameters
-        ----------
-        override : bool, optional. default = False
-            Set to true to recompute results if prior results are available. Else, returns existing results
-
-        Returns
-        -------
-         h5_results_grp : :class:`h5py.Group`  object
-            HDF5 Group containing all the results
+        :param override: Set to true to recompute results if prior results are available. Else, returns existing results
+        :type override : bool, optional. default = False
+            
+        :returns: HDF5 Group containing all the results
+        :rtype: h5py.Group object
+            
         """
         if self.__u is None and self.__v is None and self.__s is None:
             self.test(override=override)
@@ -248,11 +242,12 @@ class SVD(Process):
     def _check_available_mem(self):
         """
         Check that there is enough memory to perform the SVD decomposition.
-
-        Returns
-        -------
-        sufficient_mem : bool
-            True is enough memory found, False otherwise.
+        
+        :raise: MemoryError if not enough memory found
+        
+        :returns: True is enough memory found, False otherwise.
+        :rtype: bool
+            
 
         """
         if self.verbose:
@@ -295,21 +290,17 @@ def simplified_kpca(kpca, source_data):
 
     Note that the positions in the eigenvalues may need to be transposed
 
-    Parameters
-    ----------
-    kpca : KernelPCA object
-        configured Kernel PCA object ready to perform analysis
-    source_data : 2D numpy array
-        Data arranged as [iteration, features] example - [position, time]
-
-    Returns
-    -------
-    eigenvalues : 2D numpy array
-        Eigenvalues in the original space arranged as [component,iteration]
-    scree : 1D numpy array
-        S component
-    eigenvector : 2D numpy array
-        Eigenvectors in the original space arranged as [component,features]
+    :param kpca: configured Kernel PCA object ready to perform analysis
+    :type kpca: KernelPCA object
+    
+    :param source_data: Data arranged as [iteration, features] example - [position, time]
+    :type source_data: 2D numpy array
+        
+    :returns: tuple (eigenvalues, scree, eigenvector)
+        WHERE
+        2D numpy array eigenvalues is in the original space arranged as [component,iteration]
+        1D numpy array scree is S component
+        2D numpy array eigenvector are in the original space arranged as [component,features]
 
     """
     X_kpca = kpca.fit(source_data.T)
@@ -326,11 +317,10 @@ def rebuild_svd(h5_main, components=None, cores=None, max_RAM_mb=1024):
     Rebuild the Image from the SVD results on the windows
     Optionally, only use components less than n_comp.
 
-    Parameters
-    ----------
-    h5_main : hdf5 Dataset
-        dataset which SVD was performed on
-    components : {int, iterable of int, slice} optional
+    :param h5_main: dataset which SVD was performed on
+    :type h5_main: hdf5 Dataset
+    
+    :param components: 
         Defines which components to keep
         Default - None, all components kept
 
@@ -338,17 +328,20 @@ def rebuild_svd(h5_main, components=None, cores=None, max_RAM_mb=1024):
         integer : Components less than the input will be kept
         length 2 iterable of integers : Integers define start and stop of component slice to retain
         other iterable of integers or slice : Selection of component indices to retain
-    cores : int, optional
-        How many cores should be used to rebuild
-        Default - None, all but 2 cores will be used, min 1
-    max_RAM_mb : int, optional
-        Maximum ammount of memory to use when rebuilding, in Mb.
-        Default - 1024Mb
+    :type components: {int, iterable of int, slice} optional
 
-    Returns
-    -------
-    rebuilt_data : HDF5 Dataset
-        the rebuilt dataset
+    :param cores: How many cores should be used to rebuild
+        Default - None, all but 2 cores will be used, min 1
+    :type cores: int, optional
+    
+    :param max_RAM_mb: Maximum ammount of memory to use when rebuilding, in Mb.
+        Default - 1024Mb
+    :type max_RAM_mb: int, optional
+    
+    :raise: KeyError if SVD results not found 
+
+    :returns: rebu dataset
+    :rtype: HDF5 Dataset
 
     """
     comp_slice, num_comps = get_component_slice(components, total_components=h5_main.shape[1])
@@ -445,22 +438,18 @@ def plot_svd(h5_main, savefig=False, num_plots = 16, **kwargs):
     Dataset.
     If h5_main is the results group, then it will plot the values for that group.
     
-    Parameters
-    ----------   
-    h5_main : USIDataset or h5py Dataset or h5py Group
+    :param h5_main:
+    :type h5_main: USIDataset or h5py Dataset or h5py Group
     
-    savefig : bool, optional
-        Saves the figures to disk with some default names
-    
-    num_plots : int
-        Default number of eigenvectors and abundance plots to show
-    
-    kwargs : dict, optional
-        keyword arguments for svd filtering
+    :param savefig: Saves the figures to disk with some default names
+    :type savefig: bool, optional
         
-    Returns
-    -------
-    None
+    :param num_plots: Default number of eigenvectors and abundance plots to show
+    :type num_plots: int
+        
+    :param kwargs: keyword arguments for svd filtering
+    :type kwarrgs: dict, optional
+        
     '''
     
     if isinstance(h5_main, h5py.Group):

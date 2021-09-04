@@ -13,25 +13,36 @@ class NFMD:
         '''
         Initialize the object
 
-        Parameters
-        ----------
-        Signal: numpy.ndarray
-            temporal signal to be analyzed (should be 1-D)
-        num_freqs: integer
-            number of frequencies to fit to signal.
+        :param signal: temporal signal to be analyzed (should be 1-D)
+        :type signal: numpy.ndarray
+        
+        :param num_freqs: number of frequencies to fit to signal.
             (Note: The 'mean' mode counts as a frequency mode)
-        optimizer: optimizer object (torch.optim)
-            Optimization algorithm to employ for learning.
-        optimizer_opts: dict
-            Parameters to pass to the optimizer class.
-        max_iters: int
-            number of steps for optimizer to take (maximum)
-        target_loss: float
-            the loss value at which the window is considered sufficiently 'fit'
-            (note: setting this too low can cause issues by pushing freqs to 0)
-        device: string
-            device to use for optimization
+        :type num_freqs: integer
+        
+        :param window_size:
+        :type window_size:
+        
+        :param windows:
+        :type windows:
+        
+        :param optimizer: Optimization algorithm to employ for learning.
+        :type optimizer: optimizer object (torch.optim)
+        
+        :param optimizer_opts: Parameters to pass to the optimizer class.
+        :type optimizer_opts: dict
+        
+        :param max_iters: number of steps for optimizer to take (maximum)
+        :type max_iters: int
+        
+         the loss value at which the window is considered sufficiently 'fit'
+            (note: setting this too low can cause issues by pushing freqs to 0):param target_loss:
+        :type target_loss: float
+        
+        :param device: device to use for optimization
             (Note: default 'cpu', but could be 'cuda' with GPU)
+        :type device: string
+            
 
         '''
         # Signal -- assumed 1D, needs to be type double
@@ -59,20 +70,15 @@ class NFMD:
         Compute the slices of the windows used in the analysis.
         Note: this is equivalent to computing rectangular windows.
 
-        Parameters
-        ----------
-        update_freq: TYPE integer
-            The number of optimizer steps between printed update statements.
-        Returns
-        -------
-        freqs: numpy.ndarray
-            frequency vector
-        A: numpy.ndarray
-            coefficient vector
-        losses: numpy.ndarray
-            Fit loss (MSE) for each window
-        indices: list
-            list of slice objects. each slice describes fit window indices.
+        :param update_freq: The number of optimizer steps between printed update statements.
+        :type update_freq: int
+            
+        :returns: tuple (freqs, A, losses, indices)
+            WHERE
+            numpy.ndarray freqs is frequency vector
+            numpy.ndarray A is coefficient vector
+            numpy.ndarray losses is fit loss (MSE) for each window
+            List indices is list of slice objects. each slice describes fit window indices`
 
         '''
         # Compute window indices
@@ -135,13 +141,6 @@ class NFMD:
         to the windows used in the analysis.
         Note: this is equivalent to computing rectangular windows.
 
-        Parameters
-        ----------
-        None.
-        Returns
-        -------
-        None.
-
         '''
         # Define how many points between centerpoint of windows
         increment = int(self.n / self.windows)
@@ -165,25 +164,21 @@ class NFMD:
         Fits a set of instantaneous frequency and component coefficient vectors
         to the provided data.
 
-        Parameters
-        ----------
-        xt : TYPE numpy.ndarray
-            Temporal data of dimensions [T, ...]
-        freqs : TYPE numpy.ndarray, optional
-            1D vector of (guess) instantaneous frequencies
+        :param xt: Temporal data of dimensions [T, ...]
+        :typer xt: numpy.ndarray
+            
+        :param freqs: 1D vector of (guess) instantaneous frequencies
             (Note: assumes dt=1 in xt data array)
-        A : TYPE numpy.ndarray, optional
-            1D vector of cosine/sine coefficients
-        max_iters : TYPE int, optional
-            Number of optimization steps to take
-        Returns
-        -------
-        loss: float
-            the loss for the fit window (mean squared error)
-        freqs: numpy.ndarray
-            frequency vector of instantaneous frequencies
-        A: numpy.ndarray
-            coefficient vector of component (sine/cosine) coefficients
+        :type freqs: numpy.ndarray, optional
+        
+        :param A: 1D vector of cosine/sine coefficients
+        :type A: numpy.ndarray, optional
+        
+        :returns: tuple (loss, freqs, A)
+            WHERE
+            float loss is the loss for the fit window (mean squared error)
+            numpy.ndarray freqs is frequency vector of instantaneous frequencies
+            numpy.ndarray A is coefficient vector of component (sine/cosine) coefficients
 
         '''
         # If no frequency is provided, generate initial frequency guess:
@@ -200,17 +195,14 @@ class NFMD:
         Given temporal data xt, fft performs the initial guess of the
         frequencies contained in the data using the FFT.
 
-        Parameters
-        ----------
-        xt : TYPE: numpy.array
-            Temporal data of dimensions [T, ...]
+        :param xt: Temporal data of dimensions [T, ...]
+        :type xt: numpy.array
+            
 
-        Returns
-        -------
-        freqs: numpy.ndarray
-            vector of instantaneous frequency estimates for each timepoint
-        A: numpy.ndarray
-            vector of component coefficients
+        :returns: tuple (freqs, A)
+            WHERE
+            numpy.ndarray freqs is vector of instantaneous frequency estimates for each timepoint
+            numpy.ndarray A is vector of component coefficients
 
         '''
         # Ensure input signal is 1D:
@@ -264,25 +256,23 @@ class NFMD:
         Given temporal data xt, sgd improves the initial guess of omega
         by SGD. It uses the pseudo-inverse to obtain A.
 
-        Parameters
-        ----------
-        xt : numpy.ndarray
-            Temporal data of dimensions [T, ...]
-        freqs : numpy.ndarray
-            frequency vector
-        A: numpy.ndarray
-            Component coefficient vector
-        max_iters:
-            Number of optimizer steps to take (maximum)
-
-        Returns
-        -------
-        loss: float
-            the loss for the fit window (mean squared error)
-        freqs: numpy.ndarray
-            frequency vector of instantaneous frequencies
-        A: numpy.ndarray
-            coefficient vector of component (sine/cosine) coefficients
+        :param xt: Temporal data of dimensions [T, ...]
+        :type xt: numpy.ndarray
+        
+        :param freqs: frequency vector
+        :type freqs: numpy.ndarray
+        
+        :param A: Component coefficient vector
+        :type A: numpy.ndarray
+            
+        :param max_iters: Number of optimizer steps to take (maximum)
+        :type max_iters:
+            
+        :returns: tuple (loss, freqs, A)
+            WHERE
+            float loss is the loss for the fit window (mean squared error)
+            numpy.ndarray freqs is frequency vector of instantaneous frequencies
+            numpy.ndarray A is coefficient vector of component (sine/cosine) coefficients
 
         '''
         # Set up PyTorch tensors for SGD
@@ -337,15 +327,12 @@ class NFMD:
     def predict(self, T):
         ''' Predicts the data from 1 to T.
 
-        Parameters
-        ----------
-        T : TYPE int
-            Prediction horizon (number of timepoints T)
-
-        Returns
-        -------
-        TYPE numpy.array
-            xhat from 0 to T.
+        :param T: Prediction horizon (number of timepoints T)
+        :type T: int
+            
+        :returns: xhat from 0 to T.
+        :rtype: numpy.array
+            
         '''
         t = np.expand_dims(np.arange(T) + 1, -1)
 
@@ -360,15 +347,12 @@ class NFMD:
         Compute corrected frequency vector that takes into account the
         timestep dt in the signal
 
-        Parameters
-        ----------
-        dt: float
-            The time step between samples in the signal
-        Returns
-        -------
-        corrected_freqs: numpy.ndarray
-            Timestamp-corrected frequency vector
-
+        :param dt: The time step between samples in the signal
+        :type dt: float
+            
+        :returns: Timestamp-corrected frequency vector
+        :rtype: numpy.ndarray
+            
         '''
         corrected_freqs = []
         for freq in self.freqs:
@@ -381,14 +365,9 @@ class NFMD:
         Compute the 'amplitude' of the Fourier mode.
         Amplitude = sqrt(A_1^2 + A_2^2)
 
-        Parameters
-        ----------
-        None.
-        Returns
-        -------
-        Amps: numpy.ndarray
-            Amplitude vector, length = num_freqs
-
+        :returns: Amplitude vector, length = num_freqs
+        :rtype: numpy.ndarray
+            
         '''
         # initialize amps list
         Amps = np.ndarray((self.A.shape[0], self.num_freqs))
@@ -412,17 +391,14 @@ class NFMD:
         taking the value of the fit mean mode at the center of the window
         for each window data was fit in, and concatenating the center values.
 
-        Parameters
-        ----------
-        lf_mode: optional, integer
-            The index of the mode that is known to represent the mean.
+        :param lf_mode: The index of the mode that is known to represent the mean.
             Note: if not provided, the lowest-average-IF mode is assumed to be
             the mean.
-        Returns
-        -------
-        means: numpy.ndarray
-            The reconstructed mean signal at each time point.
-
+        :type lf_mode: optional, integer
+            
+        :returns: The reconstructed mean signal at each time point.
+        :rtype: numpy.ndarray
+            
         '''
         # Initialize empty array
         means = np.ndarray(len(self.mid_idcs))
@@ -448,14 +424,11 @@ class NFMD:
         '''
         Show the sum of the modes fit to a window of index i.
 
-        Parameters
-        ----------
-        i: integer
-            index of the window to retrieve the fit for.
-        Returns
-        -------
-        fit: numpy.ndarray
-            The sum of the reconstructed modes for the given window.
-
+        :param i: index of the window to retrieve the fit for.
+        :type i: integer
+            
+        :returns: The sum of the reconstructed modes for the given window.
+        :rtype: numpy.ndarray
+            
         '''
         return self.window_fits[i]

@@ -19,27 +19,29 @@ def GenChirp(f_center, f_width=100e3, length=1e-2, sampling_rate=1e8, name='chir
     this signal. There is a limit of 250 MHz on the 33200 Agilent wave generator,
     but obviously that varies.
     
-    Parameters
-    ----------
-    f_center : float
-        Central frequency for the signal
+    :param f_center: Central frequency for the signal
+    :type f_center: float
         
-    f_width : float
-        The single-sided width of the chirp. Generates signal from f_center - f_width 
-	to f_center + f_width
-         
-    length : float
-        the timescale of the signal. Keep this length in mind for data acquisition;
+    :param f_width: The single-sided width of the chirp. Generates signal from f_center - f_width 
+        to f_center + f_width
+    :type f_width: float
+        
+    :param length: the timescale of the signal. Keep this length in mind for data acquisition;
         if your chirp is longer than your data acquisition, you will miss many of 
         the frequencies
-        
-    sampling_rate : int
-        Sampling rate of the chirp, based on length/sampling_rate number of steps
-        This rate must be consistent on the wave generator or the frequencies will
-        be off    
+    :type length: float
+        the timescale of the signal. Keep this length in mind for data acquisition;
     
-    name : str
-        Filename for writing the chirp to disk
+    :param sampling_rate: Sampling rate of the chirp, based on length/sampling_rate number of steps
+        This rate must be consistent on the wave generator or the frequencies will
+        be off 
+    :type sampling_rate: int
+           
+    :param name: Filename for writing the chirp to disk
+    :type name: str
+    
+    :returns:
+    :rtype:
     
     '''
     tx = np.arange(0, length, 1 / sampling_rate)  # fixed 100 MHz sampling rate for 10 ms
@@ -60,27 +62,27 @@ def GenManyChirps(f_center, f_width=100e3, length=1e-2, sampling_rate=1e8):
     '''
     Based on the Agilent manual, the max-frequency is 250 MHz/number_of_points
     The minimum number of points is 8, maximum is 1e6
-		
+        
     This creates 3 chirp signals around the first three mechanical resonances
 
-    Parameters
-    ----------
-    f_center : float
-        Central frequency for the signal
+    :param f_center: Central frequency for the signal
+    :type f_center: float
         
-    f_width : float
-        The single-sided width of the chirp. Generates signal from f_center - f_width 
-	to f_center + f_width
-         
-    length : float
-        the timescale of the signal. Keep this length in mind for data acquisition;
+    :param f_width: The single-sided width of the chirp. Generates signal from f_center - f_width 
+        to f_center + f_width
+    :type f_width: float
+        
+    :param length: the timescale of the signal. Keep this length in mind for data acquisition;
         if your chirp is longer than your data acquisition, you will miss many of 
         the frequencies
-        
-    sampling_rate : int
-        Sampling rate of the chirp, based on length/sampling_rate number of steps
+    :type length: float
+        the timescale of the signal. Keep this length in mind for data acquisition;
+    
+    :param sampling_rate: Sampling rate of the chirp, based on length/sampling_rate number of steps
         This rate must be consistent on the wave generator or the frequencies will
-        be off  
+        be off 
+    :type sampling_rate: int
+
     '''
 
     name = "chirp_w.dat"
@@ -120,6 +122,17 @@ if __name__ == '__main__':
 # Old wavegenerator code
 
 def GeneratePulse(pulse_time, voltage, total_time):
+    '''
+    
+    :param pulse_time:
+    :type pulse_time:
+    
+    :param voltage:
+    :type voltage:
+    
+    :param total_time:
+    :type total_time:
+    '''
     sample_rate = 1.0e7
     total_samples = sample_rate * total_time
     pulse_samples = sample_rate * pulse_time
@@ -136,6 +149,18 @@ def GeneratePulse(pulse_time, voltage, total_time):
 
 
 def GenerateTaus(tau, beta, sfx=''):
+    '''
+    
+    :param tau:
+    :type tau:
+    
+    :param beta:
+    :type beta:
+    
+    :param sfx:
+    :type sfx:
+    '''
+    
     sample_rate = 1.0e8  # sampling rate used in Wavegenerator code
     total_samples = 800000
     pulse_samples = 700000

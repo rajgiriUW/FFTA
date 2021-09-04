@@ -34,7 +34,7 @@ class MyHandler(FileSystemEventHandler):
     
     Every time a new file is created, this processes that .ibw as a Line
     
-    Parameters
+    Attributes
     ----------
     parameters : dict
         Dictionary of the processing parameters. Found in parameters.cfg
@@ -54,6 +54,13 @@ class MyHandler(FileSystemEventHandler):
         '''
         Increments lines_loaded every time a new file is corrected
         This method provides a (crude) flag for checking when to stop
+        
+        :param parameters: Dictionary of the processing parameters. Found in parameters.cfg
+        :type parameters: dict
+        
+        :param wait_per_line: The number of seconds to wait after a new file event (avoids OS errors)
+        :type wait_per_line: int
+        
         '''
 
         self.lines_loaded = 0

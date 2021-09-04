@@ -36,31 +36,28 @@ def cal_curve(can_path, param_cfg, taus_range=[], plot=True, **kwargs):
     If you want to change the fit parameters per tau
     taus, tfp, spl = cal_curve(param_cfg, can_params, roi=0.001, n_taps=199)
 
-    Parameters
-    ----------
-    can_params : string or tuple
-		Path to cantilever parameters file (from Force Calibration tab)
-        If a Dict, assumed is passed a tuple from ffta.simulation.utils.load.simulation_configuration (old sim style)
+    :param can_path:
+    :type can_path: str
 
-	params_cfg : string
-		Path to parameters.cfg file (from FFtrEFM experiment, in the data folder)
-    
-    taus_range : ndarray (2-index array), optional
-        taus_range to set a range for the simulations, taken as [low, high]
+    :param params_cfg: Path to parameters.cfg file (from FFtrEFM experiment, in the data folder)
+    :type params_cfg: string
         
-    plot : bool, optional
-        Plots the last taus vs tfps for verification
+    :param taus_range: taus_range to set a range for the simulations, taken as [low, high]
+    :type taus_range: ndarray (2-index array), optional
+        
+    :param plot: Plots the last taus vs tfps for verification
+    :type plot: bool, optional
+        
+    :param kwargs:
+    :type kwargs:
     
-    Returns:
-    --------
-    taus : ndArray
-        The single exponential taus that were simulated
-    tfps : ndArray
-        The measured time to first peaks
-    spl : UnivariateSpline
-        spline object of the calibration curve. To scale an image, type spl(x)
+    :returns: tuple (taus, tfps, spl)
+        WHERE
+        ndarray taus is the single exponential taus that were simulated
+        ndarray tfps is the measured time to first peaks
+        UnivariateSpline spl is spline object of the calibration curve. To scale an image, type spl(x)
             
-	'''
+    '''
     if isinstance(can_path, str):
         can_params, force_params, sim_params, _, parms = load_parm(can_path, param_cfg)
     elif isinstance(can_path, tuple):
@@ -161,18 +158,16 @@ def reconstruct_cal_curve(csv_file):
     '''
     Reconstruct the calibration curve from a saved CSV
     
-    csv_file : str, path to CSV file
+    :param csv_file: path to CSV file
+    :type csv_file: str
     
-    Returns:
-    --------
-    taus : ndArray
-        The single exponential taus that were simulated
-    tfps : ndArray
-        The measured time to first peaks
-    spl : UnivariateSpline
-        spline object of the calibration curve. To scale an image, type spl(x)
-            
-	'''
+    :returns: tuple (taus, tfps, spl)
+        WHERE
+        ndarray taus is the single exponential taus that were simulated
+        ndarray tfps is the measured time to first peaks
+        UnivariateSpline spl is spline object of the calibration curve. To scale an image, type spl(x)
+               
+    '''
 
     df = pd.read_csv(csv_file)
     

@@ -23,16 +23,12 @@ def get_fft_stack(image_stack):
     """
     Gets the 2D FFT for a single or stack of images by applying a blackman window
 
-    Parameters
-    ----------
-    image_stack : 2D or 3D real numpy array
-        Either a 2D matrix [x, y] or a stack of 2D images arranged as [z or spectral, x, y]
-
-    Returns
-    -------
-    fft_stack : 2D or 3D real numpy array
-        2 or 3 dimensional matrix arranged as [z or spectral, x, y]
-
+    :param image_stack: Either a 2D matrix [x, y] or a stack of 2D images arranged as [z or spectral, x, y]
+    :type image_stack: 2D or 3D real numpy array
+        
+    :returns: 2 or 3 dimensional matrix arranged as [z or spectral, x, y]
+    :rtype: 2D or 3D real numpy array
+       
     """
     if image_stack.ndim == 2:
         # single image
@@ -50,15 +46,12 @@ def build_radius_matrix(image_shape):
     center of the provided image rather one of the corners of the image. The result from this function is required
     by get_2d_gauss_lpf
 
-    Parameters
-    ----------
-    image_shape: list or tuple
-        Number of rows and columns in the image
-
-    Returns
-    -------
-    radius_mat: 2d numpy float array
-        Radius matrix
+    :param image_shape: Number of rows and columns in the image
+    :type image_shape: list or tuple
+        
+    :returns: radius matrix
+    :rtype: 2d numpy float array
+ 
     """
     (u_mat, v_mat) = np.meshgrid(range(-image_shape[0] // 2, image_shape[0] // 2, 1),
                                  range(-image_shape[1] // 2, image_shape[1] // 2, 1))
@@ -72,17 +65,15 @@ def get_2d_gauss_lpf(radius_mat, filter_width):
 
     Multiply the output of this function with the (shifted) fft of an image to apply the filter.
 
-    Parameters
-    ----------
-    radius_mat: 2d numpy float array
-        A [NxM] matrix of the same size as the image that this filter will be applied to
-    filter_width: float
-        Size of the filter
-
-    Returns
-    -------
-    gauss_filt: 2D numpy float array
-        matrix with a single gaussian peak at the center of the matrix.
+    :param radius_mat: A [NxM] matrix of the same size as the image that this filter will be applied to filter_width
+    :type radius_mat: 2d numpy float array
+    
+    :param filter_width: Size of the filter
+    :type filter_width: float
+        
+    :returns: matrix with a single gaussian peak at the center of the matrix.
+    :rtype: 2D numpy float array
+        
     """
     return np.e ** (-(radius_mat * filter_width) ** 2)
 
@@ -91,15 +82,12 @@ def fft_to_real(image):
     """
     Provides the real-space equivalent of the provided image in Fourier space
 
-    Parameters
-    ----------
-    image: 2D numpy float array
-        FFT of image that has been fft shifted.
-
-    Returns
-    -------
-    image : 2D numpy float array
-        Image in real space
+    :param image: FFT of image that has been fft shifted.
+    :type image: 2D numpy float array
+        
+    :returns: Image in real space
+    :rtype: 2D numpy float array
+        
     """
     return np.real(np.fft.ifft2(np.fft.ifftshift(image)))
 
@@ -108,18 +96,15 @@ def get_noise_floor(fft_data, tolerance):
     """
     Calculate the noise floor from the FFT data. Algorithm originally written by Mahmut Okatan Baris
 
-    Parameters
-    ----------
-    fft_data : 1D or 2D complex numpy array
-        Signal in frequency space (ie - after FFT shifting) arranged as (channel or repetition, signal)
-    tolerance : unsigned float
-        Tolerance to noise. A smaller value gets rid of more noise.
+    :param fft_data: Signal in frequency space (ie - after FFT shifting) arranged as (channel or repetition, signal)
+    :type fft_data: 1D or 2D complex numpy array
+    
+    :param tolerance: tolerance to noise. A smaller value gets rid of more noise.
+    :type tolerance: unsigned float
         
-    Returns
-    -------
-    noise_floor : 1D array-like
-        One value per channel / repetition
-
+    :returns: One value per channel / repetition
+    :rtype: 1D array-like
+        
     """
 
     fft_data = np.atleast_2d(fft_data)
@@ -157,17 +142,15 @@ def down_sample(fft_vec, freq_ratio):
     """
     Downsamples the provided data vector
     
-    Parameters
-    ----------
-    fft_vec : 1D complex numpy array
-        Waveform that is already FFT shifted
-    freq_ratio : float
-        new sampling rate / old sampling rate (less than 1)
-    
-    Returns
-    -------
-    fft_vec : 1D numpy array
-        downsampled waveform
+    :param fft_vec: Waveform that is already FFT shifted
+    :type fft_vec: 1D complex numpy array
+        
+    :param freq_ratio: new sampling rate / old sampling rate (less than 1)
+    :type freq_ratio: float
+        
+    :returns: downsampled waveform
+    :rtype: 1D numpy array
+        
 
     """
     if freq_ratio >= 1:
@@ -187,6 +170,13 @@ def down_sample(fft_vec, freq_ratio):
 
 class FrequencyFilter(object):
     def __init__(self, signal_length, samp_rate, *args, **kwargs):
+    """
+    :param signal_length:
+    :type signal_length: int
+    
+    :param samp_rate
+    :type samp_rate:
+    """
         for val, name in zip([signal_length, samp_rate], ['Signal length', 'Sampling rate']):
             if val % 1 != 0 or val < 0:
                 raise ValueError(name + ' must be an unsigned integer')
@@ -195,14 +185,33 @@ class FrequencyFilter(object):
         self.value = None
 
     def get_parms(self):
+    """
+    
+    :returns:
+    :rtype: dict
+    """
         return {'samp_rate': self.samp_rate, 'signal_length': self.signal_length}
 
     def is_compatible(self, other):
+    """
+    :param other:
+    :type other:
+    
+    :returns:
+    :rtype: bool
+    """
         assert isinstance(other, FrequencyFilter), "Other object must be a FrequencyFilter object"
         return self.signal_length == other.signal_length and self.samp_rate == other.samp_rate
 
 
 def are_compatible_filters(frequency_filters):
+    """
+    :param frequency_filters:
+    :type frequency_filters:
+    
+    :returns:
+    :rtype: bool
+    """
     if isinstance(frequency_filters, FrequencyFilter):
         return True
     if not isinstance(frequency_filters, Iterable):
@@ -218,6 +227,13 @@ def are_compatible_filters(frequency_filters):
 
 
 def build_composite_freq_filter(frequency_filters):
+    """
+    :param frequency_filters:
+    :type frequency_filters:
+    
+    :returns:
+    :rtype:
+    """
     if not are_compatible_filters(frequency_filters):
         raise ValueError('frequency filters must be a single or list of FrequencyFilter objects')
 
@@ -237,28 +253,28 @@ class NoiseBandFilter(FrequencyFilter):
         """
         Builds a filter that removes specified noise frequencies
 
-        Parameters
-        ----------
-        signal_length : unsigned int
-            Number of points in the FFT signal
-        samp_rate : unsigned int
-            sampling rate in Hz
-        freqs : 1D array or list
-            Target frequencies as unsigned ints
-        freq_widths : 1D array or list
-            Width around the target frequency that should be set to 0\n
-        show_plots : bool
-            If True, plots will be displayed during calculation.  Default False
-
         Note
         ----
         sampRate, freqs, freq_widths have same units - eg MHz
-
-        Returns
-        -------
-        noise_filter : 1D numpy array
-            Array of ones set to 0 at noise bands
-
+        
+        :param signal_length: Number of points in the FFT signal
+        :type signal_length: unsigned int
+        
+        :param samp_rate: sampling rate in Hz
+        :type samp_rate: unsigned int
+        
+        :param freqs: Target frequencies as unsigned ints
+        :type freqs: 1D array or list
+        
+        :param freq_widths: Width around the target frequency that should be set to 0\n
+        :type freq_widths: 1D array or list
+            
+        :param show_plots: If True, plots will be displayed during calculation.  Default False
+        :type show_plots: bool
+        
+        :returns: Array of ones set to 0 at noise bands
+        :rtype: 1D numpy array
+           
         """
         super(NoiseBandFilter, self).__init__(signal_length, samp_rate)
 
@@ -319,22 +335,21 @@ class LowPassFilter(FrequencyFilter):
         """
         Builds a low pass filter
 
-        Parameters
-        ----------
-        signal_length : unsigned int
-            Points in the FFT. Assuming Signal in frequency space (ie - after FFT shifting)
-        samp_rate : unsigned integer
-            Sampling rate
-        f_cutoff : unsigned integer
-            Cutoff frequency for filter
-        roll_off : 0 < float < 1
-            Frequency band over which the filter rolls off. rol off = 0.05 on a
+        :param signal_length: Points in the FFT. Assuming Signal in frequency space (ie - after FFT shifting)
+        :type signal_length: unsigned int
+        
+        :param samp_rate: sampling rate
+        :type samp_rate: unsigned integer
+       
+        :param f_cutoff: Cutoff frequency for filter
+        :type f_cutoff : unsigned integer
+        
+        :param roll_off: Frequency band over which the filter rolls off. rol off = 0.05 on a
             100 kHz low pass filter -> roll off from 95 kHz (1) to 100 kHz (0)
-
-        Returns
-        -------
-        LPF : 1D numpy array describing the low pass filter
-
+        :type roll_off: 0 < float < 1
+            
+        :returns: 1D numpy array describing the low pass filter
+        :rtype: 1D numpy array
         """
 
         if f_cutoff >= 0.5 * samp_rate:
@@ -377,29 +392,29 @@ class HarmonicPassFilter(FrequencyFilter):
     def __init__(self, signal_length, samp_rate, first_freq, band_width, num_harm, do_plots=False):
         """
         Builds a filter that only keeps N harmonics
-
-        Parameters
-        ----------
-        signal_length : unsigned int
-            Number of points in the FFt signal
-        samp_rate : unsigned int
-            Sampling rate
-        first_freq : unsigned int
-            Frequency of the first harmonic
-        band_width : unsigned int
-            Frequency band around each harmonic that needs to be preserved
-        num_harm : unsigned int
-            Number of harmonics to preserve
-        do_plots : Boolean (optional)
-            Whether or not to generate plots. Not necessary after debugging
-
         Note that the frequency values must all have the same units
-
-        Returns
-        -------
-        harm_filter : 1D numpy array
-            0s where the signal is to be rejected and 1s at harmonics
-
+        
+        :param signal_length: Number of points in the FFt signal
+        :type signal_length: unsigned int
+        
+        :param samp_rate: sampling rate
+        :type samp_rate: unsigned int
+        
+        :param first_freq: Frequency of the first harmonic
+        :type first_freq: unsigned int
+        
+        :param band_width: Frequency band around each harmonic that needs to be preserved
+        :type band_width: unsigned int
+        
+        :param num_harm: Number of harmonics to preserve
+        :type num_harm: unsigned int
+        
+        :param do_plots: Whether or not to generate plots. Not necessary after debugging
+        :type do_plots: boolean, optional
+           
+        :returns: 0s where the signal is to be rejected and 1s at harmonics
+        :rtype: 1D numpy array
+            
         """
 
         super(HarmonicPassFilter, self).__init__(signal_length, samp_rate)
@@ -504,24 +519,26 @@ class BandPassFilter(FrequencyFilter):
         """
         Builds a bandpass filter
 
-        Parameters
-        ----------
-        signal_length : unsigned int
-            Points in the FFT. Assuming Signal in frequency space (ie - after FFT shifting)
-        samp_rate : unsigned integer
-            Sampling rate
-        f_center : unsigned integer
-            Center frequency for filter
-        f_width : unsigned integer
-            Frequency width of the pass band
-        fir : bool, optional
-            True uses a finite impulse response (FIR) response instead of a standard boxcar. FIR is causal
-        fir_taps : int
-            Number of taps (length of filter) for finite impulse response filter
-
-        Returns
-        -------
-        bpf : 1D numpy array describing the bandpass filter
+        :param signal_length: Points in the FFT. Assuming Signal in frequency space (ie - after FFT shifting)
+        :type signal_length : unsigned int
+        
+        :param samp_rate: sampling rate
+        :type samp_rate: unsigned integer
+        
+        :param f_center: Center frequency for filter
+        :type f_center: unsigned integer
+            
+        :param f_width: Frequency width of the pass band
+        :type f_width: unsigned integer
+        
+        :param fir: True uses a finite impulse response (FIR) response instead of a standard boxcar. FIR is causal
+        :type fir: bool, optional
+            
+        :param fir_taps: Number of taps (length of filter) for finite impulse response filter
+        :type fir_taps: int
+           
+        :returns:1D numpy array describing the bandpass filter
+        :rtype: 1D numpy array
 
         """
 

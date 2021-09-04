@@ -20,25 +20,28 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2, scale=Non
     """
     Plots the relevant tfp, inst_freq, and shift values as separate image files
     
-    Parameters
-    ----------
-    h5_file : h5Py File
+    :param h5_file:
+    :type h5_file: h5Py File
     
-    h5_path : str, optional
-        Location of the relevant datasets to be saved/plotted. e.g. h5_rb.name
-    
-    append : str, optional
-        A string to include in the saved figure filename
+    :param h5_path: Location of the relevant datasets to be saved/plotted. e.g. h5_rb.name
+    :type h5_path: str, optional
         
-    savefig : bool, optional
-        Whether or not to save the image
+    :param append: A string to include in the saved figure filename
+    :type append: str, optional
         
-    stdevs : int, optional
-        Number of standard deviations to display
-    
-    scale : float, optional
-        Scale bar size, in microns
+    :param savefig: Whether or not to save the image
+    :type savefig: bool, optional
         
+    :param stdevs: Number of standard deviations to display
+    :type stdevs: int, optional
+        
+    :param scale: Scale bar size, in microns
+    :type scale: float, optional
+        
+    :returns: tuple (fig, ax)
+        WHERE
+        [type] fig is...
+        [type] ax is...
     """
 
     try:
@@ -134,5 +137,16 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2, scale=Non
 
 
 def get_scale(target_size, x_size):
+    """
     
+    :param target_size:
+    :type target_size:
+    
+    :param x_size:
+    :type x_size:
+    
+    :returns:
+    :rtype:
+    
+    """
     return

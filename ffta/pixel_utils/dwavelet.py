@@ -5,20 +5,27 @@ import numpy as np
 
 
 def dwt_denoise(signal, fLow, fHigh, sampling_rate):
-    """ Uses Discrete Wavelet Transform to denoise signal
-        around a desired frequency band.
+    """
+    Uses Discrete Wavelet Transform to denoise signal
+    around a desired frequency band.
 
-       Parameters
-       ----------
-       fLow: float
-           frequency below which DWT coefficients zeroed
-
-       fHigh: float
-           frequency above which DWT coefficients zeroed
-
-       sampling_rate: float
-           Sample rate of signal in Hz
-
+    :param signal:
+    :type signal:
+    
+    :param fLow: frequency below which DWT coefficients zeroed
+    :type fLow: float
+           
+    :param fHigh: frequency above which DWT coefficients zeroed
+    :type fHigh: float
+           
+    :param sampling_rate: Sample rate of signal in Hz
+    :type sampling_rate: float
+           
+    :returns: tuple (denoised, coeffs, frequencies)
+        WHERE
+        [type] denoised is...
+        [type] coeffs is...
+        [type] frequencies is...
     """
 
     coeffs = pywt.wavedec(signal, 'db1')
@@ -53,6 +60,13 @@ def dwt_denoise(signal, fLow, fHigh, sampling_rate):
 
 
 def dwt_scalogram(coeffs):
+    """
+    :param coeffs:
+    :type coeffs:
+    
+    :returns:
+    :rtype:
+    """
     maxsize = len(coeffs[-1])
 
     scalogram = np.zeros(maxsize)

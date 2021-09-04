@@ -8,7 +8,24 @@ Fit Equations
 
 
 def ddho_freq_product(t, A, tau1, tau2):
-    '''Uses a product of exponentials as the functional form'''
+    '''
+    Uses a product of exponentials as the functional form
+    
+    :param t:
+    :type t:
+    
+    :param A:
+    :type A:
+    
+    :param tau1:
+    :type tau1:
+    
+    :param tau2:
+    :type tau2:
+    
+    :returns:
+    :rtype:
+    '''
     decay = np.exp(-t / tau1) - 1
     relaxation = -1 * np.exp(-t / tau2)
 
@@ -16,7 +33,27 @@ def ddho_freq_product(t, A, tau1, tau2):
 
 
 def ddho_freq_sum(t, A1, A2, tau1, tau2):
-    '''Uses a sum of exponentials as the functional form'''
+    '''
+    Uses a sum of exponentials as the functional form
+    
+    :param t:
+    :type t:
+    
+    :param A1:
+    :type A1:
+    
+    :param A2:
+    :type A2:
+    
+    :param tau1:
+    :type tau1:
+    
+    :param tau2:
+    :type tau2:
+    
+    :returns:
+    :rtype:
+    '''
     decay = np.exp(-t / tau1) - 1
     relaxation = -1 * np.exp(-t / tau2)
 
@@ -24,11 +61,45 @@ def ddho_freq_sum(t, A1, A2, tau1, tau2):
 
 
 def cut_exp(t, A, y0, tau):
-    '''Uses a single exponential for the case of no drive'''
+    '''
+    Uses a single exponential for the case of no drive
+    
+    :param t:
+    :type t:
+    
+    :param A:
+    :type A:
+    
+    :param y0:
+    :type y0:
+    
+    :param tau:
+    :type tau:
+    
+    :returns:
+    :rtype:
+    '''
     return y0 + A * np.exp(-t / tau)
 
 
 def ddho_phase(t, A, tau1, tau2):
+    """
+    :param t:
+    :type t:
+    
+    :param A:
+    :type A:
+    
+    :param tau1:
+    :type tau1:
+    
+    :param tau2:
+    :type tau2:
+    
+    :returns:
+    :rtype:
+    
+    """
     prefactor = tau2 / (tau1 + tau2)
 
     return A * tau1 * np.exp(-t / tau1) * (-1 + prefactor * np.exp(-t / tau2)) + A * tau1 * (1 - prefactor)
@@ -47,6 +118,23 @@ Phase: integrated product of two exponential functions
 
 
 def fit_product(Q, drive_freq, t, inst_freq):
+    """
+    :param Q:
+    :type Q:
+    
+    :param drive_freq:
+    :type drive_freq:
+    
+    :param t:
+    :type t:
+    
+    :param inst_freq:
+    :type inst_freq:
+    
+    :returns:
+    :rtype:
+    
+    """
     # Initial guess for relaxation constant.
     inv_beta = Q / (np.pi * drive_freq)
 
@@ -64,7 +152,24 @@ def fit_product(Q, drive_freq, t, inst_freq):
     return popt.x
 
 def fit_product_unbound(Q, drive_freq, t, inst_freq):
-    """Fit without any bound constraints"""
+    """
+    Fit without any bound constraints
+    
+    :param Q:
+    :type Q:
+    
+    :param drive_freq:
+    :type drive_freq:
+    
+    :param t:
+    :type t:
+    
+    :param inst_freq:
+    :type inst_freq:
+    
+    :returns:
+    :rtype:
+    """
     
     # Initial guess for relaxation constant.
     inv_beta = Q / (np.pi * drive_freq)
@@ -81,6 +186,24 @@ def fit_product_unbound(Q, drive_freq, t, inst_freq):
 
 
 def fit_sum(Q, drive_freq, t, inst_freq):
+    """
+    Fit without any bound constraints
+    
+    :param Q:
+    :type Q:
+    
+    :param drive_freq:
+    :type drive_freq:
+    
+    :param t:
+    :type t:
+    
+    :param inst_freq:
+    :type inst_freq:
+    
+    :returns:
+    :rtype:
+    """
     # Initial guess for relaxation constant.
     inv_beta = Q / (np.pi * drive_freq)
 
@@ -100,6 +223,16 @@ def fit_sum(Q, drive_freq, t, inst_freq):
 
 
 def fit_exp(t, inst_freq):
+    """
+    :param t:
+    :type t:
+    
+    :param inst_freq:
+    :type inst_freq:
+    
+    :return:
+    :rtype:
+    """
     # Cost function to minimize.
     cost = lambda p: np.sum((cut_exp(t, *p) - inst_freq) ** 2)
 
@@ -116,6 +249,17 @@ def fit_exp(t, inst_freq):
 
 
 def fit_ringdown(t, cut):
+    """
+    
+    :param t:
+    :type t:
+    
+    :param cut:
+    :type cut:
+    
+    :returns:
+    :rtype:
+    """
     # Cost function to minimize. Faster than normal scipy optimize or lmfit
     cost = lambda p: np.sum((cut_exp(t, *p) - cut) ** 2)
 
@@ -129,6 +273,23 @@ def fit_ringdown(t, cut):
 
 
 def fit_phase(Q, drive_freq, t, phase):
+    """
+    
+    :param Q:
+    :type Q:
+    
+    :param drive_freq:
+    :type drive_freq:
+    
+    :param t:
+    :type t:
+    
+    :param phase:
+    :type phase:
+    
+    :returns:
+    :rtype:
+    """
     # Initial guess for relaxation constant.
     inv_beta = Q / (np.pi * drive_freq)
 

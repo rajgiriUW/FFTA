@@ -25,37 +25,6 @@ class Cantilever:
     omega(self, t)
     dZdt(self, t) if the given ODE form will not work
 
-    Parameters
-    ----------
-    can_params : dict
-        Parameters for cantilever properties. The dictionary contains:
-
-        amp_invols = float (in m/V)
-        def_invols = float (in m/V)
-        soft_amp = float (in V)
-        drive_freq = float (in Hz)
-        res_freq = float (in Hz)
-        k = float (in N/m)
-        q_factor = float
-
-    force_params : dict
-        Parameters for forces. The dictionary contains:
-
-        es_force = float (in N)
-        delta_freq = float (in Hz)
-        tau = float (in seconds)
-        v_dc = float (in Volts)
-        v_ac = float (in Volts)
-        v_cpd = float (in Volts)
-        dCdz = float (in F/m)
-
-    sim_params : dict
-        Parameters for simulation. The dictionary contains:
-
-        trigger = float (in seconds)
-        total_time = float (in seconds)
-        sampling_rate = int (in Hz)
-
 
     Attributes
     ----------
@@ -100,6 +69,32 @@ class Cantilever:
     >>> c.analyze()
     >>> c.analyze(roi=0.004) # can change the parameters as desired
 
+
+    :param can_params: Parameters for cantilever properties. The dictionary contains:
+        amp_invols = float (in m/V)
+        def_invols = float (in m/V)
+        soft_amp = float (in V)
+        drive_freq = float (in Hz)
+        res_freq = float (in Hz)
+        k = float (in N/m)
+        q_factor = float
+    :type can_params: dict
+        
+    :param force_params: Parameters for forces. The dictionary contains:
+        es_force = float (in N)
+        delta_freq = float (in Hz)
+        tau = float (in seconds)
+        v_dc = float (in Volts)
+        v_ac = float (in Volts)
+        v_cpd = float (in Volts)
+        dCdz = float (in F/m)
+    :type force_params: dict
+        
+    :param sim_params: Parameters for simulation. The dictionary contains:
+        trigger = float (in seconds)
+        total_time = float (in seconds)
+        sampling_rate = int (in Hz)
+    :type sim_params: dict
     """
 
     def __init__(self, can_params, force_params, sim_params):
@@ -156,11 +151,9 @@ class Cantilever:
         """
         Sets initial conditions and other simulation parameters.
 
-        Parameters
-        ----------
-        trigger_phase: float, optional
-           Trigger phase is in degrees and wrt cosine. Default value is 180.
-
+        :param trigger_phase: Trigger phase is in degrees and wrt cosine. Default value is 180.
+        :type trigger_phase: float, optional
+           
         """
 
         self.trigger_phase = np.mod(np.pi * trigger_phase / 180, PI2)
@@ -191,16 +184,17 @@ class Cantilever:
         """
         Force on the cantilever at a given time.
 
-        Parameters
-        ----------
-        t : float
-            Time in seconds.
+        :param t: time in seconds
+        :type t: float
+        
+        :param t0:
+        :type t0:
+        
+        :param tau:
+        :type tau:
 
-        Returns
-        -------
-        f : float
-            Force on the cantilever at a given time, in N/kg.
-
+        :returns: Force on the cantilever at a given time, in N/kg.
+        :rtype: float
         """
 
         driving_force = self.f0 * np.sin(self.wd * t)
@@ -211,16 +205,18 @@ class Cantilever:
         """
         Resonance frequency behavior
 
-        Parameters
-        ----------
-        t : float
-            Time in seconds.
+        :param t: time in seconds
+        :type t: float
 
-        Returns
-        -------
-        w : float
-            Resonance frequency of the cantilever at a given time, in rad/s.
-
+        :param t0:
+        :type t0:
+        
+        :param tau:
+        :type tau:
+        
+        :returns: Resonance frequency of the cantilever at a given time, in rad/s.
+        :type w: float
+            
         """
 
         return self.w0
@@ -229,20 +225,17 @@ class Cantilever:
         """
         Takes the derivative of the given Z with respect to time.
 
-        Parameters
-        ----------
-        Z : (2, ) array_like
-            Z[0] is the cantilever position, and Z[1] is the cantilever
+        :param Z: Z[0] is the cantilever position, and Z[1] is the cantilever
             velocity.
-        t : float
-            Time.
+        :type Z: (2, ) array_like
+        
+        :param t: time
+        :type t : float
 
-        Returns
-        -------
-        Zdot : (2, ) array_like
-            Zdot[0] is the cantilever velocity, and Zdot[1] is the cantilever
+        :returns: Zdot[0] is the cantilever velocity, and Zdot[1] is the cantilever
             acceleration.
-
+        :rtype Zdot: (2, ) array_like
+            
         """
 
         t0 = self.t0
@@ -259,21 +252,19 @@ class Cantilever:
         """
         Simulates the cantilever motion.
 
-        Parameters
-        ----------
-        trigger_phase: float, optional
-           Trigger phase is in degrees and wrt cosine. Default value is 180.
-        Z0 : list, optional
-            Z0 = [z0, v0], the initial position and velocity
+        :param trigger_phase: Trigger phase is in degrees and wrt cosine. Default value is 180.
+        :type trigger_phase: float, optional
+        
+        :param Z0: Z0 = [z0, v0], the initial position and velocity
             If not specified, is calculated from the analytical solution to DDHO
             (using "set_conditions")
-        Returns
-        -------
-        Z : (n_points, 1) array_like
-            Cantilever position in Volts.
-        infodict : dict
-            Information about the ODE solver.
-
+        :type Z0: list, optional
+            
+        :returns: tuple (Z, infodict)
+            WHERE
+            array_like Z is Cantilever position in Volts, in format (n_points, 1)
+            dict infodict is information about the ODE solver.
+      
         """
 
         if Z0:
@@ -308,8 +299,9 @@ class Cantilever:
 
         This will overwrite the existing output with the downsampled verison
 
-        target_rate : int
-            The sampling rate for the signal to be converted to. 1e7 = 10 MHz
+        :param target_rate: The sampling rate for the signal to be converted to. 1e7 = 10 MHz
+        :type target_rate: int
+            
         '''
 
         if target_rate > self.sampling_rate:
@@ -325,17 +317,16 @@ class Cantilever:
         '''
         Creates a Pixel class-compatible parameters and cantilever parameters Dict
 
-        Parameters
-        ----------
-        params : dict, optional
-            Contains analysis parameters for the Pixel cass
-
-        can_params : dict, optional
-            Contains cantilever parameters for the Pixel class. These data are
+        :param params: Contains analysis parameters for the Pixel cass
+        :type params: dict, optional
+            
+        :param can_params: Contains cantilever parameters for the Pixel class. These data are
             optional for the analysis.
-
-        fit_params : dict, optional
-            Contains various parameters for fitting and analysis. See Pixel class.
+        :type can_params: dict, optional
+            
+        :param fit_params: Contains various parameters for fitting and analysis. See Pixel class.
+        :type fit_params: dict, optional
+            
         '''
 
         # default seeding of parameters
@@ -394,15 +385,14 @@ class Cantilever:
         '''
         Converts output to a Pixel class and analyzes
 
-        Parameters
-        ----------
-        plot : bool, optional
-            If True, calls Pixel.plot() to display the results
-
-
-        Returns
-        -------
-        pix : Pixel object
+        :param plot: If True, calls Pixel.plot() to display the results
+        :type plot: bool, optional
+            
+        :param kwargs:
+        :type kwargs:
+        
+        :returns:
+        :rtype: Pixel object
 
         '''
         param_keys = ['bandpass_filter', 'drive_freq', 'filter_bandwidth', 'n_taps',

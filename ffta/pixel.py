@@ -24,139 +24,7 @@ import warnings
 
 
 class Pixel:
-    """
-    Signal Processing to Extract Time-to-First-Peak.
 
-    Extracts Time-to-First-Peak (tFP) from digitized Fast-Free Time-Resolved
-    Electrostatic Force Microscopy (FF-trEFM) signals [1-2]. It includes a few
-    types of frequency analysis:
-
-    a) Hilbert Transform
-    b) Wavelet Transform
-    c) Short-Time Fourier Transform (STFT))
-
-    signal_array: (n_points, n_signals) array_like
-        2D real-valued signal array, corresponds to a pixel.
-    params: dict, optional
-        Includes parameters for processing, saved by the experiment Required:
-
-        trigger = float (in seconds) (required)
-        total_time = float (in seconds) (either this or sampling rate required)
-        sampling_rate = int (in Hz) (see above)
-        
-        These are often supplied but can be a default:        
-        drive_freq = float (in Hz)
-        roi = float (in seconds)
-        window = string (see documentation of scipy.signal.get_window)
-        bandpass_filter = int (0: no filtering, 1: FIR filter, 2: IIR filter)
-        filter_bandwidth = float (default: 5kHz)
-        n_taps = integer (default: 1799)
-        wavelet_analysis = bool (0: Hilbert method, 1: Wavelet Method)
-        wavelet_parameter = int (default: 5)
-        recombination = bool (0: Data are for Charging up, 1: Recombination)
-        fit_phase = bool (0: fit to frequency, 1: fit to phase)
-    can_params: dict, optional
-        Contains the cantilever parameters (e.g. AMPINVOLS).
-        see ffta.pixel_utils.load.cantilever_params
-    fit: bool, optional
-        Find tFP by just raw minimum (False) or fitting product of 2 exponentials (True)
-    pycroscopy: bool, optional
-        Pycroscopy requires different orientation, so this corrects for this effect.
-    fit_form: str, optional
-        Functional form used when fitting. 
-        
-        One of 
-            product: product of two exponentials (default)
-            sum: sum of two exponentials
-            exp: single expential decay
-            ringdown: single exponential decay of amplitude, not frequency, scaled to return Q
-    
-    method: str, optional
-        Method for generating instantaneous frequency, amplitude, and phase response
-        
-        One of
-            hilbert: Hilbert transform method (default)
-            wavelet: Morlet CWT approach
-            stft: short time Fourier transform (sliding FFT)
-            nfmd: Nonstationary Fourier mode decomposition
-    
-    filter_amplitude: bool, optional
-        The Hilbert Transform amplitude can sometimes have drive frequency artifact.
-    filter_frequency: bool, optional
-        Filters the instantaneous frequency to remove noise peaks
-    recombination: bool, optional
-        Whether to invert the frequency (during a recombination or positive frequency shift event)
-    
-    The following are necessary to define a signal, either in params or explicitly
-    trigger: bool, optional
-        The point where the event occurs.
-    total_time: bool, optional
-        The total time of the signal
-    sampling_rate: bool, optional
-        The sampling rate. Note that sampling_rate * total_time must equal number of samples
-    roi: bool, opertional
-        The length of the window to find a minimum frequency peak
-        
-    Attributes
-    ----------
-    n_points : int
-        Number of points in a signal.
-    n_signals : int
-        Number of signals to be averaged in a pixel.
-    signal_array : (n_signals, n_points) array_like
-        Array that contains original signals.
-    signal : (n_points,) array_like
-        Signal after phase-locking and averaging.
-    tidx : int
-        Index of trigger in time-domain.
-    amplitude : (n_points, ) array_like
-        Instantaneous amplitude of the signal
-    phase : (n_points,) array_like
-        Phase of the signal, only calculated with Hilbert Transform method.
-    cwt_matrix : (n_widths, n_points) array_like
-        Wavelet matrix for continuous wavelet transform.
-    inst_freq : (n_points,) array_like
-        Instantenous frequency of the signal.
-    tfp : float
-        Time from trigger to first-peak, in seconds.
-    shift : float
-        Frequency shift from trigger to first-peak, in Hz.
-
-    Methods
-    -------
-    analyze()
-        Analyzes signals and returns tfp, shift and inst_freq.
-
-    Notes
-    -----
-    Frequency shift from wavelet analysis is not in Hertz. It should be used
-    with caution.
-
-    References
-    ----------
-    .. \[1\] Giridharagopal R, Rayermann GE, Shao G, et al. Submicrosecond time
-       resolution atomic force microscopy for probing nanoscale dynamics.
-       Nano Lett. 2012;12(2):893-8.
-       \[2\] Karatay D, Harrison JA, et al. Fast time-resolved electrostatic
-       force microscopy: Achieving sub-cycle time resolution. Rev Sci Inst.
-       2016;87(5):053702
-
-    Examples
-    --------
-    >>> from ffta import pixel, pixel_utils
-    >>>
-    >>> signal_file = '../data/SW_0000.ibw'
-    >>> params_file = '../data/parameters.cfg'
-    >>>
-    >>> signal_array = pixel_utils.load.signal(signal_file)
-    >>> n_pixels, params = pixel_utils.load.configuration(params_file)
-    >>>
-    >>> p = pixel.Pixel(signal_array, params)
-    >>> tfp, shift, inst_freq = p.analyze()
-    >>>
-    >>> p.plot()
-
-    """
 
     def __init__(self,
                  signal_array,
@@ -173,7 +41,145 @@ class Pixel:
                  total_time=None,
                  sampling_rate=None,
                  roi=None):
+        """
+        Signal Processing to Extract Time-to-First-Peak.
 
+        Extracts Time-to-First-Peak (tFP) from digitized Fast-Free Time-Resolved
+        Electrostatic Force Microscopy (FF-trEFM) signals [1-2]. It includes a few
+        types of frequency analysis:
+
+        a) Hilbert Transform
+        b) Wavelet Transform
+        c) Short-Time Fourier Transform (STFT))
+            
+        Attributes
+        ----------
+        n_points : int
+            Number of points in a signal.
+        n_signals : int
+            Number of signals to be averaged in a pixel.
+        signal_array : (n_signals, n_points) array_like
+            Array that contains original signals.
+        signal : (n_points,) array_like
+            Signal after phase-locking and averaging.
+        tidx : int
+            Index of trigger in time-domain.
+        amplitude : (n_points, ) array_like
+            Instantaneous amplitude of the signal
+        phase : (n_points,) array_like
+            Phase of the signal, only calculated with Hilbert Transform method.
+        cwt_matrix : (n_widths, n_points) array_like
+            Wavelet matrix for continuous wavelet transform.
+        inst_freq : (n_points,) array_like
+            Instantenous frequency of the signal.
+        tfp : float
+            Time from trigger to first-peak, in seconds.
+        shift : float
+            Frequency shift from trigger to first-peak, in Hz.
+
+        Methods
+        -------
+        analyze()
+            Analyzes signals and returns tfp, shift and inst_freq.
+
+        Notes
+        -----
+        Frequency shift from wavelet analysis is not in Hertz. It should be used
+        with caution.
+
+        References
+        ----------
+        .. \[1\] Giridharagopal R, Rayermann GE, Shao G, et al. Submicrosecond time
+           resolution atomic force microscopy for probing nanoscale dynamics.
+           Nano Lett. 2012;12(2):893-8.
+           \[2\] Karatay D, Harrison JA, et al. Fast time-resolved electrostatic
+           force microscopy: Achieving sub-cycle time resolution. Rev Sci Inst.
+           2016;87(5):053702
+
+        Examples
+        --------
+        >>> from ffta import pixel, pixel_utils
+        >>>
+        >>> signal_file = '../data/SW_0000.ibw'
+        >>> params_file = '../data/parameters.cfg'
+        >>>
+        >>> signal_array = pixel_utils.load.signal(signal_file)
+        >>> n_pixels, params = pixel_utils.load.configuration(params_file)
+        >>>
+        >>> p = pixel.Pixel(signal_array, params)
+        >>> tfp, shift, inst_freq = p.analyze()
+        >>>
+        >>> p.plot()
+
+
+        :param signal_array: 2D real-valued signal array, corresponds to a pixel.
+        :type signal_array: (n_points, n_signals) array_like
+        
+        :param params: Includes parameters for processing, saved by the experiment Required:
+            trigger = float (in seconds) (required)
+            total_time = float (in seconds) (either this or sampling rate required)
+            sampling_rate = int (in Hz) (see above)
+            
+            These are often supplied but can be a default:        
+            drive_freq = float (in Hz)
+            roi = float (in seconds)
+            window = string (see documentation of scipy.signal.get_window)
+            bandpass_filter = int (0: no filtering, 1: FIR filter, 2: IIR filter)
+            filter_bandwidth = float (default: 5kHz)
+            n_taps = integer (default: 1799)
+            wavelet_analysis = bool (0: Hilbert method, 1: Wavelet Method)
+            wavelet_parameter = int (default: 5)
+            recombination = bool (0: Data are for Charging up, 1: Recombination)
+            fit_phase = bool (0: fit to frequency, 1: fit to phase)
+        :type params: dict, optional
+            
+        :param can_params: Contains the cantilever parameters (e.g. AMPINVOLS).
+            see ffta.pixel_utils.load.cantilever_params
+        :type can_params: dict, optional
+        
+        :param fit: Find tFP by just raw minimum (False) or fitting product of 2 exponentials (True)
+        :type fit: bool, optional
+        
+        :param pycroscopy: Pycroscopy requires different orientation, so this corrects for this effect.
+        :type pycroscopy: bool, optional
+        
+        :param fit_form: Functional form used when fitting. 
+            One of 
+                product: product of two exponentials (default)
+                sum: sum of two exponentials
+                exp: single expential decay
+                ringdown: single exponential decay of amplitude, not frequency, scaled to return Q 
+        :type fit_form: str, optional
+            
+        :param method: Method for generating instantaneous frequency, amplitude, and phase response
+            One of
+                hilbert: Hilbert transform method (default)
+                wavelet: Morlet CWT approach
+                stft: short time Fourier transform (sliding FFT)
+                nfmd: Nonstationary Fourier mode decomposition
+        :type method: str, optional
+            
+        :param filter_amplitude: The Hilbert Transform amplitude can sometimes have drive frequency artifact.
+        :type filter_amplitude: bool, optional
+        
+        :param filter_frequency: Filters the instantaneous frequency to remove noise peaks
+        :type filter_frequency: bool, optional
+        
+        :param recombination: Whether to invert the frequency (during a recombination or positive frequency shift event)
+        :type recombination: bool, optional
+            
+        
+        The following are necessary to define a signal, either in params or explicitly
+        trigger: bool, optional
+            The point where the event occurs.
+        total_time: bool, optional
+            The total time of the signal
+        sampling_rate: bool, optional
+            The sampling rate. Note that sampling_rate * total_time must equal number of samples
+        roi: bool, opertional
+            The length of the window to find a minimum frequency peak
+
+        """
         # Create parameter attributes for optional parameters.
         # These defaults are overwritten by values in 'params'
 
@@ -327,6 +333,9 @@ class Pixel:
         """
         Update the parameters, see ffta.pixel.Pixel for details on what to update
         e.g. to switch from default Hilbert to Wavelets, for example
+        
+        :param kwargs:
+        :type kwargs:
         """
         for k, v in kwargs.items():
             if hasattr(self, k):
@@ -335,7 +344,15 @@ class Pixel:
         return
 
     def remove_dc(self, dc_width=10e3, plot=False):
-        """Removes DC components from each signal using FFT."""
+        """
+        Removes DC components from each signal using FFT.
+        
+        :param dc_width:
+        :type dc_width: float, optional
+        
+        :param plot:
+        :type plot: bool, optional
+        """
 
         self.signal = np.copy(self.signal_array)
 
@@ -369,7 +386,9 @@ class Pixel:
         return
 
     def phase_lock(self):
-        """Phase-locks signals in the signal array. This also cuts signals."""
+        """
+        Phase-locks signals in the signal array. This also cuts signals.
+        """
 
         # Phase-lock signals.
         self.signal_array, self.tidx = noise.phase_lock(self.signal_array, self.tidx,
@@ -381,7 +400,9 @@ class Pixel:
         return
 
     def average(self):
-        """Averages signals."""
+        """
+        Averages signals.
+        """
 
         if self.n_signals != 1:  # if not multi-signal, don't average
 
@@ -391,7 +412,9 @@ class Pixel:
         return
 
     def set_drive(self):
-        """Calculates drive frequency of averaged signals"""
+        """
+        Calculates drive frequency of averaged signals
+        """
         n_fft = 2 ** int(np.log2(self.tidx))  # For FFT, power of 2.
         dfreq = self.sampling_rate / n_fft  # Frequency separation.
 
@@ -405,8 +428,10 @@ class Pixel:
         return
 
     def check_drive_freq(self):
-        """Calculates drive frequency of averaged signals, and check against
-           the given drive frequency."""
+        """
+        Calculates drive frequency of averaged signals, and check against
+        the given drive frequency.
+        """
 
         n_fft = 2 ** int(np.log2(self.tidx))  # For FFT, power of 2.
         dfreq = self.sampling_rate / n_fft  # Frequency separation.
@@ -426,14 +451,18 @@ class Pixel:
         return
 
     def apply_window(self):
-        """Applies the window given in parameters."""
+        """
+        Applies the window given in parameters.
+        """
 
         self.signal *= sps.get_window(self.window, self.n_points)
 
         return
 
     def dwt_denoise(self):
-        """Uses DWT to denoise the signal prior to processing."""
+        """
+        Uses DWT to denoise the signal prior to processing.
+        """
 
         rate = self.sampling_rate
         lpf = self.drive_freq * 0.1
@@ -442,7 +471,9 @@ class Pixel:
         return
 
     def fir_filter(self):
-        """Filters signal with a FIR bandpass filter."""
+        """
+        Filters signal with a FIR bandpass filter.
+        """
 
         # Calculate bandpass region from given parameters.
         nyq_rate = 0.5 * self.sampling_rate
@@ -470,9 +501,11 @@ class Pixel:
         return
 
     def iir_filter(self):
-        """Filters signal with two Butterworth filters (one lowpass,
+        """
+        Filters signal with two Butterworth filters (one lowpass,
         one highpass) using filtfilt. This method has linear phase and no
-        time delay."""
+        time delay.
+        """
 
         # Calculate bandpass region from given parameters.
         nyq_rate = 0.5 * self.sampling_rate
@@ -537,10 +570,9 @@ class Pixel:
         Filters the instantaneous frequency to remove noise
         Defaults to DC and then every multiple harmonic up to sampling
         
-        Parameters
-        ----------
-        width : int, optional
-            Size of the boxcar around the various peaks
+        :param width: Size of the boxcar around the various peaks
+        :type width: int, optional
+            
         '''
         FREQ = np.fft.fftshift(np.fft.fft(self.inst_freq))
 
@@ -561,7 +593,9 @@ class Pixel:
         return
 
     def hilbert(self):
-        """Analytical signal and calculate phase/frequency via Hilbert transform"""
+        """
+        Analytical signal and calculate phase/frequency via Hilbert transform
+        """
 
         self.hilbert_transform()
         self.calculate_amplitude()
@@ -571,15 +605,19 @@ class Pixel:
         return
 
     def hilbert_transform(self):
-        """Gets the analytical signal doing a Hilbert transform."""
+        """
+        Gets the analytical signal doing a Hilbert transform.
+        """
 
         self.signal = sps.hilbert(self.signal)
 
         return
 
     def calculate_amplitude(self):
-        """Calculates the amplitude of the analytic signal. Uses pre-filter
-        signal to do this."""
+        """
+        Calculates the amplitude of the analytic signal. Uses pre-filter
+        signal to do this.
+        """
         #
         if self.n_signals != 1:
             signal_orig = self.signal_array.mean(axis=1)
@@ -594,8 +632,10 @@ class Pixel:
         return
 
     def calculate_power_dissipation(self):
-        """Calculates the power dissipation using amplitude, phase, and frequency
-        and the Cleveland eqn (see DOI:10.1063/1.121434)"""
+        """
+        Calculates the power dissipation using amplitude, phase, and frequency
+        and the Cleveland eqn (see DOI:10.1063/1.121434)
+        """
 
         phase = self.phase  # + np.pi/2 #offsets the phase to be pi/2 at resonance
 
@@ -608,8 +648,13 @@ class Pixel:
         return
 
     def calculate_phase(self, correct_slope=True):
-        """Gets the phase of the signal and correct the slope by removing
-        the drive phase."""
+        """
+        Gets the phase of the signal and correct the slope by removing
+        the drive phase.
+        
+        :param correct_slope:
+        :type correct_slope: bool, optional
+        """
 
         # Unwrap the phase.
         self.phase = np.unwrap(np.angle(self.signal))
@@ -640,8 +685,10 @@ class Pixel:
         return
 
     def calculate_inst_freq(self):
-        """Calculates the first derivative of the phase using Savitzky-Golay
-        filter."""
+        """
+        Calculates the first derivative of the phase using Savitzky-Golay
+        filter.
+        """
 
         dtime = 1 / self.sampling_rate  # Time step.
 
@@ -665,16 +712,21 @@ class Pixel:
         
         wavelet specified in self.wavelet. See PyWavelets CWT documentation
         
-        Parameters
-        ----------
-        Optimize : bool, optionals
-            Currently placeholder for iteratively determining wavelet scales
+        :param f_center:
+        :type f_center:
+        
+        :param verbose:
+        :type verbose: bool, optional
+        
+        :param optimize: Currently placeholder for iteratively determining wavelet scales
+        :type optimize: bool, optionals
             
-        fit : bool, optional
-            Whether to curve-fit for ridge finding or use parabolic approximation
+        :param fit: Whether to curve-fit for ridge finding or use parabolic approximation
+        :type fit: bool, optional
             
-        calc_phase : bool, optional
-            Calculates teh Phase (not usually needed)
+        :param calc_phase: Calculates teh Phase (not usually needed)
+        :type calc_phase : bool, optional
+            
         '''
 
         # wavlist = pywt.wavelist(kind='continuous')
@@ -754,17 +806,13 @@ class Pixel:
         '''
         Sliding FFT approach
         
-        Parameters
-        ----------
-        self.fft_time_res : float, optional
-            What timescale to evaluate each FFT over
-                  
-        nfft : int
-            Length of FFT calculated in the spectrogram. More points gets much slower
-            but the longer the FFT the finer the frequency bin spacing   
+        :param nfft: Length of FFT calculated in the spectrogram. More points gets much slower
+            but the longer the FFT the finer the frequency bin spacing
+        :type nfft: int
+               
+        :param calc_phase: Calculates teh Phase (not usually needed)
+        :type calc_phase: bool, optional
             
-        calc_phase : bool, optional
-            Calculates teh Phase (not usually needed)
         '''
 
         pts_per_ncycle = int(self.fft_time_res * self.sampling_rate)
@@ -825,14 +873,15 @@ class Pixel:
         '''
         Nonstationary Fourier Mode Decomposition Approach
         
-        calc_phase : bool, optional
-            Calculates the Phase (not usually needed)
+        :param calc_phase: Calculates the Phase (not usually needed)
+        :type calc_phase: bool, optional
             
-        override_window: bool, optional
-            Automatically adjusts window to be integer number of cycles
+        :param override_window: Automatically adjusts window to be integer number of cycles 
+        :type override_window: bool, optional
             
-        verbose : bool, optional
-            Console feedback
+        :param verbose: Console feedback
+        :type verbose: bool, optional
+            
     
         '''
         if not self.signal.any():
@@ -878,7 +927,9 @@ class Pixel:
         return
 
     def find_tfp(self):
-        """Calculate tfp and shift based self.fit_form and self.fit selection"""
+        """
+        Calculate tfp and shift based self.fit_form and self.fit selection
+        """
         ridx = int(self.roi * self.sampling_rate)
         cut = np.copy(self.inst_freq[self.tidx:(self.tidx + ridx)])
         cut -= self.inst_freq[self.tidx]
@@ -937,8 +988,10 @@ class Pixel:
         return
 
     def restore_signal(self):
-        """Restores the signal length and position of trigger to original
-        values."""
+        """
+        Restores the signal length and position of trigger to original
+        values.
+        """
 
         # Difference between current and original values.
         d_trig = int(self._tidx_orig - self.tidx)
@@ -978,12 +1031,12 @@ class Pixel:
         """ 
         Quick visualization of best_fit and cut.
         
-        Parameters
-        ----------
-        newplot : bool, optional
-            generates a new plot (True) or plots on existing plot figure (False)
-        fit : bool, opttional
-            Overlays fit on the instantaneous frequency image
+        :param newplot: generates a new plot (True) or plots on existing plot figure (False)
+        :type newplot: bool, optional
+        
+        :param fit: Overlays fit on the instantaneous frequency image
+        :type fit: bool, opttional
+            
         """
 
         if newplot:
@@ -1028,15 +1081,14 @@ class Pixel:
         """
         Generates the instantaneous frequency
         
-        Parameters
-        ----------
-        timing : bool, optional
-            prints the time to execute (for debugging)
-
-        Returns
-        -------
-        inst_freq : (n_points,) array_like
-            Instantaneous frequency of the signal.
+        :param timing: prints the time to execute (for debugging)
+        :type timing: bool, optional
+            
+        :returns: tuple (inst_freq, amplitude, phase)
+            WHERE
+            array_like inst_freq is instantaneous frequency of the signal. in the format (n_points,)
+            [type] amplitude is...
+            [type] phase is...
         """
 
         if timing:
@@ -1117,14 +1169,12 @@ class Pixel:
         """
         Analyzes the pixel with the given method.
 
-        Returns
-        -------
-        tfp : float
-            Time from trigger to first-peak, in seconds.
-        shift : float
-            Frequency shift from trigger to first-peak, in Hz.
-        inst_freq : (n_points,) array_like
-            Instantenous frequency of the signal.
+        :returns: tuple (tfp, shift, inst_freq)
+            WHERE
+            float tfp is time from trigger to first-peak, in seconds.
+            float shift is frequency shift from trigger to first-peak, in Hz.
+            array_like inst_freq is instantenous frequency of the signal in format (n_points,)
+            
         """
 
         self.inst_freq, self.amplitude, self.phase = self.generate_inst_freq()

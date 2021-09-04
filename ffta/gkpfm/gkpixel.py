@@ -53,17 +53,8 @@ class GKPixel(Pixel):
         Parameters
         ----------
         See Pixel of parameter defintions
-        
-        Additional parameters:
-            
-        TF_norm : array, optional
-            Transfer function supplied in Shifted Fourier domain, normalized to desired Q
-        periods: int
-            Number of periods to average over for CPD calc
-        phase_shift : float
-            Amount to shift the phase of the deflection by (cable lag)
-
-        Returns
+		
+		Returns
         -------
         CPD : array
             Array of the calculated CPD values over time
@@ -71,6 +62,18 @@ class GKPixel(Pixel):
             The curvature of the parabola fit
         CPD_mean : float
             Simple average of the CPD trace, useful for plotting
+        
+        Additional parameters:
+            
+		:param TF_norm: Transfer function supplied in Shifted Fourier domain, normalized to desired Q
+        :type TF_norm: array, optional
+        
+		:param periods:Number of periods to average over for CPD calc
+        :type periods: int
+        
+		:param phase_shift: Amount to shift the phase of the deflection by (cable lag)
+        :type phase_shift : float
+            
         '''
 
         if len(signal_array.shape) > 1:
@@ -110,15 +113,14 @@ class GKPixel(Pixel):
         """
         Generates excitation waveform (AC probing bias) for CPD vs excitation plots
 
-        Parameters
-        ----------
-        exc_params: dict, optional
-                Specifies parameters for excitation waveform. Relevant keys are ac (in V), dc (in V),
+		:param exc_params: Specifies parameters for excitation waveform. Relevant keys are ac (in V), dc (in V),
                 phase (in radians), and frequency (in Hz). The default is None, implying an excitation waveform of
                 magnitude 1V, with period 1/drive_freq, and 0 DC offset.
-            
-        phase: float, optional
-                Offset of the excitation waveform in radians. Default is pi.
+        :type exc_params: dict, optional
+               
+        :param phase: Offset of the excitation waveform in radians. Default is pi.
+        :type phase: float, optional
+                
         """
         self.exc_params = {'ac': 1, 'dc': 0, 'phase': phase, 'frequency': self.drive_freq}
 
@@ -141,22 +143,21 @@ class GKPixel(Pixel):
         Calculates phase and runs self.excitation until they match.
         This process is to compensate for the Gage card having a limited input voltage range.
         
-        Parameters
-        ----------
-        exc_path : string
-            .ibw path containing the applied DDS excitation to the cantilever from the experiment
-        exc_params: dict, optional
-                Specifies parameters for excitation waveform. Relevant keys are ac (in V), dc (in V),
-                phase (in radians), and frequency (in Hz). The default is None, implying an excitation waveform of
-                magnitude 1V, with period 1/drive_freq, and 0 DC offset.
-            
-        phase_range: list, shape 2, optional
-                The start and stop phases to check
-
-        Returns
+		Returns
         -------
         self.exc_wfm
-
+		
+		:param exc_path: .ibw path containing the applied DDS excitation to the cantilever from the experiment
+        :type exc_path: string
+            
+		:param exc_params: Specifies parameters for excitation waveform. Relevant keys are ac (in V), dc (in V),
+                phase (in radians), and frequency (in Hz). The default is None, implying an excitation waveform of
+                magnitude 1V, with period 1/drive_freq, and 0 DC offset.
+        :type exc_params: dict, optional
+                
+        :param phase_range: The start and stop phases to check
+        :type phase_range: list, shape 2, optional
+                
         """
 
         phase_test = np.arange(phase_range[0], phase_range[1], 0.1)
@@ -187,16 +188,15 @@ class GKPixel(Pixel):
         
         This process is to compensate for the Gage card having a limited input voltage range.
         
-        Parameters
-        ----------
-        exc_path : string
-            .ibw path containing the applied DDS excitation to the cantilever from the experiment
-        exc_params: dict
-                Specifies parameters for excitation waveform. Relevant keys are ac (in V), dc (in V),
+		:param exc_path: .ibw path containing the applied DDS excitation to the cantilever from the experiment
+        :type exc_path: string
+        
+		:param exc_params: Specifies parameters for excitation waveform. Relevant keys are ac (in V), dc (in V),
                 phase (in radians), and frequency (in Hz). The default is None, implying an excitation waveform of
                 magnitude 1V, with period 1/drive_freq, and 0 DC offset.
-                
-                example : exc_params = {'ac': 3, 'dc': 3} for 3 Vdc and 3Vac excitation
+				example : exc_params = {'ac': 3, 'dc': 3} for 3 Vdc and 3Vac excitation
+        :type exc_params: dict
+    
         """
 
         exc_raw = loadibw(exc_path)['wave']['wData'].mean(axis=1)
@@ -214,6 +214,9 @@ class GKPixel(Pixel):
         """
         Extracts the DC response and plots. For noise-free data this will show
         the expected CPD response
+		
+		:param plot:
+		:type plot: bool
         """
         SIG_DC = np.copy(self.SIG)
         mid = int(len(self.f_ax) / 2)
@@ -243,10 +246,17 @@ class GKPixel(Pixel):
         
         If no tf_excitation_path is provided, this will generate one via SciPy chirp
         
-        remove_dc : bool, optional
-            Removes the DC peak from the FFT
-            
-        adjust_tf_length : bool, optional
+		:param tf_path:
+		:type tf_path: str
+		
+		:param tf_excitation_path:
+		:type tf_excitation_path: list
+		
+		:param remove_dc: Removes the DC peak from the FFT
+        :type remove_dc: bool, optional
+           
+        :param adjust_tf_length:
+        :type adjust_tf_length: bool, optional
             
         '''
 
@@ -291,23 +301,20 @@ class GKPixel(Pixel):
 
     def process_tf(self, resonances=2, width=20e3, exc_floor=10, plot=False):
         '''
-        Parameters
-        ----------
-
-        resonances : int, optional
-            Number of resonances to fit SHO to. The default is 2.
-        width : int, optional
-            Width of resonance peaks to fit against. The default is 20e3.
-        exc_floor : float, optional
-            Sets the floor for the transfer function, below that is ignored. 
+		
+		:param resonances: Number of resonances to fit SHO to. The default is 2.
+        :type resonances: int, optional
+        
+		:param width:  Width of resonance peaks to fit against. The default is 20e3.
+        :type width: int, optional
+        
+		:param exc_floor: Sets the floor for the transfer function, below that is ignored. 
             The default is 10
-        plot : bool, optional
-            Displays fits. The default is False
-    
-        Returns
-        -------
-        None.
-
+        :type exc_floor: float, optional
+        
+		:param plot: Displays fits. The default is False
+        :type plot: bool, optional
+            
         '''
 
         #      
@@ -383,17 +390,11 @@ class GKPixel(Pixel):
         """
         Uses the cantilever simulation to generate a tune as the transfer function
         
-        Parameters
-        ----------
-        can_params_dict : Dict
-            use ffta.pixel_utils.load.cantilever_params()
-        
-        plot : bool
-            Plots the time-dependent tune
-
-        Returns
-        -------
-        None.
+		:param can_params_dict: use ffta.pixel_utils.load.cantilever_params()
+        :type can_params_dict: Dict
+            
+        :param plot: Plots the time-dependent tune
+        :type plot: bool
 
         """
         if isinstance(can_params_dict, str):
@@ -486,18 +487,14 @@ class GKPixel(Pixel):
         """
         Reconstructs force by dividing by transfer function
 
-        Parameters
-        ----------
-        plot : bool, optional
-            Generates plot of reconstructed force. The default is False.
-        noise_tolerance : float, optional
-            Use to determine noise_floor, The default is 1e-6
-        phase_shift : float, optional
-            Desired phase shift in radians
-
-        Returns
-        -------
-        None.
+		:param plot: Generates plot of reconstructed force. The default is False. 
+        :type plot: bool, optional
+        
+		:param noise_tolerance: Use to determine noise_floor, The default is 1e-6
+        :type noise_tolerance: float, optional
+        
+		:param phase_shift: Desired phase shift in radians
+        :type phase_shift: float, optional
 
         """
         if not any(self.TF_norm):
@@ -550,8 +547,14 @@ class GKPixel(Pixel):
         """
         Denoising filter for 50 kHz harmonics (electrical noise in the system)
         
-        bw : float, optional
-            Bandwidth for the notch filters
+		:param bw: Bandwidth for the notch filters
+        :type bw: float, optional
+        
+		:param plot: Generates plot of reconstructed force. The default is False. 
+        :type plot: bool, optional
+        
+		:param noise_tolerance: Use to determine noise_floor, The default is 1e-6
+        :type noise_tolerance: float, optional
         
         """
         nbf = px.processing.fft.NoiseBandFilter(len(self.force), self.sampling_rate,
@@ -586,12 +589,15 @@ class GKPixel(Pixel):
         """
         Calculates the parameters needed to calculate the CPD
 
-        Parameters
-        ----------
-        periods : int, optional
-            Number of cantilever cycles to average over. The default is 2.
-        return_dict : bool, optional
-            Dictionary of these parameters for debugging purposes
+		:param periods: Number of cantilever cycles to average over. The default is 2.
+        :type periods: int, optional
+        
+		:param return_dict: Dictionary of these parameters for debugging purposes
+        :type return_dict: bool, optional
+        
+		:returns: if return_dict == True, return _cpdd
+		:rtype:
+		
         """
 
         self.periods = periods
@@ -623,23 +629,24 @@ class GKPixel(Pixel):
         """
         Extracts CPD and capacitance gradient from data.
 
-        Parameters
-        ----------
-            verbose: bool
+		:param verbose:
+        :type verbose: bool
 
-            deg: int
-                Degree of polynomial fit. Default is 2, which is a quadratic fit.
-                Unless there's a good reason, quadratic is correct to use
-            
-            use_raw : bool, optional
-                Uses the signal_array instead of the reconstructed force
+		:param deg: Degree of polynomial fit. Default is 2, which is a quadratic fit.
+			Unless there's a good reason, quadratic is correct to use
+        :type deg: int
                 
-            periods : int, optional
-                Numer of cantilever cycles to average over for CPD extraction
+        :param use_raw: Uses the signal_array instead of the reconstructed force
+        :type use_raw: bool, optional
                 
-            overlap : bool, optional
-                If False, each CPD is from a separate part of the signal. 
-                If True, shifts signal by 1 pixel and recalculates
+        :param periods: Numer of cantilever cycles to average over for CPD extraction
+        :type periods: int, optional
+                
+        :param overlap: If False, each CPD is from a separate part of the signal. 
+			If True, shifts signal by 1 pixel and recalculates
+        
+		:type overlap: bool, optional
+                
         """
 
         self._calc_cpd_params(periods)
@@ -683,14 +690,11 @@ class GKPixel(Pixel):
         '''
         Plots the CPD response
 
-        Parameters
-        ----------
-        smooth : int, optional
-            Boxcar smoothign kernel. Value of 3 is reasonable
-
-        Returns
-        -------
-        ax : matplotlib figure axis object
+		:param smooth: Boxcar smoothign kernel. Value of 3 is reasonable
+        :type smooth: int, optional
+            
+		:returns:
+        :rtype: matplotlib figure axis object
 
         '''
         fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
@@ -722,18 +726,12 @@ class GKPixel(Pixel):
         """
         Determine the optimal phase shift due to cable lag
         
-        Parameters
-        ----------
-        phases_to_test : list, optional
-            Which phases to shift the signal with. The default is [2.0708, 2.1208, 2.1708],
+		:param phases_to_test: Which phases to shift the signal with. The default is [2.0708, 2.1208, 2.1708],
             which is 0.5, 0.55, 0.5 + pi/2
-        noise_tolerance : float, optional
-            Use to determine noise_floor, The default is 1e-6
-        Returns
-        -------
-        None.
-
-        return
+        :type phases_to_test: list, optional
+        
+		:param noise_tolerance: Use to determine noise_floor, The default is 1e-6
+        :type noise_tolerance : float, optional
 
         """
 
@@ -762,7 +760,14 @@ class GKPixel(Pixel):
         return
 
     def min_phase_fft(self, signal):
-
+		"""
+		:param signal:
+		:type signal:
+		
+		:returns:
+		:rtype:
+	
+		"""
         fits = []
         xpts = np.arange(-2 * pi, 2 * pi, 0.1)
         fs = np.fft.fft(signal)
@@ -802,10 +807,36 @@ class GKPixel(Pixel):
 
 # Support functions
 def poly2(t, a, b, c):
+	"""
+	:param t:
+	:type t: float
+	
+	:param a:
+	:type a: float
+	
+	:param b:
+	:type b: float
+	
+	:param c:
+	:type b: float
+	
+	:returns:
+	:rtype: float
+	"""
     return a * t ** 2 + b * t + c
 
 
 def cost_func(resp_wfm, signal):
+	"""
+	:param resp_wfm:
+	:type resp_wfm:
+	
+	:param signal:
+	:type signal:
+	
+	:returns:
+	:rtype:
+	"""
     cost = lambda p: np.sum((poly2(resp_wfm, *p) - signal) ** 2)
 
     pinit = [-1 * np.abs(np.max(signal) - np.min(signal)), 0, 0]
@@ -819,6 +850,19 @@ def cost_func(resp_wfm, signal):
 
 
 def tf_fit_mat(drive_freq, resonances=2, width=20e3):
+	"""
+	:param drive_freq:
+	:type drive_freq:
+	
+	:param resonances:
+	:type resonances: int
+	
+	:param width:
+	:type width: float
+	
+	:returns:
+	:rtype: numpy nd.array
+	"""
     # Cantilever resonances, see Table 1 in doi:10.1016/j.surfrep.2005.08.003
     eigen_factors = [1, 6.255, 17.521, 34.33]
 
@@ -832,23 +876,25 @@ def gen_chirp(f_center=500e3, f_width=450e3, length=1e-2, sampling_rate=1e7):
     '''
     Generates a single broad-frequency signal using scipy chirp, writes to name.dat
     
-   
-    f_center : float
-        Central frequency for the signal
+    :param f_center: Central frequency for the signal
+    :type f_center: float
         
-    f_width : float
-        The single-sided width of the chirp. Generates signal from f_center - f_width
-         to f_center + f_width
-         
-    length : float
-        the timescale of the signal. Keep this length in mind for data acquisition;
+    :param f_width: The single-sided width of the chirp. Generates signal from f_center - f_width to f_center + f_width
+    :type f_width : float
+        
+    :param length: the timescale of the signal. Keep this length in mind for data acquisition;
         if your chirp is longer than your data acquisition, you will miss many of 
         the frequencies
+    :type length: float
         
-    sampling_rate : int
-        Sampling rate of the chirp, based on length/sampling_rate number of steps
+    :param sampling_rate: Sampling rate of the chirp, based on length/sampling_rate number of steps
         This rate must be consistent on the wave generator or the frequencies will
-        be off        
+        be off 
+    :type sampling_rate: int
+	
+	:returns:
+	:rtype:
+               
     '''
 
     if isinstance(sampling_rate, str):

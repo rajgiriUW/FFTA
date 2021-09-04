@@ -41,39 +41,32 @@ def test_filter(hdf_file, freq_filts, parameters={}, pixelnum=[0, 0], noise_tole
 	"""
 	Applies FFT Filter to the file at a specific line and displays the result
 
-	Parameters
-	----------
-	hdf_file : h5Py file or Nx1 NumPy array (preferred is NumPy array)
-		hdf_file to work on, e.g. hdf.file['/FF-raw'] if that's a Dataset
+	:param hdf_file: hdf_file to work on, e.g. hdf.file['/FF-raw'] if that's a Dataset
 		if ndarray, uses passed or default parameters
 		Use ndarray.flatten() to ensure correct dimensions
-
-	freq_filts : list of FrequencyFilter class objects
-		Contains the filters to apply to the test signal
-
-	parameters : dict, optional
-		Contains parameters in FF-raw file for constructing filters. Automatic if a Dataset/File
-		Must contain num_pts and samp_rate to be functional
-	
-	pixelnum : int, optional
-		For extracting a specific pixel to do FFT Filtering on
+	:type hdf_file: h5Py file or Nx1 NumPy array (preferred is NumPy array)
 		
-	show_plots : bool, optional
-		Turns on FFT plots from Pycroscopy
-
-	noise_tolerance : float 0 to 1
-		Amount of noise below which signal is set to 0
-
-	Returns
-	-------
-	filt_line : numpy.ndarray
-		Filtered signal of hdf_file
+	:param freq_filts: Contains the filters to apply to the test signal
+	:type freq_filts: list of FrequencyFilter class objects
+		
+	:param parameters: Contains parameters in FF-raw file for constructing filters. Automatic if a Dataset/File
+		Must contain num_pts and samp_rate to be functional
+	:type parameters: dict, optional
+		
+	:param pixelnum: For extracting a specific pixel to do FFT Filtering on
+	:type pixelnum: int, optional
 	
-	freq_filts : list
-		The filter parameters to be passed to SignalFilter
-	
-	fig_filt, axes_filt: matplotlib controls
-		Only functional if show_plots is on
+	:param noise_tolerance: Amount of noise below which signal is set to 0
+	:type noise_tolerance: float 0 to 1
+		
+	:param show_plots: Turns on FFT plots from Pycroscopy
+	:type show_plots : bool, optional
+		
+	:returns: tuple (filt_line, freq_filts, fig_filt, axes_filt)
+		WHERE
+		numpy.ndarray filt_line is filtered signal of hdf_file
+		list freq_filts is the filter parameters to be passed to SignalFilter
+	    matplotlib controls fig_filt, axes_filt - Only functional if show_plots is on
 	"""
 
 	reshape = False
@@ -127,25 +120,23 @@ def fft_filter(h5_main, freq_filts, noise_tolerance=5e-7, make_new=False, verbos
 	"""
 	Stub for applying filter above to the entire FF image set
 	
-	Parameters
-	----------
-	h5_main : h5py.Dataset object
-		Dataset to work on, e.g. h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_raw')[0]
-	
-	freq_filts : list
-		List of frequency filters usually generated in test_line above
+	:param h5_main: Dataset to work on, e.g. h5_main = px.hdf_utils.getDataSet(hdf.file, 'FF_raw')[0]
+	:type h5_main : h5py.Dataset object
 		
-	noise_tolerance : float, optional
-		Level below which data are set to 0. Higher values = more noise (more tolerant)
+	:param freq_filts: List of frequency filters usually generated in test_line above
+	:type freq_filts: list
+		
+	:param noise_tolerance: Level below which data are set to 0. Higher values = more noise (more tolerant)
+	:type noise_tolerance : float, optional
+		
+	:param make_new: Allows for re-filtering the data by creating a new folder
+	:type make_new: bool, optional
+
+	:param verbose:
+	:type verbose: bool, optional
 	
-	make_new : bool, optional
-		Allows for re-filtering the data by creating a new folder
-	
-	Returns
-	-------
-	
-	h5_filt : Dataset
-		Filtered dataset within latest -FFT_Filtering Group
+	:returns: Filtered dataset within latest -FFT_Filtering Group
+	:rtype: Dataset
 		
 	"""
 
@@ -176,15 +167,19 @@ def lowpass(hdf_file, parameters={}, pixelnum=[0, 0], f_cutoff=None):
 	Interfaces to px.pycroscopy.fft.LowPassFilter
 	
 	:param hdf_file:
+	:type hdf_file:
 
 	:param parameters:
+	:type parameters: dict
 	
-	:param pixelnum:
-		See test_filter below
+	:param pixelnum: See test_filter below
+	:type pixelnum: list
 
-	:param f_cutoff: int
-		frequency to cut off. Defaults to 2*drive frequency rounded to nearest 100 kHz
-
+	:param f_cutoff: frequency to cut off. Defaults to 2*drive frequency rounded to nearest 100 kHz
+	:type f_cutoff: int
+		
+	:returns:
+	:rtype:
 	'''
 	hdf_file, num_pts, drive, samp_rate = _get_pixel_for_filtering(hdf_file, parameters, pixelnum)
 
@@ -202,17 +197,28 @@ def bandpass(hdf_file, parameters={}, pixelnum=[0, 0], f_center=None, f_width=10
 	Note that this is effectively a Harmonic Filter of number_harmonics 1, but with finite impulse response option
 
 	:param hdf_file:
+	:type hdf_file:
+	
 	:param parameters:
-	:param pixelnum:
-		See test_filter below
-	:param f_center: int
-		center frequency for the specific band to pass
-	:param f_width: int
-		width of frequency to pass
-	:param harmonic: int
-		if specified, sets the band to this specific multiple of the drive frequency
-	:param fir: bool
-		uses an Finite Impulse Response filter instead of a normal boxcar
+	:type parameters: dict
+	
+	:param pixelnum: See test_filter below
+	:type pixelnum: list
+	
+	:param f_center: center frequency for the specific band to pass
+	:type f_center: int
+		
+	:param f_width: width of frequency to pass
+	:type f_width: int
+	
+	:param harmonic: if specified, sets the band to this specific multiple of the drive frequency
+	:type harmonic: int
+	
+	:param fir: uses an Finite Impulse Response filter instead of a normal boxcar
+	:type fir: bool
+	
+	:returns: 1D numpy array describing the bandpass filter
+	:rtype: 1D numpy array: 
 	'''
 
 	hdf_file, num_pts, drive, samp_rate = _get_pixel_for_filtering(hdf_file, parameters, pixelnum)
@@ -233,19 +239,28 @@ def harmonic(hdf_file, parameters={}, pixelnum=[0, 0], first_harm=1, bandwidth=N
 	'''
 	Interfaces with px.processing.fft.HarmonicFilter
 
-	Parameters
-	----------
-	hdf_file, parameters, pixelnum : see comments in test_filter below
-
-	first_harm : int
-		The first harmonic based on the drive frequency to use
+	:param hdf_file:
+	:type hdf_file:
+	
+	:param parameters:
+	:type parameters: dict
+	
+	:param pixelnum: See test_filter below
+	:type pixelnum: list
+	
+	:param first_harm: The first harmonic based on the drive frequency to use
 		For G-KPFM this should be explicitly set to 2
-
-	bandwidth : int
-		bandwidth for filtering. For computational purposes this is hard-set to 2500 (2.5 kHz)
-
-	num_harmonics : int
-		The number of harmonics to use (omega, 2*omega, 3*omega, etc)
+	:type first_harm: int
+		
+	:param bandwidth: bandwidth for filtering. For computational purposes this is hard-set to 2500 (2.5 kHz)
+	:type bandwidth: int
+		
+	:param num_harmonics: The number of harmonics to use (omega, 2*omega, 3*omega, etc)
+	:type num_harmonics: int
+	
+	:returns:
+	:rtype:
+		
 	'''
 
 	hdf_file, num_pts, drive, samp_rate = _get_pixel_for_filtering(hdf_file, parameters, pixelnum)
@@ -270,13 +285,22 @@ def noise_filter(hdf_file, parameters={}, pixelnum=[0, 0],
 	Interfaces with pycroscopy.processing.fft.NoiseBandFilter
 
 	:param hdf_file:
+	:type hdf_file:
+	
 	:param parameters:
-	:param pixelnum:
-		See test_filter
-	:param centers: list
-		List of Frequencies to filter out
-	:param widths:
-		List of frequency widths for each filter. e,g. in default case (10 kHz center, 20 kHz width) is from 0 to 20 kHz
+	:type parameters: dict
+	
+	:param pixelnum: See test_filter below
+	:type pixelnum: list
+	
+	:param centers: List of Frequencies to filter out
+	:type centers: list
+		
+	:param widths: List of frequency widths for each filter. e,g. in default case (10 kHz center, 20 kHz width) is from 0 to 20 kHz
+	:type widths: list
+	
+	:returns:
+	:rtype:
 	'''
 
 	hdf_file, num_pts, drive, samp_rate = _get_pixel_for_filtering(hdf_file, parameters, pixelnum)
@@ -287,6 +311,24 @@ def noise_filter(hdf_file, parameters={}, pixelnum=[0, 0],
 
 
 def _get_pixel_for_filtering(hdf_file, parameters={}, pixelnum=[0, 0]):
+	"""
+	
+	:param hdf_file:
+	:type hdf_file:
+	
+	:param parameters:
+	:type parameters: dict
+	
+	:param pixelnum: See test_filter below
+	:type pixelnum: list
+	
+	:returns: tuple (hdf_file, num_pts, drive, samp_rate)
+		WHERE
+		[type] hdf_file is...
+		int num_pts is...
+		[type] drive is...
+		[type] samp_rate is...
+	"""
 	ftype = str(type(hdf_file))
 	if ('h5py' in ftype) or ('Dataset' in ftype):  # hdf file
 
@@ -310,25 +352,27 @@ class BandPassFilter(FrequencyFilter):
 				 fir=False, fir_taps=1999):
 		"""
 		Builds a bandpass filter
-
-		Parameters
-		----------
-		signal_length : unsigned int
-			Points in the FFT. Assuming Signal in frequency space (ie - after FFT shifting)
-		samp_rate : unsigned integer
-			Sampling rate
-		f_center : unsigned integer
-			Center frequency for filter
-		f_width : unsigned integer
-			Frequency width of the pass band
-		fir : bool, optional
-			True uses a finite impulse response (FIR) response instead of a standard boxcar. FIR is causal
-		fir_taps : int
-			Number of taps (length of filter) for finite impulse response filter
-
-		Returns
-		-------
-		bpf : 1D numpy array describing the bandpass filter
+		
+		:param signal_length: Points in the FFT. Assuming Signal in frequency space (ie - after FFT shifting)
+		:type signal_length: unsigned int
+		
+		:param samp_rate: sampling rate
+		:type samp_rate: unsigned integer
+		
+		:param f_center: Center frequency for filter
+		:type f_center: unsigned integer
+		
+		:param f_width: Frequency width of the pass band
+		:type f_width: unsigned integer
+		
+		:param fir: True uses a finite impulse response (FIR) response instead of a standard boxcar. FIR is causal
+		:type fir: bool, optional
+		
+		:param fir_taps: Number of taps (length of filter) for finite impulse response filter
+		:type fir_taps: int
+			
+		:returns: 1D numpy array describing the bandpass filter
+		:rtype: 1D numpy array: 
 
 		"""
 

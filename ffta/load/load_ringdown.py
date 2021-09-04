@@ -49,37 +49,33 @@ def wrapper(ibw_file_path='', rd_folder='', verbose=False, subfolder='/',
 	
 	Loads .ibw single file an HDF5 format. Then appends the FF data to that HDF5
 
-	Parameters
-	----------
-	ibw_file_path : string, optional
-		Path to signal file IBW with images to add.
-
-	rd_folder : string, optional
-		Path to folder containing the Ringdown files and config file. If empty prompts dialogue
-
-	verbose : Boolean (Optional)
-		Whether or not to show  print statements for debugging. Passed to Pycroscopy functions
+	:param ibw_file_path: Path to signal file IBW with images to add.
+	:type ibw_file_path: string, optional
 		
-	loadverbose : Boolean (optional)
-		Whether to print any simple "loading Line X" statements for feedback
-
-	subfolder : str, optional
-		Specifies folder under root (/) to save data in. Default is standard pycroscopy format
-
-	average : bool, optional
-		Whether to automatically call the load_pixel_averaged_FF function to average data at each pixel
+	:param rd_folder: Path to folder containing the Ringdown files and config file. If empty prompts dialogue
+	:type rd_folder: string, optional
 		
-	mirror : bool, optional
-		Whether to reverse the data on each line read (since data are usually saved during a RETRACE scan)
+	:param verbose: Whether or not to show  print statements for debugging. Passed to Pycroscopy functions
+	:type verbose: bool, optional
+		
+	:param subfolder: Specifies folder under root (/) to save data in. Default is standard pycroscopy format
+	:type subfolder: str, optional
+		
+	:param loadverbose: Whether to print any simple "loading Line X" statements for feedback
+	:type loadverbose: bool, optional
+		
+	:param mirror: 
+	:type mirror: bool, optional
 	
-	AMPINVOLS : float
-		inverted optical level sensitivity (scaling factor for amplitude). 
+	:param average: Whether to automatically call the load_pixel_averaged_FF function to average data at each pixel
+	:type average: bool, optional
+		
+	:param AMPINVOLS: inverted optical level sensitivity (scaling factor for amplitude). 
 		if not provided, it will search for one in the attributes of h5_rd or use default
-
-	Returns
-	-------
-	h5_rd: USID Dataset 
-		USIDataset of ringdown
+	:type AMPINVOLS: float
+		
+	:returns:
+	:rtype: USIDataset of ringdown
 
 	"""
 	if not any(ibw_file_path):
@@ -116,31 +112,30 @@ def load_ringdown(data_files, parm_dict, h5_path,
 
 	Creates a Datagroup FFtrEFM_Group with a single dataset in chunks
 
-	Parameters
-	----------
-	data_files : list
-		List of the \*.ibw files to be invidually scanned
-
-	parm_dict : dict
-		Scan parameters to be saved as attributes
-
-	h5_path : string
-		Path to H5 file on disk
-
-	verbose : bool, optional
-		Display outputs of each function or not
-
-	loadverbose : Boolean (optional)
-		Whether to print any simple "loading Line X" statements for feedback
-
-	mirror : bool, optional
-		Flips the ibw signal if acquired during a retrace, so data match the topography pixel-to-pixel
-
-	Returns
-	-------
-	h5_path: str
-		The filename path to the H5 file created
-
+	:param data_files: List of the \*.ibw files to be invidually scanned
+	:type data_files: list
+		
+	:param parm_dict: Scan parameters to be saved as attributes
+	:type parm_dict: dict
+		
+	:param h5_path: Path to H5 file on disk
+	:type h5_path: string
+		
+	:param verbose: Display outputs of each function or not
+	:type verbose: bool, optional
+		
+	:param loadverbose: Whether to print any simple "loading Line X" statements for feedback
+	:type loadverbose: bool, optional
+		
+	:param average: Whether to reverse the data on each line read (since data are usually saved during a RETRACE scan)
+	:type average: bool, optional
+	
+	:param mirror: Flips the ibw signal if acquired during a retrace, so data match the topography pixel-to-pixel
+	:type mirror: bool, optional
+		
+	:returns: The filename path to the H5 file created
+	:rtype: str
+		
 	"""
 	# e.g. if a 16000 point signal with 2000 averages and 10 pixels 
 	#   (10MHz sampling of a 1.6 ms long signal=16000, 200 averages per pixel)
@@ -229,13 +224,11 @@ def reprocess_ringdown(h5_rd, fit_time=[1, 5]):
 	'''
 	Reprocess ringdown data using an exponential fit around the timescales indicated.
 	
-	Parameters
-	----------
-	h5_rd : USIDataset
-		Ringdown dataset
+	:param h5_rd: Ringdown dataset
+	:type h5_rd : USIDataset
 	
-	fit_time : list
-		The times (in milliseconds) to fit between. This function uses a single exponential fit
+	:param fit_time: The times (in milliseconds) to fit between. This function uses a single exponential fit
+	:type fit_time: list
 		
 	'''
 	h5_gp = h5_rd.parent
@@ -268,17 +261,20 @@ def test_fitting(h5_rd, pixel=0, fit_time=[1, 5], plot=True):
 	'''
 	Tests curve fitting on a particular pixel, then plots the result
 	
-	Parameters
-	----------
-	h5_rd : USIDataset
-		Ringdown dataset
+	:param h5_rd: Ringdown dataset
+	:type h5_rd: USIDataset
+
+	:param pixel: Which pixel to fit to.
+	:type pixel: int
 	
-	pixel : int
-		Which pixel to fit to. 
+	:param fit_time: The times (in milliseconds) to fit between. This function uses a single exponential fit
+	:type fit_time: list
+		
+	:param plot:
+	:type plot: bool, optional
 	
-	fit_time : list
-		The times (in milliseconds) to fit between. This function uses a single exponential fit
-	
+	:returns:
+	:rtype:
 	'''
 	drive_freq = h5_rd.attrs['drive_freq']
 
@@ -307,16 +303,17 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
 	"""
 	Saves the Q, Amp, as CSV files
 	
-	Parameters
-	----------
-	h5_file : H5Py file
-		Reminder you can always type: h5_svd.file or h5_avg.file for this
+	:param h5_file: Reminder you can always type: h5_svd.file or h5_avg.file for this
+	:type h5_file: H5Py file
+		
+	:param h5_path: specific folder path to search for the tfp data. Usually not needed.
+	:type h5_path: str, optional
+		
+	:param append: text to append to file name (e.g. RD01 or something related to the file)
+	:type append: str, optional
 	
-	h5_path : str, optional
-		specific folder path to search for the tfp data. Usually not needed.
-	
-	append : str, optional
-		text to append to file name (e.g. RD01 or something related to the file)
+	:param mirror: Flips the ibw signal if acquired during a retrace, so data match the topography pixel-to-pixel
+	:type mirror: bool, optional
 	"""
 
 	Q = usid.hdf_utils.find_dataset(h5_file[h5_path], 'Q')[-1][()]
@@ -342,11 +339,38 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
 
 
 def exp(t, A1, y0, tau):
-	'''Uses a single exponential for the case of no drive'''
+	'''
+	Uses a single exponential for the case of no drive
+	
+	:param t:
+	:type t:
+	
+	:param A1:
+	:type A1:
+	
+	:param y0:
+	:type y0:
+	
+	:param tau:
+	:type tau:
+	
+	:returns:
+	:rtype:
+	'''
 	return y0 + A1 * np.exp(-t / tau)
 
 
 def fit_exp(t, cut):
+	"""
+	:param t:
+	:type t:
+	
+	:param cut:
+	:type cut:
+	
+	:returns:
+	:rtype:
+	"""
 	# Cost function to minimize. Faster than normal scipy optimize or lmfit
 	cost = lambda p: np.sum((exp(t - t[0], *p) - cut) ** 2)
 
@@ -362,21 +386,25 @@ def plot_ringdown(h5_file, h5_path='/', append='', savefig=True, stdevs=2):
 	"""
 	Plots the relevant tfp, inst_freq, and shift values as separate image files
 	
-	Parameters
-	----------
-	h5_file : h5Py File
+	:param h5_file:
+	:type h5_file: h5Py File
 	
-	h5_path : str, optional
-		Location of the relevant datasets to be saved/plotted. e.g. h5_rb.name
+	:param h5_path: Location of the relevant datasets to be saved/plotted. e.g. h5_rb.name
+	:type h5_path: str, optional
+		
+	:param append: A string to include in the saved figure filename
+	:type append: str, optional
+		
+	:param savefig: Whether or not to save the image
+	:type savefig: bool, optional
+		
+	:param stdevs: Number of standard deviations to display
+	:type stdevs: int, optional
 	
-	append : str, optional
-		A string to include in the saved figure filename
-		
-	savefig : bool, optional
-		Whether or not to save the image
-		
-	stdevs : int, optional
-		Number of standard deviations to display
+	:returns: tuple (fig, a)
+		WHERE
+		fig is figure object
+		a is axes object
 	"""
 
 	# h5_rd = usid.hdf_utils.find_dataset(h5_file[h5_path], 'Ringdown')[0]

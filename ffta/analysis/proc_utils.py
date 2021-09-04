@@ -17,23 +17,21 @@ def get_component_slice(components, total_components=None):
     """
     Check the components object to determine how to use it to slice the dataset
 
-    Parameters
-    ----------
-    components : {int, array-like of ints, slice, or None}
+    :param components:
         Input Options
         integer: Components less than the input will be kept
         length 2 iterable of integers: Integers define start and stop of component slice to retain
         other iterable of integers or slice: Selection of component indices to retain
         None: All components will be used
-    total_components : uint, optional. Default = None
-        Total number of spectral components in the dataset
+    :type components: {int, array-like of ints, slice, or None}
 
-    Returns
-    -------
-    comp_slice : slice or numpy.ndarray of uints
-        Slice or array specifying which components should be kept
-    num_comps : uint
-        Number of selected components
+    :param total_components: Total number of spectral components in the dataset
+    :type total_components : uint, optional. Default = None
+        
+    :returns: tuple (comp_slice, num_comps)
+        WHERE
+        slice or numpy.ndarray comp_slice specifies which components should be kept
+        uint num_comps is number of selected components
     """
     num_comps = None
 
@@ -94,15 +92,11 @@ def to_ranges(iterable):
 
     Credits: @juanchopanza and @luca
 
-    Parameters
-    ----------
-    iterable : collections.Iterable object
-        iterable object like a list
-
-    Returns
-    -------
-    iterable : generator object
-        Cast to list or similar to use
+    :param iterable: iterable object like a list
+    :type iterable: collections.Iterable object
+        
+    :returns: Cast to list or similar to use
+    :rtype: generator object
     """
     iterable = sorted(set(iterable))
     for key, group in itertools.groupby(enumerate(iterable),

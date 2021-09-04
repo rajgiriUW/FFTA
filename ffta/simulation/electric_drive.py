@@ -17,96 +17,97 @@ PI2 = 2 * pi
 
 
 class ElectricDrive(Cantilever):
-    """Damped Driven Harmonic Oscillator Simulator for AFM Cantilevers under Electric drive
-
-    Simulates a DDHO under excitation with given parameters.
-
-    Parameters
-    ----------
-    can_params : dict
-        Parameters for cantilever properties. See Cantilever
-
-    force_params : dict
-        Parameters for forces. The dictionary contains:
-
-        es_force = float (in N)
-        delta_freq = float (in Hz)
-        tau = float (in seconds)
-        v_dc = float (in Volts)
-        v_ac = float (in Volts)
-        v_cpd = float (in Volts)
-        dCdz = float (in F/m)
-
-    sim_params : dict
-        Parameters for simulation. The dictionary contains:
-
-        trigger = float (in seconds)
-        total_time = float (in seconds)
-        sampling_rate = int (in Hz)
-
-    v_array : ndarray, optional
-        If provided, supplies the time-dependent voltage to v_cpd
-        v_array must be the exact length and sampling of the desired signal
-        v_array only functionally does anything after the trigger.
-
-    v_step : float, optional
-        If v_array not supplied, then a voltage of v_step is applied at the trigger
-
-    Attributes
-    ----------
-    amp : float
-        Amplitude of the cantilever in meters.
-    beta : float
-        Damping factor of the cantilever in rad/s.
-    delta : float
-        Initial phase of the cantilever in radians.
-    delta_freq : float
-        Frequency shift of the cantilever under excitation.
-    mass : float
-        Mass of the cantilever in kilograms.
-
-    Method
-    ------
-    simulate(trigger_phase=180)
-        Simulates the cantilever motion with excitation happening
-        at the given phase.
-
-    See Also
-    --------
-    pixel: Pixel processing for FF-trEFM data.
-    Cantilever: base class
-
-    Examples
-    --------
-    >>> from ffta.simulation import electric_drive
-    >>> from ffta.simulation.utils import load
-    >>>
-    >>> params_file = '../examples/sim_params.cfg'
-    >>> params = load.simulation_configuration(params_file)
-    >>>
-    >>> c = electric_drive.ElectricDrive(*params)
-    >>> Z, infodict = c.simulate()
-    >>> c.analyze()
-    >>> c.analyze(roi=0.004) # can change the parameters as desired
-    >>>
-    >>> # To supply an arbitary v_array
-    >>> n_points = int(params[2]['total_time'] * params[2]['sampling_rate'])
-    >>> v_array = np.ones(n_points) # create just a flat excitation
-    >>> c = mechanical_drive.MechanicalDrive(*params, v_array = v_array)
-    >>> Z, _ = c.simulate()
-    >>> c.analyze()
-    >>>
-    >>> # To supply an arbitary voltage step
-    >>> step = -7 #-7 Volt step
-    >>> c = mechanical_drive.MechanicalDrive(*params, v_step = step)
-    >>> Z, _ = c.simulate()
-    >>> c.analyze()
-
-    """
+    
 
     def __init__(self, can_params, force_params, sim_params, v_array=[], v_step=np.nan,
                  func=excitation.single_exp, func_args=[]):
+        """Damped Driven Harmonic Oscillator Simulator for AFM Cantilevers under Electric drive
 
+        Simulates a DDHO under excitation with given parameters.
+        
+        Attributes
+        ----------
+        amp : float
+            Amplitude of the cantilever in meters.
+        beta : float
+            Damping factor of the cantilever in rad/s.
+        delta : float
+            Initial phase of the cantilever in radians.
+        delta_freq : float
+            Frequency shift of the cantilever under excitation.
+        mass : float
+            Mass of the cantilever in kilograms.
+
+        Method
+        ------
+        simulate(trigger_phase=180)
+            Simulates the cantilever motion with excitation happening
+            at the given phase.
+
+        See Also
+        --------
+        pixel: Pixel processing for FF-trEFM data.
+        Cantilever: base class
+
+        Examples
+        --------
+        >>> from ffta.simulation import electric_drive
+        >>> from ffta.simulation.utils import load
+        >>>
+        >>> params_file = '../examples/sim_params.cfg'
+        >>> params = load.simulation_configuration(params_file)
+        >>>
+        >>> c = electric_drive.ElectricDrive(*params)
+        >>> Z, infodict = c.simulate()
+        >>> c.analyze()
+        >>> c.analyze(roi=0.004) # can change the parameters as desired
+        >>>
+        >>> # To supply an arbitary v_array
+        >>> n_points = int(params[2]['total_time'] * params[2]['sampling_rate'])
+        >>> v_array = np.ones(n_points) # create just a flat excitation
+        >>> c = mechanical_drive.MechanicalDrive(*params, v_array = v_array)
+        >>> Z, _ = c.simulate()
+        >>> c.analyze()
+        >>>
+        >>> # To supply an arbitary voltage step
+        >>> step = -7 #-7 Volt step
+        >>> c = mechanical_drive.MechanicalDrive(*params, v_step = step)
+        >>> Z, _ = c.simulate()
+        >>> c.analyze()
+
+        :param can_params: Parameters for cantilever properties. See Cantilever
+        :type can_params: dict
+            
+        :param force_params: Parameters for forces. The dictionary contains:
+            es_force = float (in N)
+            delta_freq = float (in Hz)
+            tau = float (in seconds)
+            v_dc = float (in Volts)
+            v_ac = float (in Volts)
+            v_cpd = float (in Volts)
+            dCdz = float (in F/m)
+        :type force_params: dict
+            
+        :param sim_params: Parameters for simulation. The dictionary contains:
+            trigger = float (in seconds)
+            total_time = float (in seconds)
+            sampling_rate = int (in Hz)
+        :type sim_params: dict
+            
+        :param v_array: If provided, supplies the time-dependent voltage to v_cpd
+            v_array must be the exact length and sampling of the desired signal
+            v_array only functionally does anything after the trigger.
+        :type v_array: ndarray, optional
+            
+        :param v_step: If v_array not supplied, then a voltage of v_step is applied at the trigger
+        :type v_step : float, optional
+            
+        :param func:
+        :type func:
+        
+        :param func_args:
+        :type func_args:
+        """
         parms = [can_params, force_params, sim_params]
         super(ElectricDrive, self).__init__(*parms)
 
@@ -154,15 +155,11 @@ class ElectricDrive(Cantilever):
         If supplying an explicit v_array, then this function will call the values
         in that array
 
-        Parameters
-        ----------
-        t : float
-            Time in seconds.
+        :param t: time in seconds
+        :type t: float
 
-        Returns
-        -------
-        value : float
-            Value of the function at the given time.
+        :returns: value of the function at the given time
+        :rtype: float
 
         """
 
@@ -191,20 +188,18 @@ class ElectricDrive(Cantilever):
         """
         Exponentially decaying resonance frequency.
 
-        Parameters
-        ----------
-        t : float
-            Time in seconds.
-        t0: float
-            Event time in seconds.
-        tau : float
-            Decay constant in the exponential function, in seconds.
-
-        Returns
-        -------
-        w : float
-            Resonance frequency of the cantilever at a given time, in rad/s.
-
+        :param t: time in seconds
+        :type t: float
+        
+        :param t0: Event time in seconds.
+        :type t0: float
+        
+        :param tau: Decay constant in the exponential function, in seconds.
+        :type tau: float
+            
+        :returns: Resonance frequency of the cantilever at a given time, in rad/s.
+        :rtype: float
+            
         """
 
         return self.w0 + self.delta_w * self.__gamma__(t)
@@ -213,12 +208,14 @@ class ElectricDrive(Cantilever):
         """
         Adds a DC step at the trigger point for electrical drive simulation
 
-        Parameters
-        ----------
-        t : float
-            Time in seconds.
-        t0: float
-            Event time in seconds.
+        :param t: Time in seconds.
+        :type t: float
+        
+        :param t0: Event time in seconds.
+        :type t0: float
+        
+        :returns:
+        :rtype:
         """
 
         if t > t0:
@@ -234,20 +231,18 @@ class ElectricDrive(Cantilever):
         Force on the cantilever at a given time. It contains driving force and
         electrostatic force.
 
-        Parameters
-        ----------
-        t : float
-            Time in seconds.
-        t0: float
-            Event time in seconds.
-        tau : float
-            Decay constant in the exponential function, in seconds.
-
-        Returns
-        -------
-        f : float
-            Force on the cantilever at a given time, in N/kg.
-
+        :param t: time in seconds
+        :type t: float
+        
+        :param t0: event time in seconds:
+        :type t0: float
+        
+        :param tau: Decay constant in the exponential function, in seconds.
+        :type tau: float
+            
+        :returns: Force on the cantilever at a given time, in N/kg.
+        :rtype: float
+            
         """
 
         # explicitly define voltage at each time step
@@ -272,10 +267,9 @@ class ElectricDrive(Cantilever):
         Sets initial conditions and other simulation parameters. Using 2w given
         the squared term in electric driving
 
-        Parameters
-        ----------
-        trigger_phase: float, optional
-           Trigger phase is in degrees and wrt cosine. Default value is 180.
+        :param trigger_phase: Trigger phase is in degrees and wrt cosine. Default value is 180.
+        :type trigger_phase: float, optional
+           
 
         """
         self.delta = np.abs(np.arctan(np.divide(2 * (2 * self.wd) * self.beta,

@@ -25,7 +25,17 @@ from matplotlib import gridspec as gs
 
 
 def process_line(args):
-    """Wrapper function for line class, used in parallel processing."""
+    """
+    Wrapper function for line class, used in parallel processing.
+    
+    :param args:
+    :type args:
+    
+    :returns: tuple (tfp, shift)
+        WHERE
+        [type] tfp is...
+        [type] shift is...
+    """
 
     signal_file, params, n_pixels = args
     signal_array = load.signal(signal_file)
@@ -37,7 +47,12 @@ def process_line(args):
 
 
 def main(argv=None):
-    """Main function of the executable file."""
+    """
+    Main function of the executable file.
+    
+    :param argv:
+    :type argv:
+    """
     logging.basicConfig(filename='error.log', level=logging.INFO)
 
     # Get the CPU count to display in help.

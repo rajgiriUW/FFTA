@@ -13,22 +13,24 @@ def test_pixel(h5_file, param_changes={}, pxls = 1, showplots = True,
 	"""
 	Takes a random pixel and does standard processing.
 	
-	Parameters
-	----------	
-	h5_file : h5Py File, path, Dataset
-		H5 file to process
-	
-	pxls : int, optional
-		Number of random pixels to survey
-	
-	showplots : bool, optional
-		Whether to create a new plot or not. 
+	:param h5_file: H5 file to process
+	:type h5_file: h5Py File, path, Dataset
 		
-	verbose : bool , optional
-		To print to command line. Currently for future-proofing
+	:param param_changes:
+	:type param_changes: dict, optional
+	
+	:param pxls: Number of random pixels to survey
+	:type pxls: int, optional
 		
-	clear_filter : bool, optional
-		Whether to do filtering (FIR) or not
+	:param showplots: Whether to create a new plot or not. 
+	:type showplots: bool, optional
+	
+	:param verbose: To print to command line. Currently for future-proofing
+	:type verbose : bool , optional
+	
+	:param clear_filter: Whether to do filtering (FIR) or not
+	:type clear_filter: bool, optional
+		
 	
 	"""
 	# get_pixel can work on Datasets or the H5_File

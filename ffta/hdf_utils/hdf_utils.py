@@ -39,15 +39,12 @@ def _which_h5_group(h5_path):
     If this is a Dataset, it will try and return the parent as that is
         by default where all relevant attributs are
 
-    Parameters
-    ----------
-    h5_path : str, HDF group, HDF file
+    :param h5_path:
+    :type h5_path: str, HDF group, HDF file
 
-    Returns
-    -------
-    h5Py Group
-        h5Py group corresponding to "FF_Group" typically at hdf.file['/FF_Group']
-    """
+    :returns: h5Py group corresponding to "FF_Group" typically at hdf.file['/FF_Group']
+    :rtype: h5Py Group
+        """
     ftype = str(type(h5_path))
 
     # h5_path is a file path
@@ -85,13 +82,14 @@ def h5_list(h5_file, key):
     >>        suffix = names[-1][-4:]
     >>        suffix = str(int(suffix)+1).zfill(4)
 
-    Parameters
-    ----------
-    h5_file : h5py File
-        hdf.file['/Measurement_000/Channel_000'] or similar
-
-    key : str
-        string to search for, e.g. 'processing'
+    :param h5_file: hdf.file['/Measurement_000/Channel_000'] or similar
+    :type h5_file: h5py File
+        
+    :param key: string to search for, e.g. 'processing'
+    :type key: str
+    
+    :returns:
+    :rtype: List of str
     '''
     names = []
 

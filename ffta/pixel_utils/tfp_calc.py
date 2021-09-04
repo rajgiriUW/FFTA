@@ -12,12 +12,12 @@ def find_minimum(pix, cut):
     """
     Finds when the minimum of instantaneous frequency happens using spline fitting
     
-    Parameters
-    ----------
-    pix : ffta.pixel.Pixel object
-        pixel object to analyze
-    cut : ndarray
-        The slice of frequency data to fit against
+    :param pix: pixel object to analyze
+    :type pix: ffta.pixel.Pixel object
+      
+    :param cut: The slice of frequency data to fit against
+    :type cut: ndarray
+        
 
     Returns
     -------
@@ -62,14 +62,15 @@ def fit_freq_product(pix, cut, t):
     Fits the frequency shift to an approximate functional form using
     an analytical fit with bounded values.
 
-    Parameters
-    ----------
-    pix : ffta.pixel.Pixel object
-        pixel object to analyze
-    cut : ndarray
-        The slice of frequency data to fit against
-    t : ndarray
-        The time-array (x-axis) for fitting
+    :param pix: pixel object to analyze
+    :type pix: ffta.pixel.Pixel object
+    
+    :param cut: The slice of frequency data to fit against
+    :type cut: ndarray
+    
+    :param t: The time-array (x-axis) for fitting
+    :type t: ndarray
+        
 
     Returns
     -------
@@ -117,14 +118,16 @@ def fit_freq_sum(pix, cut, t):
     '''
     Fits the frequency shift to an approximate functional form using
     an analytical fit with bounded values.
-    Parameters
-    ----------
-    pix : ffta.pixel.Pixel object
-        pixel object to analyze
-    cut : ndarray
-        The slice of frequency data to fit against
-    t : ndarray
-        The time-array (x-axis) for fitting
+    
+    :param pix: pixel object to analyze
+    :type pix: ffta.pixel.Pixel object
+    
+    :param cut: The slice of frequency data to fit against
+    :type cut: ndarray
+    
+    :param t: The time-array (x-axis) for fitting
+    :type t: ndarray
+        
 
     Returns
     -------
@@ -158,14 +161,14 @@ def fit_freq_exp(pix, cut, t):
     Fits the frequency shift to a single exponential in the case where
     there is no return to 0 Hz offset (if drive is cut).
     
-    Parameters
-    ----------
-    pix : ffta.pixel.Pixel object
-        pixel object to analyze
-    cut : ndarray
-        The slice of frequency data to fit against
-    t : ndarray
-        The time-array (x-axis) for fitting
+    :param pix: pixel object to analyze
+    :type pix: ffta.pixel.Pixel object
+        
+    :param cut: The slice of frequency data to fit against
+    :type cut: ndarray
+    
+    :param t: The time-array (x-axis) for fitting
+    :type t: ndarray
 
     Returns
     -------
@@ -196,14 +199,15 @@ def fit_ringdown(pix, cut, t):
     '''
     Fits the amplitude to determine Q from single exponential fit.
     
-    Parameters
-    ----------
-    pix : ffta.pixel.Pixel object
-        pixel object to analyze
-    cut : ndarray
-        The slice of amplitude data to fit against
-    t : ndarray
-        The time-array (x-axis) for fitting
+    :param pix: pixel object to analyze
+    :type pix: ffta.pixel.Pixel object
+    
+    :param cut: The slice of amplitude data to fit against
+    :type cut: ndarray
+    
+    :param t: The time-array (x-axis) for fitting
+    :type t: ndarray
+        
 
     Returns
     -------
@@ -240,14 +244,15 @@ def fit_phase(pix, cut, t):
     Fits the phase to an approximate functional form using an
     analytical fit with bounded values.
     
-    Parameters
-    ----------
-    pix : ffta.pixel.Pixel object
-        pixel object to analyze
-    cut : ndarray
-        The slice of frequency data to fit against
-    t : ndarray
-        The time-array (x-axis) for fitting
+    :param pix: pixel object to analyze
+    :type pix: ffta.pixel.Pixel object
+    
+    :param cut: The slice of frequency data to fit against
+    :type cut: ndarray
+    
+    :param t: The time-array (x-axis) for fitting
+    :type t: ndarray
+        
 
     Returns
     -------

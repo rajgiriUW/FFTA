@@ -14,11 +14,24 @@ def cpd_total(ds, params, verbose=False, ncycles=4, smooth=3):
     '''
 
     :param ds:
+    :type ds:
+    
     :param params:
+    :type params:
+    
     :param verbose:
+    :type verbose: bool, optional
+    
     :param ncycles:
+    :type ncycles: int, optional
+    
     :param smooth:
-    :return:
+    :type smooth:
+    
+    :returns: tuple (cpd_mat, cpd_mat_sm)
+        WHERE
+        [type] cpd_mat is...
+        [type] cpd_mat_sm is...
     '''
     t0 = time.time()
     gk = ffta.gkpfm.gkpixel.GKPixel(ds[0, :], params)
@@ -51,9 +64,16 @@ def save_cpd(h5_main, cpd_mat, cpd_sm):
     '''
 
     :param h5_main:
+    :type h5_main:
+    
     :param cpd_mat:
+    :type cpd_mat:
+    
     :param cpd_mat_sm:
-    :return:
+    :type cpd_mat_sm:
+    
+    :returns:
+    :rtype:
     '''
     parm_dict = usid.hdf_utils.get_attributes(h5_main)
 
@@ -91,6 +111,16 @@ def save_cpd(h5_main, cpd_mat, cpd_sm):
 
 
 def cpd_single(ds, params):
+    """
+    :param ds:
+    :type ds:
+    
+    :param params:
+    :type params:
+    
+    :returns:
+    :rtype:
+    """
     gk = ffta.gkpfm.gkpixel.GKPixel(ds, params)
     cpd, _, _ = gk.analyze(fft=True)
 

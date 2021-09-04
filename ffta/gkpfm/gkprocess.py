@@ -57,38 +57,50 @@ class GKPFM(FFtrEFM):
                  tip_response='', tip_excitation='', exc_wfm_file='',
                  override=False, exc_floor=10, noise_tolerance=1e-4, **kwargs):
         """
-        Parameters
-        ----------
-        h5_main : h5py.Dataset object
-            Dataset to process
-        parm_dict : dict, optional
-            Additional updates to the parameters dictionary. e.g. changing the trigger.
+        
+        :param h5_main: Dataset to process
+        :type h5_main: h5py.Dataset object
+        
+        :param parm_dict: Additional updates to the parameters dictionary. e.g. changing the trigger.
             You can also explicitly update self.parm_dict.update({'key': value})
             The default is {}.
-        can_params : dict, optional
-            Cantilever parameters describing the behavior
+        :type parm_dict: dict, optional
+        
+        :param can_params: Cantilever parameters describing the behavior
             Can be loaded from ffta.pixel_utils.load.cantilever_params
             The default is {}.
-        pixel_params : dict, optional
-            Currently unimplemented. The default is {}.
-        TF_norm : numpy array, optional
-            Transfer function (normalized). Can use GKPixel to generate, or supply explicitly
-        exc_wfm : numpy array, optional
-            The excitation used to generated Transfer Function. Unneeded if supplying a TF explicitly
-        periods : int, optional
-            Num of cantilever cycles to process in CPD calc. The default is 2.
-        tip_response : string, optional
-            File path to tip_response .ibw. Only needed if calculating TF_norm here
-        tip_excitation : string, optional
-            File path to tip excitation .ibw. Only needed if calculating TF_norm here
-        exc_wfm_file : string, optional
-            File path to .ibw for excitation during actual measurement (not TF).
-        override : bool, optional
-            If True, forces creation of new results group. Use in _get_existing_datasets
-        exc_floor : float, optional
-            The noise floor for calculating Transfer Function. The default is 10.
-        noise_tolerance : float, optional
-            Use to determine noise_floor in reconstructing force. The default is 1e-4.
+        :type can_params: dict, optional
+        
+        :param pixel_params: Currently unimplemented. The default is {}.
+        :type pixel_params: dict, optional
+        
+        :param TF_norm: Transfer function (normalized). Can use GKPixel to generate, or supply explicitly
+        :type TF_norm: numpy array, optional
+            
+        :param exc_wfm: The excitation used to generated Transfer Function. Unneeded if supplying a TF explicitly
+        :type exc_wfm: numpy array, optional
+            
+        :param periods: Num of cantilever cycles to process in CPD calc. The default is 2.
+        :type periods: int, optional
+        
+        :param tip_response: File path to tip_response .ibw. Only needed if calculating TF_norm here
+        :type tip_response: string, optional
+            
+        :param tip_excitation: File path to tip excitation .ibw. Only needed if calculating TF_norm here
+        :type tip_excitation: string, optional
+            
+        :param exc_wfm_file: File path to .ibw for excitation during actual measurement (not TF).
+        :type exc_wfm_file: string, optional
+            
+        :param override: If True, forces creation of new results group. Use in _get_existing_datasets
+        :type override: bool, optional
+            
+        :param exc_floor: The noise floor for calculating Transfer Function. The default is 10.
+        :type exc_floor: float, optional
+            
+        :param noise_tolerance: Use to determine noise_floor in reconstructing force. The default is 1e-4.
+        :type noise_tolerance: float, optional
+            
         """
 
         self.parm_dict = parm_dict
@@ -139,7 +151,10 @@ class GKPFM(FFtrEFM):
         """
         Update the parameters, see ffta.pixel.Pixel for details on what to update
         e.g. to switch from default Hilbert to Wavelets, for example
-        """
+        
+        :param **kwargs:
+        :type **kwargs:
+		"""
         self.parm_dict.update(kwargs)
 
         return
@@ -148,10 +163,9 @@ class GKPFM(FFtrEFM):
         """
         Generates a Transfer Function using GKPixel function
         
-        Parameters
-        ----------
-        exc_floor : float
-            DESCRIPTION.
+        :param exc_floor:
+        :type exc_floor: float
+
         """
 
         defl = get_utils.get_pixel(self.h5_main, [0, 0], array_form=True).flatten()
@@ -171,24 +185,24 @@ class GKPFM(FFtrEFM):
         """
         Test the Pixel analysis of a single pixel
 
-        Parameters
-        ----------
-        pixel_ind : uint or list
-            Index of the pixel in the dataset that the process needs to be tested on.
+        :param pixel_ind: Index of the pixel in the dataset that the process needs to be tested on.
             If a list it is read as [row, column]
-        phases_to_test : list, optional
-            Which phases to shift the signal with. The default is [2.0708, 2.1208, 2.1708],
+        :type pixel_ind: uint or list
+        
+        :param phases_to_test: Which phases to shift the signal with. The default is [2.0708, 2.1208, 2.1708],
             which is 0.5, 0.55, 0.5 + pi/2
+        :type phases_to_test: list, optional
+        
+        :param smooth:
+        :type smooth:
             
-        Returns
-        -------
-        [inst_freq, tfp, shift] : List
-            inst_freq : array
-                the instantaneous frequency array for that pixel
-            tfp : float
-                the time to first peak
-            shift : float
-                the frequency shift at time t=tfp (i.e. maximum frequency shift)
+            
+        :returns: List [inst_freq, tfp, shift]
+            WHERE
+            array inst_freq is the instantaneous frequency array for that pixel
+            float tfp is the time to first peak
+            float shift     
+            shift is the frequency shift at time t=tfp (i.e. maximum frequency shift)
 
         """
         # First read the HDF5 dataset to get the deflection for this pixel
@@ -242,16 +256,6 @@ class GKPFM(FFtrEFM):
         '''
         Creates the datasets an Groups necessary to store the results.
 
-        Parameters
-        ----------
-        h5_if : 'Inst_Freq' h5 Dataset
-            Contains the Instantaneous Frequencies
-            
-        tfp : 'tfp' h5 Dataset
-            Contains the time-to-first-peak data as a 1D matrix
-            
-        shift : 'shift' h5 Dataset
-            Contains the frequency shift data as a 1D matrix
         '''
 
         print('Creating CPD results datasets')
@@ -352,7 +356,8 @@ class GKPFM(FFtrEFM):
         """
         Extracts references to the existing datasets that hold the results
         
-        index = which existing dataset to get
+        :param index: which existing dataset to get
+        :type index:
         
         """
 
@@ -369,6 +374,12 @@ class GKPFM(FFtrEFM):
         """
         The unit computation that is performed per data chunk. This allows room for any data pre / post-processing
         as well as multiple calls to parallel_compute if necessary
+        
+        :param *args:
+        :type *args:
+        
+        :param **kwargs:
+        :type **kwargs:
         """
 
         args = [self.parm_dict, self.TF_norm, self.exc_wfm]
@@ -383,6 +394,17 @@ class GKPFM(FFtrEFM):
 
     @staticmethod
     def _map_function(defl, *args, **kwargs):
+    """
+    
+    :param *args:
+    :type *args:
+    
+    :returns: List [force, cpd, capacitance]
+        WHERE
+        [type] force is...
+        [type] cpd is...
+        [type capacitance is...
+    """
 
         parm_dict = args[0]
         TF_norm = args[1]
@@ -410,16 +432,18 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False):
     """
     Saves the tfp, shift, and fixed_tfp as CSV files
     
-    Parameters
-    ----------
-    h5_file : H5Py file of FFtrEFM class
-        Reminder you can always type: h5_svd.file or h5_avg.file for this
+    :param h5_file: Reminder you can always type: h5_svd.file or h5_avg.file for this
+    :type h5_file: H5Py file of FFtrEFM class
+        
+    :param h5_path: specific folder path to search for the tfp data. Usually not needed.
+    :type h5_path: str, optional
+        
+    :param append: text to append to file name
+    :type append: str, optional
     
-    h5_path : str, optional
-        specific folder path to search for the tfp data. Usually not needed.
-    
-    append : str, optional
-        text to append to file name
+    :param mirror:
+    :type mirror: bool
+        
     """
 
     h5_ff = h5_file
@@ -458,13 +482,26 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
     Quickly plots the tfp and shift data. If there's a height image in the h5_file associated
      with ffprocess, will plot that as well
     
-    Parameters
-    ----------
-    ffprocess : FFtrEFM class object (inherits Process)
+    :param ffprocess:
+    :type ffprocess: FFtrEFM class object (inherits Process)
     
-    Returns
-    -------
-    fig, a : figure and axes objects
+    :param scale_tfp:
+    :type scale_tfp:
+    
+    :param scale_shift:
+    :type scale_shift:
+    
+    :param threshold:
+    :type threshold:
+    
+    :param **kwargs:
+    :type **kwargs:
+    
+    :returns: tuple (fig, a)
+        WHERE
+        figure object fig is...
+        axes object a is...
+    
     '''
     fig, a = plt.subplots(nrows=2, ncols=2, figsize=(13, 6))
 

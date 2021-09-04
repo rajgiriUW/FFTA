@@ -16,17 +16,15 @@ def analyze_pixel(ibw_file, param_file):
     '''
     Analyzes a single pixel
     
-    Parameters
-    ----------
-    ibw_file : str
-        path to \*.ibw file
-    param_file : str
-        path to parameters.cfg file
+    :param path to \*.ibw file
+    :type ibw_file: str
         
-    Returns
-    -------
-    pixel : Pixel
-        The pixel object read and analyzed
+    :param param_file: path to parameters.cfg file
+    :type param_file: str
+        
+    :returns: The pixel object read and analyzed
+    :rtype: Pixel
+        
     '''
     signal_array = signal(ibw_file)
     n_pixels, params = configuration(param_file)
@@ -40,4 +38,3 @@ def analyze_pixel(ibw_file, param_file):
     print('tFP is', pixel.tfp, 's')
     
     return pixel.tfp
-

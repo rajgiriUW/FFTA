@@ -30,32 +30,35 @@ class GLIBWTranslator(Translator):
         Translates the provided file to .h5
         Adapted heavily from pycroscopy IBW file, modified to work with Ginger format
 
-        Parameters
-        ----------
-        file_path : String / unicode
-            Absolute path of the .ibw file
-        verbose : Boolean (Optional)
-            Whether or not to show  print statements for debugging
-        parm_encoding : str, optional
-            Codec to be used to decode the bytestrings into Python strings if needed.
+        :param file_path: Absolute path of the .ibw file
+        :type file_path: String / unicode
+        
+        :param verbose: Whether or not to show  print statements for debugging
+        :type verbose: boolean, optional
+        
+        :param parm_encoding: Codec to be used to decode the bytestrings into Python strings if needed.
             Default 'utf-8'
-        ftype : str, optional
-            Delineates Ginger Lab imaging file type to be imported (not case-sensitive)
+        :type parm_encoding: str, optional
+            
+        :param ftype: Delineates Ginger Lab imaging file type to be imported (not case-sensitive)
             'FF' : FF-trEFM
             'SKPM' : FM-SKPM
             'ringdown' : Ringdown
             'trEFM' : normal trEFM
-        subfolder : str, optional
-            Specifies folder under root (/) to save data in. Default is standard pycroscopy format
-        h5_path : str, optional
-            Existing H5 file to append to
-        channel_label_name : bool, optional
-            If True, uses the Channel as the subfolder name (e.g. Height, Phase, Amplitude, Charging)
-
-        Returns
-        -------
-        h5_path : String / unicode
-            Absolute path of the .h5 file
+        :type ftype: str, optional
+        
+        :param subfolder: Specifies folder under root (/) to save data in. Default is standard pycroscopy format
+        :type subfolder: str, optional
+        
+        :param h5_path: Existing H5 file to append to
+        :type h5_path: str, optional
+        
+        :param channel_label_name: If True, uses the Channel as the subfolder name (e.g. Height, Phase, Amplitude, Charging)
+        :type channel_label_name: bool, optional
+        
+        :returns: Absolute path of the .h5 file
+        :rtype: String / unicode
+            
         """
 
         # Prepare the .h5 file:
@@ -138,18 +141,17 @@ class GLIBWTranslator(Translator):
         """
         Parses the parameters in the provided dictionary
 
-        Parameters
-        ----------
-        ibw_wave : dictionary
-            Wave entry in the dictionary obtained from loading the ibw file
-        codec : str, optional
-            Codec to be used to decode the bytestrings into Python strings if needed.
+        :param ibw_wave: Wave entry in the dictionary obtained from loading the ibw file
+        :type ibw_wave: dict
+        
+        :param codec: Codec to be used to decode the bytestrings into Python strings if needed.
             Default 'utf-8'
+        :type codec: str, optional
+            
 
-        Returns
-        -------
-        parm_dict : dictionary
-            Dictionary containing parameters
+        :returns: dictionary containing parameters
+        :rtype: dict
+
         """
         parm_string = ibw_wave.get('note')
         if type(parm_string) == bytes:
@@ -189,20 +191,17 @@ class GLIBWTranslator(Translator):
         """
         Retrieves the names of the data channels and default units
 
-        Parameters
-        ----------
-        ibw_wave : dictionary
-            Wave entry in the dictionary obtained from loading the ibw file
-        codec : str, optional
-            Codec to be used to decode the bytestrings into Python strings if needed.
+        :param ibw_wave: Wave entry in the dictionary obtained from loading the ibw file
+        :type ibw_wave: dict
+        
+        :param codec: Codec to be used to decode the bytestrings into Python strings if needed.
             Default 'utf-8'
-
-        Returns
-        -------
-        labels : list of strings
-            List of the names of the data channels
-        default_units : list of strings
-            List of units for the measurement in each channel
+        :type codec: str, optional
+        
+        :returns: tuple (labels, default_units)
+            WHERE
+            str List labels is List of the names of the data channels
+            str List default_units is List of units for the measurement in each channel
         """
         temp = ibw_wave.get('labels')
         labels = []
@@ -231,6 +230,11 @@ class GLIBWTranslator(Translator):
         return labels, default_units
 
     def _parse_file_path(self, input_path):
+        """
+        
+        :param input_path:
+        :type input_path: str
+        """
         pass
 
     def _read_data(self):
@@ -239,6 +243,15 @@ class GLIBWTranslator(Translator):
     def _get_image_type(self, ibw_wave, ftype):
         """
         Generates correct channel labels based on the passed filetype
+        
+        :param ibw_wave:
+        :type ibw_wave:
+        
+        :param ftype:
+        :type ftype:
+        
+        :returns:
+        :rtype:
         """
 
         if ftype.lower() == 'ff':
@@ -274,7 +287,12 @@ class GLIBWTranslator(Translator):
     def _get_unit_factor(self, unit):
         """
         Returns numerical conversion of unit label
-        Unit : str
+        
+        :param unit:
+        :type unit:
+        
+        :returns:
+        :rtype:
         """
 
         fc = {'um': 1e-6,

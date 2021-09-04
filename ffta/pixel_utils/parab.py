@@ -8,12 +8,6 @@ def fit_peak(f, x):
 	Uses solution to parabola to fit peak and two surrounding points
 	This assumes there is a peak (i.e. parabola second deriv is negative)
 	
-	Parameters
-	----------
-	f : array f(x)
-	x : array x with the indices corresponding to f
-	
-	
 	If interested, this is educational to see with sympy
 	 import sympy
 	 y1, y2, y3 = sympy.symbols('y1 y2 y3')
@@ -22,6 +16,18 @@ def fit_peak(f, x):
 	 D = A.inv().multiply(C)
 	 D contains the values of a, b, c in ax**2 + bx + c
 	 Peak position is at x = -D[1]/(2D[0])   
+	
+	:param f: array of f(x)
+	:type f: array 
+	
+	:param x: array of indices corresponding to f
+	:type x: array 
+	
+	:returns: tuple (findex, yindex, xindex)
+		WHERE
+		[type] findex is...
+		[type] yindex is...
+		[type] xindex is...
 	'''
 
 	pk = np.argmax(f)
@@ -46,21 +52,17 @@ def ridge_finder(spectrogram, freq_bin):
 	Uses parabolda to fit peak and two surrounding points
 	This takes a spectrogram and the frequency bin spacing and wraps parab.fit_2d
 	
-	Parameters
-	----------
-	spectrogram : ndarray 
-		Returned by scipy.signal.spectrogram or stft or cwt
+	:param spectrogram: Returned by scipy.signal.spectrogram or stft or cwt
 		Arranged in (frequencies, times) shape
+	:type spectrogram: ndarray 
 		
-	freq_bin : ndarray
-		arrays corresponding the frequencies in the spectrogram
+	:param freq_bin: arrays corresponding the frequencies in the spectrogram
+	:type freq_bin: ndarray
 		
-	Returns
-	-------
-	xindex : ndarray
-		1D array of the frequency bins returned by parabolic approximation
-	yindex : ndarray
-		1D array of the peak values at the xindices supplied
+	:returns: tuple (xindex, yindex)
+		WHERE
+		ndarray xindex is 1D array of the frequency bins returned by parabolic approximation
+		ndarray yindex is 1D array of the peak values at the xindices supplied
 	'''
 	_argmax = np.argmax(np.abs(spectrogram), axis=0)
 	cols = spectrogram.shape[1]
@@ -80,13 +82,20 @@ def fit_2d(f, p, dx):
 	
 	This is a broadcast version for speed purposes
 	
-	Parameters
-	----------
-	f : 2-d array f(x) of size (3 , samples)
+	:param f: 2D array f(x) of size (3 , samples)
+	:type f: 2D array
 	
-	p : 1-d array with the peak positions for f
+	:param p: peak positions for f
+	:type p: 1D array
 
-	dx : 1-d array with the frequency (x values) of f
+	:param dx: frequency (x values) of f
+	:type dx: 1D array 
+
+	:returns: tuple (findex, yindex, xindex)
+		WHERE
+		[type] findex is...
+		[type] yindex is...
+		[type] xindex is...	
 	'''
 
 	if f.shape[0] != 3:
@@ -105,10 +114,18 @@ def fit_2d(f, p, dx):
 
 def fit_peak_old(f, x):
 	"""
-	f = array
-	x = index of peak, typically just argmax
-
 	Uses parabola equation to fit to the peak and two surrounding points
+	
+	:param f:
+	:type f: array
+	
+	:param x: index of peak, typically just argmax
+	:type x:
+
+	:returns: tuple (xindex, yindex)
+		WHERE
+		[type] xindex is...
+		[type] yindex is...
 	"""
 
 	x1 = x - 1

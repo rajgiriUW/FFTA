@@ -21,19 +21,23 @@ def load_exc(ibw_folder='', pixels=64, scale=1, offset=1, verbose=False):
 	"""
 	Loads excitation files into a single .h5 file
 	
-	Parameters
-	----------
-	ibw_folder : string, optional
-		The folder containing the excitation files to load
-	
-	pixels : int, optional
-		How many pixels per line to divide the excitation ibw
-	
-	scale : float, optional
-		The AC signal scaling, assuming the input excitation is wrong
+	:param ibw_folder: The folder containing the excitation files to load
+	:type ibw_folder: string, optional
 		
-	offset : float, optional
-		The DC offset for the excitation
+	:param pixels: How many pixels per line to divide the excitation ibw
+	:type pixels: int, optional
+		
+	:param scale: The AC signal scaling, assuming the input excitation is wrong
+	:type scale: float, optional
+		
+	:param offset: The DC offset for the excitation
+	:type offset: float, optional
+	
+	:param verbose:
+	:type verbose: bool, optional
+	
+	:returns:
+	:rtype: str
 	"""
 	if not any(ibw_folder):
 		exc_file_path = usid.io_utils.file_dialog(caption='Select any file in destination folder',

@@ -4,23 +4,26 @@ from .NFMD import NFMD
 
 
 class NFMDMode:
-    '''
-    Initialize an NFMDMode object containing the data relevant to
-    a Fourier mode in the data. This is a data storage object.
-    Parameters
-    ----------
-    IF: float
-        frequency vector of instantaneous frequencies, one for each time in t
-    IA: numpy.ndarray
-        vector of instantaneous amplitudes
-    A: numpy.ndarray
-        vector of fourier mode coefficients
-        (note: different from amplitude, but related)
-    t: numpy.ndarray
-        time vector, same length as the IF and IA vectors.
-    '''
 
     def __init__(self, IF, IA, A, t):
+        '''
+        Initialize an NFMDMode object containing the data relevant to
+        a Fourier mode in the data. This is a data storage object.
+        
+        :param IF: frequency vector of instantaneous frequencies, one for each time in t
+        :type IF: float
+        
+        :param IA: vector of instantaneous amplitudes
+        :type IA: numpy.ndarray
+        
+        :param A: vector of fourier mode coefficients
+            (note: different from amplitude, but related)
+        :type A: numpy.ndarray
+            
+        :param t: time vector, same length as the IF and IA vectors.
+        :type t: numpy.ndarray
+            
+        '''
         self.IF = IF
         self.IA = IA
         self.A = A
@@ -28,19 +31,21 @@ class NFMDMode:
 
 
 class NFMDPixel:
-    '''
-    Initialize an NFMDPixel object for decomposing a signal into Fourier modes.
-    Parameters
-    ----------
-    signal: numpy.ndarray
-        Temporal signal to be analyzed.
-    nfmd_options: dict
-        options passed to the NFMD analysis class
-    '''
 
     def __init__(self, signal,
                  nfmd_options={'num_freqs': 3,
                                'window_size': 320}):
+                               
+        '''
+        Initialize an NFMDPixel object for decomposing a signal into Fourier modes.
+    
+        :param signal: Temporal signal to be analyzed.
+        :type signal: numpy.ndarray
+    
+        :param nmfd_options: options passed to the NFMD analysis class
+        :type nfmd_options: dict
+        
+        '''
         # Signal
         self.signal = signal
 
@@ -54,10 +59,12 @@ class NFMDPixel:
         '''
         Initialize an NFMDMode object containing the data relevant to
         a Fourier mode in the data. This is a data storage object.
-        Parameters
-        ----------
-        dt: float, optional
-            timestep between datapoints in the signal array
+        
+        :param dt: timestep between datapoints in the signal array
+        :type dt: float, optional
+        
+        :param update_freq:
+        :type update_freq:
         '''
         # Initialize the NFMD object
         nfmd = NFMD(self.signal, **self.nfmd_options)

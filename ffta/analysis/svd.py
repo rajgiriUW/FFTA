@@ -30,28 +30,24 @@ Typical usage:
 def test_svd(h5_main, num_components=128, show_plots=True, override=True, verbose=True):
     """
 
-    Parameters
-    ----------
-    h5_main : h5Py Dataset
-        Main dataset to filter
+    :param h5_main: Main dataset to filter
+    :type h5_main: h5Py Dataset
         
-    num_components : int, optional
-        Number of SVD components. Increasing this lenghtens computation
+    :param num_components: Number of SVD components. Increasing this lenghtens computation
+    :type num_components: int, optional
         
-    show_plots : bool, optional
-        If True displays skree, abundance_maps, and data loops
+    :param show_plots: If True displays skree, abundance_maps, and data loops
+    :type show_plots: bool, optional
         
-    override : bool, optional
-        Force SVD.Compute to reprocess data no matter what
-        
-    verbose : bool, optional
-        Print out component ratio values
-        
-    Returns
-    -------
-    h5_svd_group : h5Py Group
-        Group containing the h5_svd data
+    :param override: Force SVD.Compute to reprocess data no matter what   
+    :type override: bool, optional
     
+    :param verbose: Print out component ratio values
+    :type verbose: bool, optional
+        
+    :returns: Group containing the h5_svd data
+    :rtype: h5Py Group
+        
     """
 
     if not (isinstance(h5_main, usid.USIDataset)):
@@ -86,14 +82,17 @@ def svd_filter(h5_main, clean_components=None):
     """
     Filters data given the array clean_components
     
-    Clean_components has 2 components will filter from start to finish
-    Clean_components has 3+ components will use those individual components
-    
-    Parameters
-    ----------
-    h5_main : h5Py
-        Dataset to be filtered and reconstructed.
+    :param h5_main: Dataset to be filtered and reconstructed.
         This must be the same as where SVD was performed
+    :type h5_main: h5py
+    
+    :param clean_components:
+        Clean_components has 2 components will filter from start to finish
+        Clean_components has 3+ components will use those individual components
+    :type clean_components:
+    
+    :returns:
+    :rtype:
     
     """
     if not (isinstance(h5_main, usid.USIDataset)):
@@ -116,22 +115,18 @@ def plot_svd(h5_main, savefig=False, num_plots=16, **kwargs):
     If h5_main is the results group, then it will plot the values for that group.
     If h5_main is a Dataset, it will default to the most recent SVD group.
     
-    Parameters
-    ----------   
-    h5_main : USIDataset or h5py Dataset or h5py Group
+    :param h5_main:
+    :type h5_main: USIDataset or h5py Dataset or h5py Group
     
-    savefig : bool, optional
-        Saves the figures to disk
-    
-    num_plots : int
-        Default number of eigenvectors and abundance plots to show
-    
-    kwargs : dict, optional
-        keyword arguments for svd filtering
+    :param savefig: Saves the figures to disk
+    :type savefig: bool, optional
         
-    Returns
-    -------
-    None
+    :param num_plots: Default number of eigenvectors and abundance plots to show
+    :type num_plots: int
+        
+    :param kwargs: keyword arguments for svd filtering
+    :type kwargs: dict, optional
+        
     '''
 
     if isinstance(h5_main, h5py.Group):
