@@ -154,7 +154,7 @@ class GKPFM(FFtrEFM):
         
         :param **kwargs:
         :type **kwargs:
-		"""
+        """
         self.parm_dict.update(kwargs)
 
         return
@@ -394,17 +394,17 @@ class GKPFM(FFtrEFM):
 
     @staticmethod
     def _map_function(defl, *args, **kwargs):
-    """
-    
-    :param *args:
-    :type *args:
-    
-    :returns: List [force, cpd, capacitance]
-        WHERE
-        [type] force is...
-        [type] cpd is...
-        [type capacitance is...
-    """
+        """
+        
+        :param *args:
+        :type *args:
+        
+        :returns: List [force, cpd, capacitance]
+            WHERE
+            [type] force is...
+            [type] cpd is...
+            [type capacitance is...
+        """
 
         parm_dict = args[0]
         TF_norm = args[1]
