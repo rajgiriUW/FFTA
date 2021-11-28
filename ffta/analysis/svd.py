@@ -15,6 +15,7 @@ from matplotlib import pyplot as plt
 from ffta.hdf_utils import hdf_utils
 from ffta.load import get_utils
 import h5py
+from sidpy.viz import plot_utils
 
 """
 Wrapper to SVD functions, specific to ffta Class.
@@ -166,20 +167,20 @@ def plot_svd(h5_main, savefig=False, num_plots=16, **kwargs):
     if savefig:
         plt.savefig('Cumulative_variance_plot.png')
 
-    fig_skree, axes = usid.viz.plot_utils.plot_scree(h5_S, title='Scree plot')
+    fig_skree, axes = plot_utils.plot_scree(h5_S, title='Scree plot')
     fig_skree.tight_layout()
 
     if savefig:
         plt.savefig('Scree_plot.png')
 
-    fig_abun, axes = usid.viz.plot_utils.plot_map_stack(abun_maps, num_comps=num_plots, title='SVD Abundance Maps',
+    fig_abun, axes = plot_utils.plot_map_stack(abun_maps, num_comps=num_plots, title='SVD Abundance Maps',
                                                         color_bar_mode='single', cmap='inferno', reverse_dims=True,
                                                         fig_mult=(3.5, 3.5), facecolor='white', **kwargs)
     fig_abun.tight_layout()
     if savefig:
         plt.savefig('Abundance_maps.png')
 
-    fig_eigvec, axes = usid.viz.plot_utils.plot_curves(h5_spec_vals * 1e3, eigen_vecs, use_rainbow_plots=False,
+    fig_eigvec, axes = plot_utils.plot_curves(h5_spec_vals * 1e3, eigen_vecs, use_rainbow_plots=False,
                                                        x_label='Time (ms)', y_label=units,
                                                        num_plots=num_plots, subtitle_prefix='Component',
                                                        title='SVD Eigenvectors', evenly_spaced=False,

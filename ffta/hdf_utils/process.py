@@ -221,59 +221,59 @@ class FFtrEFM(Process):
 
         # Writes main dataset
         self.h5_if = write_main_dataset(self.h5_results_grp,
-                                                       ds_shape,
-                                                       'Inst_Freq',  # Name of main dataset
-                                                       'Frequency',  # Physical quantity contained in Main dataset
-                                                       'Hz',  # Units for the physical quantity
-                                                       pos_desc,  # Position dimensions
-                                                       spec_desc,  # Spectroscopic dimensions
-                                                       dtype=np.float32,  # data type / precision
-                                                       main_dset_attrs=self.parm_dict)
+                                        ds_shape,
+                                        'Inst_Freq',  # Name of main dataset
+                                        'Frequency',  # Physical quantity contained in Main dataset
+                                        'Hz',  # Units for the physical quantity
+                                        pos_desc,  # Position dimensions
+                                        spec_desc,  # Spectroscopic dimensions
+                                        dtype=np.float32,  # data type / precision
+                                        main_dset_attrs=self.parm_dict)
 
         self.h5_amp = write_main_dataset(self.h5_results_grp,
-                                                        ds_shape,
-                                                        'Amplitude',  # Name of main dataset
-                                                        'Amplitude',  # Physical quantity contained in Main dataset
-                                                        'nm',  # Units for the physical quantity
-                                                        None,  # Position dimensions
-                                                        None,  # Spectroscopic dimensions
-                                                        h5_pos_inds=self.h5_main.h5_pos_inds,  # Copy Pos Dimensions
-                                                        h5_pos_vals=self.h5_main.h5_pos_vals,
-                                                        h5_spec_inds=self.h5_main.h5_spec_inds,
-                                                        # Copy Spectroscopy Dimensions
-                                                        h5_spec_vals=self.h5_main.h5_spec_vals,
-                                                        dtype=np.float32,  # data type / precision
-                                                        main_dset_attrs=self.parm_dict)
+                                         ds_shape,
+                                         'Amplitude',  # Name of main dataset
+                                         'Amplitude',  # Physical quantity contained in Main dataset
+                                         'nm',  # Units for the physical quantity
+                                         None,  # Position dimensions
+                                         None,  # Spectroscopic dimensions
+                                         h5_pos_inds=self.h5_main.h5_pos_inds,  # Copy Pos Dimensions
+                                         h5_pos_vals=self.h5_main.h5_pos_vals,
+                                         h5_spec_inds=self.h5_main.h5_spec_inds,
+                                         # Copy Spectroscopy Dimensions
+                                         h5_spec_vals=self.h5_main.h5_spec_vals,
+                                         dtype=np.float32,  # data type / precision
+                                         main_dset_attrs=self.parm_dict)
 
         self.h5_phase = write_main_dataset(self.h5_results_grp,
-                                                          ds_shape,
-                                                          'Phase',  # Name of main dataset
-                                                          'Phase',  # Physical quantity contained in Main dataset
-                                                          'degrees',  # Units for the physical quantity
-                                                          None,  # Position dimensions
-                                                          None,  # Spectroscopic dimensions
-                                                          h5_pos_inds=self.h5_main.h5_pos_inds,  # Copy Pos Dimensions
-                                                          h5_pos_vals=self.h5_main.h5_pos_vals,
-                                                          h5_spec_inds=self.h5_main.h5_spec_inds,
-                                                          # Copy Spectroscopy Dimensions
-                                                          h5_spec_vals=self.h5_main.h5_spec_vals,
-                                                          dtype=np.float32,  # data type / precision
-                                                          main_dset_attrs=self.parm_dict)
+                                           ds_shape,
+                                           'Phase',  # Name of main dataset
+                                           'Phase',  # Physical quantity contained in Main dataset
+                                           'degrees',  # Units for the physical quantity
+                                           None,  # Position dimensions
+                                           None,  # Spectroscopic dimensions
+                                           h5_pos_inds=self.h5_main.h5_pos_inds,  # Copy Pos Dimensions
+                                           h5_pos_vals=self.h5_main.h5_pos_vals,
+                                           h5_spec_inds=self.h5_main.h5_spec_inds,
+                                           # Copy Spectroscopy Dimensions
+                                           h5_spec_vals=self.h5_main.h5_spec_vals,
+                                           dtype=np.float32,  # data type / precision
+                                           main_dset_attrs=self.parm_dict)
 
         self.h5_pwrdis = write_main_dataset(self.h5_results_grp,
-                                                           ds_shape,
-                                                           'PowerDissipation',  # Name of main dataset
-                                                           'Power',  # Physical quantity contained in Main dataset
-                                                           'W',  # Units for the physical quantity
-                                                           None,  # Position dimensions
-                                                           None,  # Spectroscopic dimensions
-                                                           h5_pos_inds=self.h5_main.h5_pos_inds,  # Copy Pos Dimensions
-                                                           h5_pos_vals=self.h5_main.h5_pos_vals,
-                                                           h5_spec_inds=self.h5_main.h5_spec_inds,
-                                                           # Copy Spectroscopy Dimensions
-                                                           h5_spec_vals=self.h5_main.h5_spec_vals,
-                                                           dtype=np.float32,  # data type / precision
-                                                           main_dset_attrs=self.parm_dict)
+                                            ds_shape,
+                                            'PowerDissipation',  # Name of main dataset
+                                            'Power',  # Physical quantity contained in Main dataset
+                                            'W',  # Units for the physical quantity
+                                            None,  # Position dimensions
+                                            None,  # Spectroscopic dimensions
+                                            h5_pos_inds=self.h5_main.h5_pos_inds,  # Copy Pos Dimensions
+                                            h5_pos_vals=self.h5_main.h5_pos_vals,
+                                            h5_spec_inds=self.h5_main.h5_spec_inds,
+                                            # Copy Spectroscopy Dimensions
+                                            h5_spec_vals=self.h5_main.h5_spec_vals,
+                                            dtype=np.float32,  # data type / precision
+                                            main_dset_attrs=self.parm_dict)
 
         _arr = np.zeros([num_rows * num_cols, 1])
         self.h5_tfp = self.h5_results_grp.create_dataset('tfp', data=_arr, dtype=np.float32)
