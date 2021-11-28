@@ -8,6 +8,7 @@ before_install:
 - pip install coveralls
 - pip install decorator>=5.0.7
 - pip uninstall numpy -y
+- pip uninstall importlib-metadata -y
 - pip install numpy>=1.18.1
 - pip install importlib-metadata>=0.23
 - export PYTHONPATH=$PYTHONPATH:$(pwd)
