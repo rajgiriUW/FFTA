@@ -392,10 +392,15 @@ def rebuild_svd(h5_main, components=None, cores=None, max_RAM_mb=1024):
         free_mem = max_memory * 2 - fixed_mem
 
     batch_size = int(round(float(free_mem) / mem_per_pix))
+    
+    if batch_size < 0:
+        print('Batches listed were negative', batch_size)
+        batch_size = 100
+        
     batch_slices = gen_batches(h5_U.shape[0], batch_size)
 
     print('Reconstructing in batches of {} positions.'.format(batch_size))
-    print('Batchs should be {} Mb each.'.format(mem_per_pix * batch_size / 1024.0 ** 2))
+    print('Batches should be {} Mb each.'.format(mem_per_pix * batch_size / 1024.0 ** 2))
 
     '''
     Loop over all batches.
