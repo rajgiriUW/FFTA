@@ -167,8 +167,11 @@ def plot_svd(h5_main, savefig=False, num_plots=16, **kwargs):
     if savefig:
         plt.savefig('Cumulative_variance_plot.png')
 
-    fig_skree, axes = plot_utils.plot_scree(h5_S, title='Scree plot')
-    fig_skree.tight_layout()
+    try:
+        fig_skree, axes = usid.viz.plot_utils.plot_scree(h5_S, title='Scree plot')
+        fig_skree.tight_layout()
+    except:
+        pass
 
     if savefig:
         plt.savefig('Scree_plot.png')
@@ -183,8 +186,7 @@ def plot_svd(h5_main, savefig=False, num_plots=16, **kwargs):
     fig_eigvec, axes = plot_utils.plot_curves(h5_spec_vals * 1e3, eigen_vecs, use_rainbow_plots=False,
                                                        x_label='Time (ms)', y_label=units,
                                                        num_plots=num_plots, subtitle_prefix='Component',
-                                                       title='SVD Eigenvectors', evenly_spaced=False,
-                                                       **kwargs)
+                                                       title='SVD Eigenvectors', evenly_spaced=False, **kwargs)
     fig_eigvec.tight_layout()
     if savefig:
         plt.savefig('Eigenvectors.png')
