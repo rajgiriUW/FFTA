@@ -5,8 +5,8 @@ Created on Mon Feb 26 17:15:36 2018
 @author: Raj
 """
 
-import pycroscopy as px
 from pycroscopy.processing.fft import FrequencyFilter
+from pycroscopy.processing.gmode_utils import test_filter as gtest_filter
 import pyUSID as usid
 import numpy as np
 from scipy import signal as sps
@@ -84,10 +84,10 @@ def test_filter(hdf_file, freq_filts, parameters={}, pixelnum=[0, 0], noise_tole
 	sh = hdf_file.shape
 
 	# Test filter on a single line:
-	filt_line, fig_filt, axes_filt = px.processing.gmode_utils.test_filter(hdf_file,
-																		   frequency_filters=freq_filts,
-																		   noise_threshold=noise_tolerance,
-																		   show_plots=show_plots)
+	filt_line, fig_filt, axes_filt = gtest_filter(hdf_file,
+                                                  frequency_filters=freq_filts,
+												 noise_threshold=noise_tolerance,
+												 show_plots=show_plots)
 
 	# If need to reshape
 	if reshape:
