@@ -35,3 +35,11 @@ This includes a few types of frequency analysis:
 
 ### Getting started
 To get started and to see some examples, check out the (very much in progress) [documention](https://ffta.readthedocs.io/en/latest/).
+
+### Installation
+
+```
+pip install ffta
+```
+
+
