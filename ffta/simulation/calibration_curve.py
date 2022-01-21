@@ -18,7 +18,7 @@ from matplotlib import pyplot as plt
 import pandas as pd
 
 
-def cal_curve(can_path, param_cfg, taus_range=[], plot=True, **kwargs):
+def cal_curve(can_path, param_cfg, taus_range=[-7, -3], plot=True, **kwargs):
     '''
     Generates a calibration curve for a given cantilever given some particular
     parameters.
@@ -36,7 +36,7 @@ def cal_curve(can_path, param_cfg, taus_range=[], plot=True, **kwargs):
     If you want to change the fit parameters per tau
     taus, tfp, spl = cal_curve(param_cfg, can_params, roi=0.001, n_taps=199)
 
-    :param can_path:
+    :param can_path: Path to cantilever parameters.txt file 
     :type can_path: str
 
     :param params_cfg: Path to parameters.cfg file (from FFtrEFM experiment, in the data folder)
@@ -69,17 +69,18 @@ def cal_curve(can_path, param_cfg, taus_range=[], plot=True, **kwargs):
         sim_params['total_time'] = parms['total_time']
         sim_params['sampling_rate'] = parms['sampling_rate']
 
-    _rlo = -7
-    _rhi = -3
-
     if len(taus_range) != 2 or (taus_range[1] <= taus_range[0]):
         raise ValueError('Range must be ascending and 2-items')
+    
+    # Check if given as log or actual values
+    if taus_range[0] < 0 or taus_range[1] < 0:
+        _rlo = taus_range[0]
+        _rhi = taus_range[1]
+    
     else:
         _rlo = np.log10(taus_range[0])
         _rhi = np.log10(taus_range[1])
-    #    _rlo = np.floor(np.log10(taus_range[0]))
-    #    _rhi = np.ceil(np.log10(taus_range[1]))
-
+        
     taus = np.logspace(_rlo, _rhi, 50)
     tfps = []
 
@@ -87,8 +88,11 @@ def cal_curve(can_path, param_cfg, taus_range=[], plot=True, **kwargs):
         force_params['tau'] = t
         cant = MechanicalDrive(can_params, force_params, sim_params)
         Z, _ = cant.simulate()
-        pix = cant.analyze(plot=False, **kwargs)
-        tfps.append(pix.tfp)
+        try:
+            pix = cant.analyze(plot=False, **kwargs)
+            tfps.append(pix.tfp)
+        except:
+            print('Error', t)
 
     # sort the arrays
     taus = taus[np.argsort(tfps)]
