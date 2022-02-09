@@ -269,7 +269,7 @@ class Pixel:
         if self.trigger == None:  # trigger can be 0
             raise KeyError('Trigger must be supplied')
 
-        if not self.total_time:
+        if self.total_time == None:
             if not self.sampling_rate:
                 raise KeyError('total_time or sampling_rate must be supplied')
             else:
@@ -885,7 +885,7 @@ class Pixel:
     
         '''
         if not self.signal.any():
-            self.signal = self.signal_array
+            self.signal = np.copy(self.signal_array)
             self.average()
 
         z = self.signal
@@ -1097,6 +1097,8 @@ class Pixel:
         # Remove DC component, first.
         if self.method != 'nfmd':
             self.remove_dc()
+        else:
+            self.signal = np.copy(self.signal_array)
 
         # Phase-lock signals.
         # self.phase_lock()
