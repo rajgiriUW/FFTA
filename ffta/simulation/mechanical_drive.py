@@ -30,8 +30,6 @@ class MechanicalDrive(Cantilever):
             decay.
             For this approach to work, you must supply or set self.func_args = []
 
-
-
     Attributes
     ----------
     Z : ndarray
