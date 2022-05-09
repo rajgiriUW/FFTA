@@ -5,8 +5,8 @@ Created on Mon Feb 26 17:15:36 2018
 @author: Raj
 """
 
-from pycroscopy.processing.fft import FrequencyFilter
-from pycroscopy.processing.gmode_utils import test_filter as gtest_filter
+from .fft import FrequencyFilter
+from .gmode_utils import test_filter as gtest_filter
 import pyUSID as usid
 import numpy as np
 from scipy import signal as sps

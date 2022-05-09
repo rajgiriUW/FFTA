@@ -7,7 +7,6 @@ Created on Tue Feb 11 18:07:06 2020
 
 import pyUSID as usid
 import ffta
-from ffta.pixel import Pixel
 from ffta.gkpfm.gkpixel import GKPixel
 from ffta.pixel_utils import badpixels
 import os

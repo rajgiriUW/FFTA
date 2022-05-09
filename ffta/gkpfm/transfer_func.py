@@ -18,7 +18,7 @@ from math import pi
 import ffta
 import time
 
-from pycroscopy.processing.fft import get_noise_floor
+from ..analysis.fft import get_noise_floor
 
 
 def transfer_function(h5_file, tf_file='', params_file='',

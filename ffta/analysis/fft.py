@@ -168,15 +168,17 @@ def down_sample(fft_vec, freq_ratio):
 ###############################################################################
 
 
-class FrequencyFilter(object):
+class FrequencyFilter:
     def __init__(self, signal_length, samp_rate, *args, **kwargs):
-    """
-    :param signal_length:
-    :type signal_length: int
+        """
+        :param signal_length:
+        :type signal_length: int
+        
+        :param samp_rate: 
+        :type samp_rate: float
+            
     
-    :param samp_rate
-    :type samp_rate:
-    """
+        """
         for val, name in zip([signal_length, samp_rate], ['Signal length', 'Sampling rate']):
             if val % 1 != 0 or val < 0:
                 raise ValueError(name + ' must be an unsigned integer')
@@ -185,21 +187,21 @@ class FrequencyFilter(object):
         self.value = None
 
     def get_parms(self):
-    """
-    
-    :returns:
-    :rtype: dict
-    """
+        """
+        
+        :returns:
+        :rtype: dict
+        """
         return {'samp_rate': self.samp_rate, 'signal_length': self.signal_length}
 
     def is_compatible(self, other):
-    """
-    :param other:
-    :type other:
-    
-    :returns:
-    :rtype: bool
-    """
+        """
+        :param other:
+        :type other:
+        
+        :returns:
+        :rtype: bool
+        """
         assert isinstance(other, FrequencyFilter), "Other object must be a FrequencyFilter object"
         return self.signal_length == other.signal_length and self.samp_rate == other.samp_rate
 

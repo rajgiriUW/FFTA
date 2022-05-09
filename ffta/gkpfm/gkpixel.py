@@ -17,8 +17,8 @@ from ffta.pixel_utils.load import cantilever_params
 from ffta.pixel import Pixel
 import warnings
 
-import pycroscopy as px
-from pycroscopy.processing.fft import get_noise_floor
+from ..analysis.fft import get_noise_floor, NoiseBandFilter
+from ..analysis.gmode_utils import test_filter
 from BGlib.be.analysis.utils.be_sho import SHOfunc, SHOfit
 from igor.binarywave import load as loadibw
 import pyUSID as usid
@@ -557,14 +557,14 @@ class GKPixel(Pixel):
         :type noise_tolerance: float, optional
         
         """
-        nbf = px.processing.fft.NoiseBandFilter(len(self.force), self.sampling_rate,
+        nbf = NoiseBandFilter(len(self.force), self.sampling_rate,
                                                 [2E3, 50E3, 100E3, 150E3, 200E3],
                                                 [4E3, bw, bw, bw, bw])
 
-        filt_line, _, _ = px.processing.gmode_utils.test_filter(self.force,
-                                                                frequency_filters=nbf,
-                                                                noise_threshold=noise_tolerance,
-                                                                show_plots=plot)
+        filt_line, _, _ = test_filter(self.force,
+                                      frequency_filters=nbf,
+                                       noise_threshold=noise_tolerance,
+                                       show_plots=plot)
         self.force = np.real(filt_line)
         self.FORCE = np.fft.fftshift(np.fft.fft(self.force))
 
