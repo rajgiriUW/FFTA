@@ -46,8 +46,8 @@ def impulse(can_path, param_cfg, voltage = None, **kwargs):
     if voltage:
         k = can_params['k'] # N/m 
         resf = can_params['res_freq']
-        dFdz = force_params['dFdz']
-        dFdz = dFdz * 4 *k / resf
+        dFdz = force_params['dFdz'] # I think these values are off by 1000 somewhere
+        #dFdz = dFdz * 4 *k / resf , note dFdz is already saved scaled!!!
         
         delta_f =  resf / (4*k) * dFdz * voltage**2  # Marohn and others
         force_params['delta_freq'] = delta_f
