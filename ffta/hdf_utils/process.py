@@ -10,6 +10,9 @@ from pyUSID import Process
 import ffta
 from ffta.pixel import Pixel
 from ffta.pixel_utils import badpixels
+from ffta.simluation.utils.load import simulation_configuration as load_sim_config
+from ffta.simulation import impulse
+from skimage import restoration
 import os
 import numpy as np
 from ffta.load import get_utils
@@ -24,8 +27,11 @@ from matplotlib import pyplot as plt
 
 class FFtrEFM(Process):
     """
+    This class processes the deflection data into instantaneous frequency and tFP
     Implements the pixel-by-pixel processing using ffta.pixel routines
-    Abstracted using the Process class for parallel processing
+    Abstracted using the Process class for parallel processing on image dataset
+    
+    
 
     Example usage:
 
@@ -93,7 +99,7 @@ class FFtrEFM(Process):
         """
 
         self.parm_dict = parm_dict
-
+        self.parm_dict['deconvolve'] = False 
         if not any(parm_dict):
             self.parm_dict = get_attributes(h5_main)
             self.parm_dict.update({'if_only': if_only})
@@ -111,6 +117,8 @@ class FFtrEFM(Process):
 
         self.pixel_params = pixel_params
         self.override = override
+
+        self.impulse = None
 
         super(FFtrEFM, self).__init__(h5_main, process_name, parms_dict=self.parm_dict, **kwargs)
 
@@ -148,6 +156,117 @@ class FFtrEFM(Process):
         self.parm_dict.update(kwargs)
 
         return
+
+    def impulse(self, can_path, voltage = None, plot=True):
+        """
+        Generates impulse response using simulation with given cantilever parameters file        
+
+        :param can_path: Path to cantilever parameters.txt file 
+        :type can_path: str
+
+        :param voltage: Voltage to simulate the impulse response at
+        :type param: float
+    
+        :param plot: Whether the plot the processed instantaneous frequency/Pixel response
+        :type param: bool
+        """
+        
+        can_params, force_params, sim_params = load_sim_config(can_path)
+        
+        pix, cant = impulse((can_params, force_params, sim_params), voltage = None,
+                            plot=plot, **self.parm_dict)
+        
+        self.impulse = pix.inst_freq
+        self.parm_dict['impulse_window'] = [0, len(self.h5_main)-1]
+        self.parm_dict['deconvolve'] = True
+        
+        print("Set self.parm_dict['deconvolve']=False if deconvolution is undesirable")
+        
+        return
+    
+    def test_deconv(self, window, pixel_ind=[0, 0], iterations=10):
+        """
+        Tests the deconvolution by bracketing the impulse around window
+        A reasonable window size might be 100 us pre-trigger to 500 us post-trigger
+        
+        :param window: List of format [left_index, right_index] for impulse
+        :type window: list
+        
+        :param pixel_ind: Index of the pixel in the dataset that the process needs to be tested on.
+            If a list it is read as [row, column]
+        :type pixel_ind: uint or list
+            
+        
+        :param iterations: Number of Richardson-Lucy deconvolution iterations
+        :type iterations: int
+
+        """
+        if len(window) != 2 or not isinstance(window, list):
+            raise ValueError('window must be specified[left, right]')
+        
+        if isinstance(window[0], float): # passed a time index
+            window = np.array(window)/self.parm_dict['sampling_rate']
+            window = int(window)
+        
+        if type(pixel_ind) is not list:
+            col = int(pixel_ind % self.parm_dict['num_rows'])
+            row = int(np.floor(pixel_ind % self.parm_dict['num_rows']))
+            pixel_ind = [row, col]
+
+        # as an array, not an ffta.Pixel
+        defl = get_utils.get_pixel(self.h5_main, pixel_ind, array_form=True)
+
+        pixraw = Pixel(defl, self.parm_dict, **self.pixel_params)
+        tfp, shift, inst_freq = pixraw.analyze()
+        
+        impulse = self.impulse[window[0]:window[1]]
+        self.parm_dict['impulse_window'] = window
+        self.parm_dict['conv_iterations'] = iterations
+        
+        pixconv = restoration.richardson_lucy(pixraw, impulse, clip=False, iterations=iterations)
+        
+        pixrl = pixraw
+        tfp_raw = pixraw.tfp
+        fit_raw = pixraw.best_fit
+        if_raw = pixraw.inst_freq
+        
+        pixrl.inst_freq = pixconv
+        pixrl.find_tfp()
+        tfp_conv = pixrl.tfp
+        fit_conv = pixrl.best_fit
+        if_conv = pixrl.inst_freq
+    
+        print(tfp_raw, tfp_conv)
+    
+        # Plot the results of the original+fit compared to deconvolution+fit
+        ridx = int(self.parm_dict['roi'] * self.parm_dict['sampling_rate'])
+        fidx = int(pixraw.tidx)    
+        yl0 = [pixraw[fidx:(fidx + ridx)].min(), if_raw[fidx:(fidx + ridx)].max()]
+    
+        fig, ax = plt.subplots(nrows=2, facecolor='white', figsize=(5, 8))
+        tx = np.arange(0, pixraw.total_time, 1/pixraw.sampling_rate) * 1e3
+        
+        ax[0].plot(tx, if_raw, 'k', label='Pre-Conv')
+        ax[0].plot(tx[fidx:(fidx + ridx)], fit_raw, 'r--', label='Pre-Conv, fit')
+        ax[0].set_title('Raw')
+        
+        ax[1].plot(tx, if_conv, 'b', label='Conv')
+        ax[1].plot(tx[fidx:(fidx + ridx)], fit_conv, 'r--', label='Conv, fit')
+        ax[1].set_title('Deconvolved')
+        
+        ax[0].set_xlim(window / self.parm_dict['sampling_rate'])
+        ax[0].set_ylim(yl0)
+        ax[1].set_xlim(window / self.parm_dict['sampling_rate'])
+        ax[1].set_ylim(yl0)
+        ax[1].set_xlabel('Time (ms)')
+        ax[0].set_ylabel('Frequency Shift (Hz)')
+        ax[1].set_ylabel('Frequency Shift (Hz)')
+        
+        plt.tight_layout()
+
+
+        return 
+    
 
     def test(self, pixel_ind=[0, 0]):
         """
@@ -390,10 +509,8 @@ class FFtrEFM(Process):
         :param kwargs:
         :type kwargs:
         """
-        # TODO: Try to use the functools.partials to preconfigure the map function
-        # cores = number of processes / rank here
 
-        args = [self.parm_dict, self.pixel_params]
+        args = [self.parm_dict, self.pixel_params, self.impulse]
 
         if self.verbose and self.mpi_rank == 0:
             print("Rank {} at Process class' default _unit_computation() that "
@@ -427,7 +544,8 @@ class FFtrEFM(Process):
         """
         parm_dict = args[0]
         pixel_params = args[1]
-
+        impulse = args[2]
+        
         pix = Pixel(defl, parm_dict, **pixel_params)
 
         if parm_dict['if_only']:
@@ -437,6 +555,18 @@ class FFtrEFM(Process):
             amplitude = 0
             phase = 0
             pwr_diss = 0
+        elif parm_dict['deconvolve']:
+            iterations = parm_dict['conv_iterations']
+            impulse = impulse[parm_dict['impulse_window']]
+            inst_freq, amplitude, phase = pix.generate_inst_freq()
+            conv = restoration.richardson_lucy(inst_freq, impulse, 
+                                               clip=False, iterations=iterations)
+            pix.inst_freq = conv
+            pix.find_tfp()
+            pix.calculate_power_dissipation()
+            amplitude = pix.amplitude
+            phase = pix.phase
+            pwr_diss = pix.power_dissipated
         else:
             tfp, shift, inst_freq = pix.analyze()
             pix.calculate_power_dissipation()

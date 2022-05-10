@@ -13,7 +13,7 @@ from .utils.load import simulation_configuration as load_sim_config
 from ffta.pixel_utils.load import configuration
 
 
-def impulse(can_path, param_cfg, voltage = None, **kwargs):
+def impulse(can_path, param_cfg=None, voltage = None, plot=False, **kwargs):
     '''
     Generates the impulse force response for a given cantilever given some particular
     parameters.
@@ -27,11 +27,14 @@ def impulse(can_path, param_cfg, voltage = None, **kwargs):
     :param voltage: Voltage to simulate the impulse response at
     :type param: float
     
+    :param plot: Whether the plot the processed instantaneous frequency/Pixel response
+    :type param: bool
+    
     :param kwargs: Passed to pixel.analyze (n_taps, method, etc)
     :type kwargs:
     
     '''
-    if isinstance(can_path, str):
+    if isinstance(can_path, str) and isinstance(param_cfg, str):
         can_params, force_params, sim_params, _, parms = load_parm(can_path, param_cfg)
     elif isinstance(can_path, tuple):
         can_params, force_params, sim_params = load_sim_config(can_path)
@@ -41,7 +44,8 @@ def impulse(can_path, param_cfg, voltage = None, **kwargs):
         sim_params['trigger'] = parms['trigger']
         sim_params['total_time'] = parms['total_time']
         sim_params['sampling_rate'] = parms['sampling_rate']
-
+    else:
+        raise ValueError('Missing correct parameters path')
     # Use input voltage to calculate expected frequency shift with which to simulate
     if voltage:
         k = can_params['k'] # N/m 
@@ -57,6 +61,6 @@ def impulse(can_path, param_cfg, voltage = None, **kwargs):
     force_params['tau'] = 1e-8 #"impulse"
     cant = MechanicalDrive(can_params, force_params, sim_params)
     Z, _ = cant.simulate()
-    pix = cant.analyze(plot=False, **kwargs)
+    pix = cant.analyze(plot=plot, **kwargs)
     
     return pix, cant
