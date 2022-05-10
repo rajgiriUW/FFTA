@@ -10,7 +10,7 @@ from pyUSID import Process
 import ffta
 from ffta.pixel import Pixel
 from ffta.pixel_utils import badpixels
-from ffta.simluation.utils.load import simulation_configuration as load_sim_config
+from ffta.simulation.utils.load import simulation_configuration as load_sim_config
 from ffta.simulation import impulse
 from skimage import restoration
 import os
