@@ -13,7 +13,7 @@ from .utils.load import simulation_configuration as load_sim_config
 from ffta.pixel_utils.load import configuration
 
 
-def impulse(can_path, param_cfg, voltage = 5, **kwargs):
+def impulse(can_path, param_cfg, voltage = None, **kwargs):
     '''
     Generates the impulse force response for a given cantilever given some particular
     parameters.
@@ -43,15 +43,16 @@ def impulse(can_path, param_cfg, voltage = 5, **kwargs):
         sim_params['sampling_rate'] = parms['sampling_rate']
 
     # Use input voltage to calculate expected frequency shift with which to simulate
-    # k = can_params['k'] # N/m 
-    # resf = can_params['res_freq']
-    # dFdz = force_params['dFdz']
-    # dFdz = dFdz * 4 *k / resf
-    
-    # #delta_f = 0.25 * resf / (4*k) * d2cdz2 * voltage**2  # Marohn and others
-    # delta_f =  resf / (4*k) * dFdz * voltage**2  # Marohn and others
-    # force_params['delta_freq'] = delta_f
-    # #omega0 = resf * np.ones(len(voltage)) - delta_f
+    if voltage:
+        k = can_params['k'] # N/m 
+        resf = can_params['res_freq']
+        dFdz = force_params['dFdz']
+        dFdz = dFdz * 4 *k / resf
+        
+        delta_f =  resf / (4*k) * dFdz * voltage**2  # Marohn and others
+        force_params['delta_freq'] = delta_f
+        force_params['es_force'] = (voltage / (force_params['lift_height']*1e-9))*1.6e-19
+        # #omega0 = resf * np.ones(len(voltage)) - delta_f
     
     force_params['tau'] = 1e-8 #"impulse"
     cant = MechanicalDrive(can_params, force_params, sim_params)

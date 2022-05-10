@@ -96,7 +96,7 @@ def configuration(path):
                   'sampling_rate', 'Q']
     parai_keys = ['n_pixels', 'pts_per_pixel', 'lines_per_image']
     procs_keys = ['window', 'fit_form', 'method']
-    procf_keys = ['roi', 'FastScanSize', 'SlowScanSize', 'liftheight', 'fft_time_res']
+    procf_keys = ['roi', 'FastScanSize', 'SlowScanSize', 'lift_height', 'fft_time_res']
     proci_keys = ['n_taps', 'filter_bandwidth', 'bandpass_filter',
                   'wavelet_analysis', 'wavelet_parameter', 'recombination',
                   'phase_fitting']

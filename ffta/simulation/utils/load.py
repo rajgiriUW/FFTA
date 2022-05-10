@@ -125,6 +125,7 @@ def params_from_experiment(can_params_file, params_cfg):
     force_params['delta_freq'] = can['Differential']['ResFrequency']
     force_params['tau'] = 1e-5
     force_params['dFdz'] = can['Differential']['dFdZ']
+    force_params['lift_height'] = par['lift_height']
 
     sim_params = {}
     sim_params['trigger'] = par['trigger']
