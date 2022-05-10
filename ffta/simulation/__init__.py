@@ -9,4 +9,5 @@ __all__ = ['utils',
            'mechanical_drive',
            'electric_drive',
            'calibration_curve',
+           'impulse'
            ]

@@ -58,4 +58,4 @@ def impulse(can_path, param_cfg, voltage = 5, **kwargs):
     Z, _ = cant.simulate()
     pix = cant.analyze(plot=False, **kwargs)
     
-    return
+    return pix, cant
