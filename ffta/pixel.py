@@ -269,8 +269,8 @@ class Pixel:
         if self.trigger == None:  # trigger can be 0
             raise KeyError('Trigger must be supplied')
 
-        if self.total_time == None:
-            if not self.sampling_rate:
+        if not hasattr(self, 'total_time') or self.total_time == None:
+            if not hasattr(self, 'sampling_rate') or self.sampling_rate == None:
                 raise KeyError('total_time or sampling_rate must be supplied')
             else:
                 self.total_time = self.sampling_rate * self.n_points

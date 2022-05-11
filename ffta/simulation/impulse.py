@@ -36,9 +36,9 @@ def impulse(can_path, param_cfg=None, voltage = None, plot=False, **kwargs):
     '''
     if isinstance(can_path, str) and isinstance(param_cfg, str):
         can_params, force_params, sim_params, _, parms = load_parm(can_path, param_cfg)
-    elif isinstance(can_path, tuple):
-        can_params, force_params, sim_params = load_sim_config(can_path)
-        _, parms = configuration(param_cfg)
+    elif isinstance(can_path, list) and isinstance(param_cfg, dict): #passing dictionaries directly
+        can_params, force_params, sim_params = can_path
+        parms = param_cfg
         can_params['drive_freq'] = parms['drive_freq']
         can_params['res_freq'] = parms['drive_freq']
         sim_params['trigger'] = parms['trigger']

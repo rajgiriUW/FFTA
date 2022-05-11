@@ -108,6 +108,9 @@ def params_from_experiment(can_params_file, params_cfg):
 
     can = cantilever_params(can_params_file)
     _, par = configuration(params_cfg)
+    
+    if isinstance(params_cfg, dict):
+        par = params_cfg
 
     can_params = {}
     can_params['amp_invols'] = can['Initial']['AMPINVOLS']
@@ -125,7 +128,7 @@ def params_from_experiment(can_params_file, params_cfg):
     force_params['delta_freq'] = can['Differential']['ResFrequency']
     force_params['tau'] = 1e-5
     force_params['dFdz'] = can['Differential']['dFdZ']
-    force_params['lift_height'] = par['lift_height']
+    force_params['lift_height'] = can['Initial']['LiftHeight']
 
     sim_params = {}
     sim_params['trigger'] = par['trigger']

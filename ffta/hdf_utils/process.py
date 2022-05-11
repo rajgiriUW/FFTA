@@ -11,7 +11,8 @@ import ffta
 from ffta.pixel import Pixel
 from ffta.pixel_utils import badpixels
 from ffta.simulation.utils.load import simulation_configuration as load_sim_config
-from ffta.simulation import impulse
+from ffta.simulation.utils.load import params_from_experiment as load_parm
+from ffta.simulation.impulse import impulse
 from skimage import restoration
 import os
 import numpy as np
@@ -99,10 +100,11 @@ class FFtrEFM(Process):
         """
 
         self.parm_dict = parm_dict
-        self.parm_dict['deconvolve'] = False 
         if not any(parm_dict):
             self.parm_dict = get_attributes(h5_main)
             self.parm_dict.update({'if_only': if_only})
+
+        self.parm_dict['deconvolve'] = False 
 
         for key, val in parm_dict.items():
             self.parm_dict.update({key: val})
@@ -157,7 +159,7 @@ class FFtrEFM(Process):
 
         return
 
-    def impulse(self, can_path, voltage = None, plot=True):
+    def impulse_response(self, can_path, voltage = None, plot=True):
         """
         Generates impulse response using simulation with given cantilever parameters file        
 
@@ -171,10 +173,9 @@ class FFtrEFM(Process):
         :type param: bool
         """
         
-        can_params, force_params, sim_params = load_sim_config(can_path)
-        
-        pix, cant = impulse((can_params, force_params, sim_params), voltage = None,
-                            plot=plot, **self.parm_dict)
+        can_params, force_params, sim_params, _, _ = load_parm(can_path, self.parm_dict)
+        pix, cant = impulse([can_params, force_params, sim_params], voltage = voltage,
+                            plot=plot, param_cfg=self.parm_dict, **self.parm_dict)
         
         self.impulse = pix.inst_freq
         self.parm_dict['impulse_window'] = [0, len(self.h5_main)-1]
@@ -223,7 +224,7 @@ class FFtrEFM(Process):
         self.parm_dict['impulse_window'] = window
         self.parm_dict['conv_iterations'] = iterations
         
-        pixconv = restoration.richardson_lucy(pixraw, impulse, clip=False, iterations=iterations)
+        pixconv = restoration.richardson_lucy(inst_freq, impulse, clip=False, iterations=iterations)
         
         pixrl = pixraw
         tfp_raw = pixraw.tfp
@@ -241,31 +242,45 @@ class FFtrEFM(Process):
         # Plot the results of the original+fit compared to deconvolution+fit
         ridx = int(self.parm_dict['roi'] * self.parm_dict['sampling_rate'])
         fidx = int(pixraw.tidx)    
-        yl0 = [pixraw[fidx:(fidx + ridx)].min(), if_raw[fidx:(fidx + ridx)].max()]
+        ifx = np.array([fidx-1100, fidx+ridx])*1e3 / self.parm_dict['sampling_rate']
+        windx = np.array(window)*1e3 / self.parm_dict['sampling_rate']
+        yl0 = [if_raw[fidx:(fidx + ridx)].min(), if_raw[fidx:(fidx + ridx)].max()]
+        yl1 = [if_conv[fidx:(fidx + ridx)].min(), if_conv[fidx:(fidx + ridx)].max()]
+        yl2 = [self.impulse[fidx:(fidx + ridx)].min(), self.impulse[fidx:(fidx + ridx)].max()]
     
-        fig, ax = plt.subplots(nrows=2, facecolor='white', figsize=(5, 8))
+        fig, ax = plt.subplots(nrows=2, ncols=2, facecolor='white', figsize=(12, 8))
         tx = np.arange(0, pixraw.total_time, 1/pixraw.sampling_rate) * 1e3
         
-        ax[0].plot(tx, if_raw, 'k', label='Pre-Conv')
-        ax[0].plot(tx[fidx:(fidx + ridx)], fit_raw, 'r--', label='Pre-Conv, fit')
-        ax[0].set_title('Raw')
+        ax[0][0].plot(tx, if_raw, 'b', label='Pre-Conv')
+        ax[0][0].plot(tx[fidx:(fidx + ridx)], fit_raw, 'r--', label='Pre-Conv, fit')
+        ax[0][0].set_title('Raw')
         
-        ax[1].plot(tx, if_conv, 'b', label='Conv')
-        ax[1].plot(tx[fidx:(fidx + ridx)], fit_conv, 'r--', label='Conv, fit')
-        ax[1].set_title('Deconvolved')
+        ax[1][0].plot(tx, if_conv, 'b', label='Conv')
+        ax[1][0].plot(tx[fidx:(fidx + ridx)], fit_conv, 'r--', label='Conv, fit')
+        ax[1][0].set_title('Deconvolved')
         
-        ax[0].set_xlim(window / self.parm_dict['sampling_rate'])
-        ax[0].set_ylim(yl0)
-        ax[1].set_xlim(window / self.parm_dict['sampling_rate'])
-        ax[1].set_ylim(yl0)
-        ax[1].set_xlabel('Time (ms)')
-        ax[0].set_ylabel('Frequency Shift (Hz)')
-        ax[1].set_ylabel('Frequency Shift (Hz)')
+        ax[0][1].plot(tx, self.impulse, 'k')
+        ax[0][1].axvspan(windx[0], windx[1], alpha=0.5, color='red')
+        ax[0][1].set_title('Impulse response')
+        
+        ax[1][1].plot(tx[fidx:(fidx + ridx)], fit_raw, 'r--', label='Pre-Conv, fit')
+        ax[1][1].plot(tx[fidx:(fidx + ridx)], fit_conv, 'k--', label='Conv, fit')
+        ax[1][1].set_title('Comparing fits')
+        ax[1][1].legend()
+        
+        ax[0][0].set_xlim(ifx)
+        ax[0][0].set_ylim(yl0)
+        ax[1][0].set_xlim(ifx)
+        ax[1][0].set_ylim(yl1)
+        ax[0][1].set_xlim(ifx)
+        ax[0][1].set_ylim(yl2)
+        ax[1][1].set_xlim(ifx)
+        ax[1][0].set_xlabel('Time (ms)')
+        ax[1][1].set_xlabel('Time (ms)')
         
         plt.tight_layout()
 
-
-        return 
+        return pixrl
     
 
     def test(self, pixel_ind=[0, 0]):
@@ -299,7 +314,7 @@ class FFtrEFM(Process):
         tfp, shift, inst_freq = pix.analyze()
         pix.plot()
 
-        return self._map_function(defl, self.parm_dict, self.pixel_params)
+        return self._map_function(defl, self.parm_dict, self.pixel_params, self.impulse)
 
     def _create_results_datasets(self):
         '''
@@ -563,9 +578,9 @@ class FFtrEFM(Process):
                                                clip=False, iterations=iterations)
             pix.inst_freq = conv
             pix.find_tfp()
+            tfp = pix.tfp
+            shift = pix.shift
             pix.calculate_power_dissipation()
-            amplitude = pix.amplitude
-            phase = pix.phase
             pwr_diss = pix.power_dissipated
         else:
             tfp, shift, inst_freq = pix.analyze()
