@@ -572,7 +572,7 @@ class FFtrEFM(Process):
             pwr_diss = 0
         elif parm_dict['deconvolve']:
             iterations = parm_dict['conv_iterations']
-            impulse = impulse[parm_dict['impulse_window']]
+            impulse = impulse[parm_dict['impulse_window'][0]:parm_dict['impulse_window'][1]]
             inst_freq, amplitude, phase = pix.generate_inst_freq()
             conv = restoration.richardson_lucy(inst_freq, impulse, 
                                                clip=False, iterations=iterations)
