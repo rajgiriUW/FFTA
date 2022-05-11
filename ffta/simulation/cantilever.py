@@ -9,7 +9,7 @@ import numpy as np
 from math import pi
 from scipy.integrate import odeint
 
-import ffta
+from ..pixel import Pixel
 
 # Set constant 2 * pi.
 PI2 = 2 * pi
@@ -417,7 +417,7 @@ class Cantilever:
 
         self.create_parameters(params, can_params, fit_params)
 
-        pix = ffta.pixel.Pixel(self.Z, self.parameters, self.can_params, **self.fit_params)
+        pix = Pixel(self.Z, self.parameters, self.can_params, **self.fit_params)
 
         pix.analyze()
 

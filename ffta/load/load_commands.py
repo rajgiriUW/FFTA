@@ -31,13 +31,13 @@ def hdf_commands(h5_path, ds='FF_Raw'):
 
     """
 
+    if not isinstance(h5_path, str):
+        raise TypeError('Pass a file path (string), not an H5 file')
+
     commands = ['***Copy-paste all commands below this line, then hit ENTER***',
                 'import h5py']
     commands.append('import pyUSID as usid')
     commands.append("h5_path = '" + h5_path + "'")
-    
-    if not isinstance(h5_path, str):
-        raise TypeError('Pass a file path (string), not an H5 file')
 
     try:
         hdf = h5py.File(h5_path, 'r+')
