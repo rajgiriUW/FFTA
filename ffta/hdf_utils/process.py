@@ -224,7 +224,7 @@ class FFtrEFM(Process):
         self.parm_dict['impulse_window'] = window
         self.parm_dict['conv_iterations'] = iterations
         
-        pixconv = restoration.richardson_lucy(inst_freq, impulse, clip=False, iterations=iterations)
+        pixconv = restoration.richardson_lucy(inst_freq, impulse, clip=False, num_iter=iterations)
         
         pixrl = pixraw
         tfp_raw = pixraw.tfp
@@ -575,7 +575,7 @@ class FFtrEFM(Process):
             impulse = impulse[parm_dict['impulse_window'][0]:parm_dict['impulse_window'][1]]
             inst_freq, amplitude, phase = pix.generate_inst_freq()
             conv = restoration.richardson_lucy(inst_freq, impulse, 
-                                               clip=False, iterations=iterations)
+                                               clip=False, num_iter=iterations)
             pix.inst_freq = conv
             pix.find_tfp()
             tfp = pix.tfp
