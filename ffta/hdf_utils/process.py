@@ -759,12 +759,17 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
                                               cmap='inferno', **kwargs)
     shift_image, cbar_sh = plot_utils.plot_map(shift_ax, shift * scale_shift,
                                                cmap='inferno', **kwargs)
-    tfp_cal_image, cbar_tfp_cal = plot_utils.plot_map(tfp_cal_ax, tfp_cal_fixed * scale_tfp,
-                                                  cmap='inferno', **kwargs)
+    try:
+        tfp_cal_image, cbar_tfp_cal = plot_utils.plot_map(tfp_cal_ax, tfp_cal_fixed * scale_tfp,
+                                                          cmap='inferno', **kwargs)
+        cbar_tfp_cal.set_label('Time Calib. (us)', rotation=90, labelpad=16)
+    except:
+        tfp_cal_image = tfp_cal_ax.imshow(tfp_cal_fixed * scale_tfp,
+                                                          cmap='inferno', origin='lower')
     
     cbar_tfp.set_label('Time (us)', rotation=270, labelpad=16)
     cbar_sh.set_label('Frequency Shift (Hz)', rotation=270, labelpad=16)
-    cbar_tfp_cal.set_label('Time Calib. (us)', rotation=90, labelpad=16)
+
     text = tfp_ax.text(num_cols / 2, num_rows + 3, '')
 
     return fig, a
