@@ -34,7 +34,7 @@ class TestFFTA:
         self.delete_old_h5()
         h5_path, data_files, parm_dict = ffta.load.load_hdf.load_folder(folder_path=self.ff_folder)
         assert (len(data_files) == 8)
-        assert (len(parm_dict.items()) == 22)
+        assert (len(parm_dict.items()) == 23)        
         assert (type(h5_path) == str)
 
     def test_load_FF(self):
@@ -95,6 +95,7 @@ class TestSignal:
         assert (pix.tfp > 1e-6 and pix.tfp < 500e-4)
 
     def test_pixel_stft(self):
+        # Checks if pixel with STFT runs
         self.load_deflection()
         pix = ffta.pixel.Pixel(self.Z, trigger=5e-4, total_time=5e-3, roi=1e-3, method='stft')
         pix.analyze()
@@ -102,6 +103,7 @@ class TestSignal:
         assert (pix.tfp > 1e-6 and pix.tfp < 500e-4)
 
     def test_pixel_wavelet(self):
+        # Checks if pixel with CWT runs
         self.load_deflection()
         pix = ffta.pixel.Pixel(self.Z, trigger=5e-4, total_time=5e-3, roi=1e-3, method='wavelet')
         pix.scales = np.arange(100, 10, -5)
