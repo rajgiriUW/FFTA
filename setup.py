@@ -33,7 +33,7 @@ setup(
                       'pandas>=1.1.0',
                       'BGlib>=0.0.3',
                       'torch>=1.6.0',
-                      'skimage>=0.19.2'
+                      'scikit-image>=0.19.2'
                       ],
     test_suite='pytest',
     # entry_points={
