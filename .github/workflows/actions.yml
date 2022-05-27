@@ -38,6 +38,12 @@ jobs:
         pip install pytest-cov
         pip install coveralls
         coverage run --source=ffta -m pytest tests/
+    
+    - name: Publish to coveralls.io
+      uses: coverallsapp/github-action@v1.1.2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+
 
     - name: Publish distribution
       if: startsWith(github.ref, 'refs/tags')
