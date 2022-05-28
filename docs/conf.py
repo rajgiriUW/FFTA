@@ -23,8 +23,8 @@ sys.path.insert(0, os.path.abspath('../ffta'))
 # -- Project information -----------------------------------------------------
 
 project = 'FFTA'
-copyright = '2020, Raj Giridharagopal'
-author = 'Raj Giridharagopal'
+copyright = '2022, Rajiv Giridharagopal'
+author = 'Rajiv Giridharagopal'
 
 
 # -- General configuration ---------------------------------------------------
