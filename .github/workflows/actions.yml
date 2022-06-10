@@ -50,5 +50,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install setuptools wheel twine
         python setup.py sdist bdist_wheel
-        pythong3 -m twine upload --username "__token__" --password $PYPI_TOKEN_PASSWORD dist/*
+<<<<<<< Updated upstream
+        twine upload --username "__token__" --password $PYPI_TOKEN_PASSWORD dist/*
+=======
+        python3 -m twine upload --username "__token__" --password $PYPI_TOKEN_PASSWORD dist/*
+>>>>>>> Stashed changes
 
