@@ -8,11 +8,12 @@ __status__ = "Development"
 
 import configparser
 import sys
-from igor.binarywave import load as loadibw
-from numpy.lib.npyio import loadtxt
 from os.path import splitext
+
 import numpy as np
 import pandas as pd
+from igor.binarywave import load as loadibw
+from numpy.lib.npyio import loadtxt
 
 
 def signal(path, skiprows=0):

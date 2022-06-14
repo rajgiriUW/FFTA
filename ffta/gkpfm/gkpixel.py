@@ -5,23 +5,23 @@ Created on Tue Sep  3 11:55:14 2019
 @author: Raj
 """
 
-import numpy as np
+import warnings
 from math import pi
+
+import numpy as np
 import numpy.polynomial.polynomial as npPoly
+import pyUSID as usid
+from BGlib.be.analysis.utils.be_sho import SHOfunc, SHOfit
+from igor.binarywave import load as loadibw
+from matplotlib import pyplot as plt
 from scipy.optimize import fmin_tnc
 from scipy.signal import fftconvolve, chirp
 
-from matplotlib import pyplot as plt
-from ffta.simulation.cantilever import Cantilever
-from ffta.pixel_utils.load import cantilever_params
 from ffta.pixel import Pixel
-import warnings
-
+from ffta.pixel_utils.load import cantilever_params
+from ffta.simulation.cantilever import Cantilever
 from ..analysis.fft import get_noise_floor, NoiseBandFilter
 from ..analysis.gmode_utils import test_filter
-from BGlib.be.analysis.utils.be_sho import SHOfunc, SHOfit
-from igor.binarywave import load as loadibw
-import pyUSID as usid
 
 
 class GKPixel(Pixel):
@@ -558,13 +558,13 @@ class GKPixel(Pixel):
         
         """
         nbf = NoiseBandFilter(len(self.force), self.sampling_rate,
-                                                [2E3, 50E3, 100E3, 150E3, 200E3],
-                                                [4E3, bw, bw, bw, bw])
+                              [2E3, 50E3, 100E3, 150E3, 200E3],
+                              [4E3, bw, bw, bw, bw])
 
         filt_line, _, _ = test_filter(self.force,
                                       frequency_filters=nbf,
-                                       noise_threshold=noise_tolerance,
-                                       show_plots=plot)
+                                      noise_threshold=noise_tolerance,
+                                      show_plots=plot)
         self.force = np.real(filt_line)
         self.FORCE = np.fft.fftshift(np.fft.fft(self.force))
 

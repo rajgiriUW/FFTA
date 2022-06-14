@@ -11,31 +11,32 @@ Created on Mon Mar 28 09:45:08 2016
 """
 
 from __future__ import division, print_function, absolute_import
+
 import time
 from multiprocessing import cpu_count
+
+import h5py
 import numpy as np
+from matplotlib import pyplot as plt
+from pyUSID import Dimension
+from pyUSID import USIDataset
+from pyUSID.io.anc_build_utils import calc_chunks
+from pyUSID.io.hdf_utils import find_results_groups, \
+    reshape_to_n_dims, write_main_dataset, create_results_group, \
+    create_indexed_group, find_dataset
+from pyUSID.processing.process import Process
+from sidpy.base.string_utils import format_time
+from sidpy.hdf.dtype_utils import check_dtype, stack_real_to_target_dtype
+from sidpy.hdf.hdf_utils import get_attr, write_simple_attrs, copy_attributes
+from sidpy.hdf.reg_ref import get_indices_for_region_ref, create_region_reference
+from sidpy.proc.comp_utils import get_available_memory
+# from pyUSID.viz import plot_utils
+from sidpy.viz import plot_utils
 from sklearn.utils import gen_batches
 from sklearn.utils.extmath import randomized_svd
 
-from sidpy.hdf.reg_ref import get_indices_for_region_ref, create_region_reference
-from sidpy.hdf.hdf_utils import get_attr, write_simple_attrs, copy_attributes
-from sidpy.proc.comp_utils import get_available_memory
-from sidpy.base.string_utils import format_time
-from sidpy.hdf.dtype_utils import check_dtype, stack_real_to_target_dtype
-
-from pyUSID.processing.process import Process
 from .proc_utils import get_component_slice
-from pyUSID.io.hdf_utils import find_results_groups,  \
-    reshape_to_n_dims, write_main_dataset, create_results_group, \
-    create_indexed_group, find_dataset
-from pyUSID import Dimension
-from pyUSID.io.anc_build_utils import calc_chunks
-from pyUSID import USIDataset
 
-import h5py
-from matplotlib import pyplot as plt
-#from pyUSID.viz import plot_utils
-from sidpy.viz import plot_utils
 
 class SVD(Process):
     """
@@ -200,7 +201,6 @@ class SVD(Process):
                                             h5_parent_group=self._h5_target_group)
         self.h5_results_grp = h5_svd_group
         self._write_source_dset_provenance()
-        
 
         write_simple_attrs(h5_svd_group, self.parms_dict)
         write_simple_attrs(h5_svd_group, {'svd_method': 'sklearn-randomized'})
@@ -281,6 +281,7 @@ class SVD(Process):
                             'Maximum possible parameters is {}.'.format(max_comps)
             raise MemoryError(error_message)
 
+
 ###############################################################################
 
 
@@ -345,10 +346,10 @@ def rebuild_svd(h5_main, components=None, cores=None, max_RAM_mb=1024):
     :rtype: HDF5 Dataset
 
     """
-    
+
     if not isinstance(h5_main, USIDataset):
         h5_main = USIDataset(h5_main)
-    
+
     comp_slice, num_comps = get_component_slice(components, total_components=h5_main.shape[1])
     if isinstance(comp_slice, np.ndarray):
         comp_slice = list(comp_slice)
@@ -396,11 +397,11 @@ def rebuild_svd(h5_main, components=None, cores=None, max_RAM_mb=1024):
         free_mem = max_memory * 2 - fixed_mem
 
     batch_size = int(round(float(free_mem) / mem_per_pix))
-    
+
     if batch_size < 0:
         print('Batches listed were negative', batch_size)
         batch_size = 100
-        
+
     batch_slices = gen_batches(h5_U.shape[0], batch_size)
 
     print('Reconstructing in batches of {} positions.'.format(batch_size))
@@ -441,7 +442,8 @@ def rebuild_svd(h5_main, components=None, cores=None, max_RAM_mb=1024):
 
     return h5_rebuilt
 
-def plot_svd(h5_main, savefig=False, num_plots = 16, **kwargs):
+
+def plot_svd(h5_main, savefig=False, num_plots=16, **kwargs):
     '''
     Replots the SVD showing the skree, abundance maps, and eigenvectors.
     If h5_main is a Dataset, it will default to the most recent SVD group from that
@@ -461,7 +463,7 @@ def plot_svd(h5_main, savefig=False, num_plots = 16, **kwargs):
     :type kwarrgs: dict, optional
         
     '''
-    
+
     if isinstance(h5_main, h5py.Group):
 
         _U = find_dataset(h5_main, 'U')[-1]
@@ -475,51 +477,50 @@ def plot_svd(h5_main, savefig=False, num_plots = 16, **kwargs):
         h5_svd_group = find_results_groups(h5_main, 'SVD')[-1]
         units = h5_main.attrs['quantity']
         h5_spec_vals = h5_main.get_spec_values('Time')
-    
+
     h5_U = h5_svd_group['U']
     h5_V = h5_svd_group['V']
     h5_S = h5_svd_group['S']
-    
+
     _U = USIDataset(h5_U)
     [num_rows, num_cols] = _U.pos_dim_sizes
-    
-    abun_maps = np.reshape(h5_U[:,:16], (num_rows, num_cols,-1))
+
+    abun_maps = np.reshape(h5_U[:, :16], (num_rows, num_cols, -1))
     eigen_vecs = h5_V[:16, :]
-    
+
     skree_sum = np.zeros(h5_S.shape)
     for i in range(h5_S.shape[0]):
-        skree_sum[i] = np.sum(h5_S[:i])/np.sum(h5_S)
+        skree_sum[i] = np.sum(h5_S[:i]) / np.sum(h5_S)
 
     plt.figure()
     plt.plot(skree_sum, 'bo')
     plt.title('Cumulative Variance')
     plt.xlabel('Total Components')
     plt.ylabel('Total variance ratio (a.u.)')
-    
+
     if savefig:
         plt.savefig('Cumulative_variance_plot.png')
-    
+
     fig_skree, axes = plot_utils.plot_scree(h5_S, title='Scree plot')
     fig_skree.tight_layout()
 
     if savefig:
         plt.savefig('Scree_plot.png')
-    
+
     fig_abun, axes = plot_utils.plot_map_stack(abun_maps, num_comps=num_plots, title='SVD Abundance Maps',
-                                                  color_bar_mode='single', cmap='inferno', reverse_dims=True, 
-                                                  fig_mult=(3.5,3.5), facecolor='white', **kwargs)
+                                               color_bar_mode='single', cmap='inferno', reverse_dims=True,
+                                               fig_mult=(3.5, 3.5), facecolor='white', **kwargs)
     fig_abun.tight_layout()
     if savefig:
         plt.savefig('Abundance_maps.png')
-    
 
-    fig_eigvec, axes = plot_utils.plot_curves(h5_spec_vals*1e3, eigen_vecs, use_rainbow_plots=False, 
-                                                 x_label='Time (ms)', y_label=units, 
-                                                 num_plots=num_plots, subtitle_prefix='Component', 
-                                                 title='SVD Eigenvectors', evenly_spaced=False, 
-                                                 **kwargs)
+    fig_eigvec, axes = plot_utils.plot_curves(h5_spec_vals * 1e3, eigen_vecs, use_rainbow_plots=False,
+                                              x_label='Time (ms)', y_label=units,
+                                              num_plots=num_plots, subtitle_prefix='Component',
+                                              title='SVD Eigenvectors', evenly_spaced=False,
+                                              **kwargs)
     fig_eigvec.tight_layout()
     if savefig:
         plt.savefig('Eigenvectors.png')
-    
-    return 
+
+    return

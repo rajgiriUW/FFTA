@@ -112,7 +112,6 @@ class NFMD:
             max_iters = self.max_iters
 
             if i == 0:
-                
                 max_iters = 10000
 
             # Fit data in window to model

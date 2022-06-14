@@ -250,7 +250,7 @@ def get_pixel(h5_path, rc, params={}, pixel_params={},
         pnts = parameters['pnts_per_pixel']
 
     if rc[1] > c or rc[0] > r:
-        err = 'row and columns must be less than ' + str(r) +  ' X ' + str(c)
+        err = 'row and columns must be less than ' + str(r) + ' X ' + str(c)
         raise ValueError(err)
 
     signal_pixel = d[rc[0] * c + rc[1]:rc[0] * c + rc[1] + pnts, :]

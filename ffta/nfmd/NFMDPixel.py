@@ -35,7 +35,7 @@ class NFMDPixel:
     def __init__(self, signal,
                  nfmd_options={'num_freqs': 3,
                                'window_size': 320}):
-                               
+
         '''
         Initialize an NFMDPixel object for decomposing a signal into Fourier modes.
     

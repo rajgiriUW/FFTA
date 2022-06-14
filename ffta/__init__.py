@@ -1,14 +1,12 @@
 from . import acquisition
-from . import hdf_utils
-from . import pixel_utils
 from . import analysis
-from . import simulation
 from . import gkpfm
-from . import load
-
-from . import pixel
+from . import hdf_utils
 from . import line
-
+from . import load
+from . import pixel
+from . import pixel_utils
+from . import simulation
 from .__version__ import version as __version__
 
 __all__ = ['line', 'pixel']

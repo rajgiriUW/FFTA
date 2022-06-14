@@ -2,10 +2,11 @@
 
 """tfp.py: Routines for fitting the frequency/phase/amplitude to extract tFP/shift """
 
-from . import fitting
 import numpy as np
 from scipy import interpolate as spi
 from scipy import optimize as spo
+
+from . import fitting
 
 
 def find_minimum(pix, cut):
@@ -89,9 +90,9 @@ def fit_freq_product(pix, cut, t):
 
     # Fit the cut to the model.
     try:
-        
+
         popt = fitting.fit_product(pix.Q, pix.drive_freq, t, cut)
-        
+
     except:
 
         popt = fitting.fit_product_unbound(pix.Q, pix.drive_freq, t, cut)

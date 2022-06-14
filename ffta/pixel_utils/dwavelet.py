@@ -1,7 +1,7 @@
 """dwavelet.py: contains functions used in DWT calculations."""
 
-import pywt
 import numpy as np
+import pywt
 
 
 def dwt_denoise(signal, fLow, fHigh, sampling_rate):

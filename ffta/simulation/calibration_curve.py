@@ -6,16 +6,15 @@ Created on Thu Mar  4 10:27:55 2021
 """
 
 import numpy as np
-
-from .mechanical_drive import MechanicalDrive
-from .utils.load import params_from_experiment as load_parm
-from .utils.load import simulation_configuration as load_sim_config
-from ffta.pixel_utils.load import configuration
+import pandas as pd
+from matplotlib import pyplot as plt
 from scipy.interpolate import InterpolatedUnivariateSpline as ius
 from scipy.signal import medfilt
 
-from matplotlib import pyplot as plt
-import pandas as pd
+from ffta.pixel_utils.load import configuration
+from .mechanical_drive import MechanicalDrive
+from .utils.load import params_from_experiment as load_parm
+from .utils.load import simulation_configuration as load_sim_config
 
 
 def cal_curve(can_path, param_cfg, taus_range=[-7, -3], plot=True, **kwargs):
@@ -71,16 +70,16 @@ def cal_curve(can_path, param_cfg, taus_range=[-7, -3], plot=True, **kwargs):
 
     if len(taus_range) != 2 or (taus_range[1] <= taus_range[0]):
         raise ValueError('Range must be ascending and 2-items')
-    
+
     # Check if given as log or actual values
     if taus_range[0] < 0 or taus_range[1] < 0:
         _rlo = taus_range[0]
         _rhi = taus_range[1]
-    
+
     else:
         _rlo = np.log10(taus_range[0])
         _rhi = np.log10(taus_range[1])
-        
+
     taus = np.logspace(_rlo, _rhi, 50)
     tfps = []
 
@@ -158,6 +157,7 @@ def cal_curve(can_path, param_cfg, taus_range=[-7, -3], plot=True, **kwargs):
 
     return taus, tfps, spl
 
+
 def reconstruct_cal_curve(csv_file):
     '''
     Reconstruct the calibration curve from a saved CSV
@@ -174,11 +174,11 @@ def reconstruct_cal_curve(csv_file):
     '''
 
     df = pd.read_csv(csv_file)
-    
+
     taus = df['taus']
     tfps = df['tfps']
     spl = ius(tfps, taus, k=4)
-    
-    print ('Note that taus, tfps, and cal_curve are in log-space')
+
+    print('Note that taus, tfps, and cal_curve are in log-space')
 
     return taus, tfps, spl

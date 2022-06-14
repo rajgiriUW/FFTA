@@ -5,15 +5,17 @@ Created on Fri Mar 27 14:05:42 2020
 @author: Raj
 """
 
+import os
+
+import matplotlib.font_manager as fm
+import numpy as np
+import pyUSID as usid
 from matplotlib import pyplot as plt
+from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
+
 # from ffta.hdf_utils import get_utils
 from ffta.load import get_utils
 from ffta.pixel_utils import badpixels
-import pyUSID as usid
-import numpy as np
-import os
-from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
-import matplotlib.font_manager as fm
 
 
 def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2, scale=None):
@@ -92,37 +94,37 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2, scale=Non
     ax[0].set_title('tfp', fontsize=12)
 
     if scale:
-        sz = np.floor(xs*1e6 / scale)
-        ratio = int(tfp_fixed.shape[1]/sz)
+        sz = np.floor(xs * 1e6 / scale)
+        ratio = int(tfp_fixed.shape[1] / sz)
         if scale > 1:
             sz = str(scale) + ' $\mu m$'
         else:
-            sz = str(int(scale*1000)) + ' nm'
-        
+            sz = str(int(scale * 1000)) + ' nm'
+
         fontprops = fm.FontProperties(size=14, weight='bold')
-        bar1 = AnchoredSizeBar(ax[0].transData, ratio, sz, frameon=False, 
+        bar1 = AnchoredSizeBar(ax[0].transData, ratio, sz, frameon=False,
                                loc='lower right', size_vertical=2,
-                               pad=0.2, color='white', fontproperties=fontprops) 
-        
+                               pad=0.2, color='white', fontproperties=fontprops)
+
         ax[0].add_artist(bar1)
-    
+
     cbar_r.set_label('Rate (kHz)', rotation=270, labelpad=16)
     ax[1].set_title('1/tfp', fontsize=12)
 
     if scale:
-        bar1 = AnchoredSizeBar(ax[0].transData, ratio, sz, frameon=False, 
+        bar1 = AnchoredSizeBar(ax[0].transData, ratio, sz, frameon=False,
                                loc='lower right', size_vertical=2,
-                               pad=0.2, color='white', fontproperties=fontprops) 
-        ax[1].add_artist(bar1)        
+                               pad=0.2, color='white', fontproperties=fontprops)
+        ax[1].add_artist(bar1)
 
     cbar_s.set_label('shift (Hz)', rotation=270, labelpad=16)
     ax[2].set_title('shift', fontsize=12)
-    
+
     if scale:
-        bar1 = AnchoredSizeBar(ax[0].transData, ratio, sz, frameon=False, 
+        bar1 = AnchoredSizeBar(ax[0].transData, ratio, sz, frameon=False,
                                loc='lower right', size_vertical=2,
-                               pad=0.2, color='white', fontproperties=fontprops) 
-        ax[2].add_artist(bar1)        
+                               pad=0.2, color='white', fontproperties=fontprops)
+        ax[2].add_artist(bar1)
 
     fig.tight_layout()
 
@@ -133,7 +135,6 @@ def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2, scale=Non
         fig.savefig('tfp_shift_' + append + '_.tif', format='tiff')
 
     return fig, ax
-
 
 
 def get_scale(target_size, x_size):

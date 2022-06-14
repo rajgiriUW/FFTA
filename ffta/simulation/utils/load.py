@@ -6,9 +6,11 @@ Created on Tue May 12 11:23:17 2020
 """
 
 import configparser
+import urllib
+
 from ffta.pixel_utils.load import cantilever_params
 from ffta.pixel_utils.load import configuration
-import urllib
+
 
 def simulation_configuration(path, is_url=False):
     """
@@ -108,7 +110,7 @@ def params_from_experiment(can_params_file, params_cfg):
 
     can = cantilever_params(can_params_file)
     _, par = configuration(params_cfg)
-    
+
     if isinstance(params_cfg, dict):
         par = params_cfg
 

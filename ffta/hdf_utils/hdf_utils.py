@@ -4,14 +4,8 @@ Created on Thu Feb 22 14:28:28 2018
 
 @author: Raj
 """
-import pyUSID as usid
-
-import warnings
-import numpy as np
 import h5py
-
-from ffta.load import get_utils
-from sidpy import Dimension
+import pyUSID as usid
 
 """
 Common HDF interfacing functions

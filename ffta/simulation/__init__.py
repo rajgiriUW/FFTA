@@ -1,7 +1,7 @@
-from . import cantilever
-from . import mechanical_drive
-from . import electric_drive
 from . import calibration_curve
+from . import cantilever
+from . import electric_drive
+from . import mechanical_drive
 from . import utils
 
 __all__ = ['utils',

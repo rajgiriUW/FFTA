@@ -151,6 +151,7 @@ def fit_product(Q, drive_freq, t, inst_freq):
 
     return popt.x
 
+
 def fit_product_unbound(Q, drive_freq, t, inst_freq):
     """
     Fit without any bound constraints
@@ -170,7 +171,7 @@ def fit_product_unbound(Q, drive_freq, t, inst_freq):
     :returns:
     :rtype:
     """
-    
+
     # Initial guess for relaxation constant.
     inv_beta = Q / (np.pi * drive_freq)
 
@@ -238,10 +239,10 @@ def fit_exp(t, inst_freq):
 
     pinit = [inst_freq.max() - inst_freq.min(), inst_freq.min(), 1e-4]
 
-#    popt = minimize(cost, pinit, method='TNC', options={'disp': False},
-#                    bounds=[(1e-5, 1000),
-#                            (np.abs(inst_freq.min()) * -2, np.abs(inst_freq.max()) * 2),
-#                             (1e-6, 0.1)])
+    #    popt = minimize(cost, pinit, method='TNC', options={'disp': False},
+    #                    bounds=[(1e-5, 1000),
+    #                            (np.abs(inst_freq.min()) * -2, np.abs(inst_freq.max()) * 2),
+    #                             (1e-6, 0.1)])
 
     popt = minimize(cost, pinit, method='TNC', options={'disp': False})
 

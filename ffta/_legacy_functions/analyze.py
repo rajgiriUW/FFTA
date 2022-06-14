@@ -6,22 +6,22 @@ __maintainer__ = "Rajiv Giridharagopal"
 __email__ = "rgiri@uw.edu"
 __status__ = "Development"
 
+import argparse as ap
+import logging
+import multiprocessing
 import os
 import sys
 import time
-import multiprocessing
-import logging
-import argparse as ap
-import numpy as np
-import ffta.line as line
-from .pixel_utils import load
-from .pixel_utils import badpixels
 
+import numpy as np
+from matplotlib import gridspec as gs
 # Plotting imports
-import matplotlib as mpl
 # mpl.use('WxAgg')
 from matplotlib import pyplot as plt
-from matplotlib import gridspec as gs
+
+import ffta.line as line
+from .pixel_utils import badpixels
+from .pixel_utils import load
 
 
 def process_line(args):

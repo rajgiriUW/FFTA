@@ -5,25 +5,25 @@ Created on Tue Feb 11 18:07:06 2020
 @author: Raj
 """
 
-from pyUSID.io.hdf_utils import write_main_dataset, find_dataset, create_results_group
+import os
+
+import h5py
+import numpy as np
+from matplotlib import pyplot as plt
+from pyUSID import Dimension
 from pyUSID import Process
+from pyUSID.io.hdf_utils import write_main_dataset, find_dataset, create_results_group
+from sidpy.hdf.hdf_utils import get_attributes, copy_attributes
+from sidpy.proc.comp_utils import parallel_compute
+from sidpy.viz import plot_utils
+from skimage import restoration
+
 import ffta
+from ffta.load import get_utils
 from ffta.pixel import Pixel
 from ffta.pixel_utils import badpixels
-from ffta.simulation.utils.load import simulation_configuration as load_sim_config
-from ffta.simulation.utils.load import params_from_experiment as load_parm
 from ffta.simulation.impulse import impulse
-from skimage import restoration
-import os
-import numpy as np
-from ffta.load import get_utils
-from sidpy.proc.comp_utils import parallel_compute
-from sidpy.hdf.hdf_utils import get_attributes, copy_attributes
-from sidpy.viz import plot_utils
-from pyUSID import Dimension
-import h5py
-
-from matplotlib import pyplot as plt
+from ffta.simulation.utils.load import params_from_experiment as load_parm
 
 
 class FFtrEFM(Process):
