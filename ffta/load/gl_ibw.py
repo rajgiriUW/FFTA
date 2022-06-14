@@ -6,17 +6,16 @@ Created on Wed Feb 21 10:06:12 2018
 """
 
 from __future__ import division, print_function, absolute_import, unicode_literals
+
 from os import path  # File Path formatting
+
+import h5py
 import numpy as np  # For array operations
-
 from igor import binarywave as bw
-
-from sidpy.sid import Translator # , generate_dummy_main_parms
-
 from pyUSID.io import Dimension
 from pyUSID.io.hdf_utils import write_ind_val_dsets
 from pyUSID.io.hdf_utils import write_main_dataset, create_indexed_group
-import h5py
+from sidpy.sid import Translator  # , generate_dummy_main_parms
 
 
 class GLIBWTranslator(Translator):

@@ -5,20 +5,19 @@ Created on Tue Mar 31 11:16:36 2020
 @author: Raj
 """
 
-import numpy as np
-import h5py
-from scipy.optimize import minimize
 import os
 
+import h5py
+import numpy as np
 import pyUSID as usid
-from sidpy import Dimension
-
-from ffta.load.load_hdf import load_folder
-from ffta.load import gl_ibw
-from ffta.pixel_utils import badpixels
-
 from igor.binarywave import load as loadibw
 from matplotlib import pyplot as plt
+from scipy.optimize import minimize
+from sidpy import Dimension
+
+from ffta.load import gl_ibw
+from ffta.load.load_hdf import load_folder
+from ffta.pixel_utils import badpixels
 
 '''
 Loads Ringdown data from raw .ibw and with the associated *.ibw Image file.

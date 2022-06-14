@@ -4,14 +4,13 @@ Created on Fri Aug 24 13:40:54 2018
 
 @author: Raj
 """
+import h5py
+import numpy as np
 import pyUSID as usid
 import sidpy
-import h5py
 
 from ffta.line import Line
 from ffta.pixel import Pixel
-
-import numpy as np
 
 '''
 Functions for extracting certain segments from an HDF FFtrEFM file

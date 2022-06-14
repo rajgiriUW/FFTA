@@ -8,19 +8,19 @@ __maintainer__ = "Rajiv Giridharagopal"
 __email__ = "rgiri@uw.edu"
 __status__ = "Development"
 
-import numpy as np
 import os
-import h5py
 
+import h5py
+import numpy as np
 import pyUSID as usid
 import sidpy
-from sidpy.hdf.hdf_utils import get_attributes
 from pyUSID import Dimension
+from sidpy.hdf.hdf_utils import get_attributes
 
-from ffta.pixel_utils import load
-from ffta.load import gl_ibw
-from ffta.load import get_utils
 from ffta import line
+from ffta.load import get_utils
+from ffta.load import gl_ibw
+from ffta.pixel_utils import load
 
 """
 Common HDF Loading functions

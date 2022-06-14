@@ -1,13 +1,11 @@
-import numpy as np
-from scipy import optimize as spo
-from scipy import signal as sps
-
-import warnings
-
-import ffta
 import time
+
+import numpy as np
 import pyUSID as usid
 from pyUSID import Dimension
+from scipy import signal as sps
+
+import ffta
 
 
 def cpd_total(ds, params, verbose=False, ncycles=4, smooth=3):

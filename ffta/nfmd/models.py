@@ -1,7 +1,8 @@
 # Model Examples
 import warnings
-from scipy import optimize
+
 import numpy as np
+from scipy import optimize
 
 warnings.filterwarnings('ignore')
 
