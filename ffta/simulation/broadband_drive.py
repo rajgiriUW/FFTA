@@ -4,10 +4,10 @@ __email__ = "rgiri@uw.edu"
 __status__ = "Production"
 
 from math import pi
+
 from scipy.signal import chirp
 
 from .cantilever import Cantilever
-from .utils import excitation
 
 # Set constant 2 * pi.
 PI2 = 2 * pi

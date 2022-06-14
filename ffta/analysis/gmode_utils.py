@@ -11,24 +11,26 @@ Created on Thu May 05 13:29:12 2016
 """
 
 from __future__ import division, print_function, absolute_import
+
 import sys
 from collections import Iterable
-from warnings import warn
 from numbers import Number
+from warnings import warn
+
 import matplotlib.pyplot as plt
 import numpy as np
-from .fft import get_noise_floor, are_compatible_filters, build_composite_freq_filter
-
-from sidpy.hdf.hdf_utils import get_attr
-from sidpy.viz.plot_utils import set_tick_font_size, plot_curves
-
+from pyUSID import Dimension
 from pyUSID import USIDataset
 from pyUSID.io.hdf_utils import check_if_main, write_main_dataset, \
     create_results_group
-from pyUSID import Dimension
+from sidpy.hdf.hdf_utils import get_attr
+from sidpy.viz.plot_utils import set_tick_font_size, plot_curves
+
+from .fft import get_noise_floor, are_compatible_filters, build_composite_freq_filter
 
 if sys.version_info.major == 3:
     unicode = str
+
 
 # TODO: Phase rotation not implemented correctly. Find and use excitation frequency
 

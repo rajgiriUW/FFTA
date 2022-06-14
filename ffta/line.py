@@ -7,6 +7,7 @@ __email__ = "ukaratay@uw.edu"
 __status__ = "Development"
 
 import numpy as np
+
 from ffta import pixel
 
 
@@ -77,7 +78,7 @@ class Line:
         """
         # Pass inputs to the object.
         self.signal_array = signal_array
-        if pycroscopy: 
+        if pycroscopy:
             self.signal_array = signal_array.T
         self.n_pixels = int(n_pixels)
         self.params = params
@@ -86,8 +87,8 @@ class Line:
         self.tfp = np.empty(self.n_pixels)
         self.shift = np.empty(self.n_pixels)
         self.inst_freq = np.empty((self.signal_array.shape[0], self.n_pixels))
-        
-        self.avgs_per_pixel = int(self.signal_array.shape[1]/self.n_pixels)
+
+        self.avgs_per_pixel = int(self.signal_array.shape[1] / self.n_pixels)
         self.n_signals = self.signal_array.shape[0]
 
         return
@@ -109,9 +110,8 @@ class Line:
 
         # Iterate over pixels and return tFP and shift arrays.
         for i, pixel_signal in enumerate(pixel_signals):
-
             p = pixel.Pixel(pixel_signal, self.params)
-            
+
             (self.tfp[i], self.shift[i], self.inst_freq[:, i]) = p.analyze()
 
         return (self.tfp, self.shift, self.inst_freq)
@@ -125,22 +125,21 @@ class Line:
         :rtype: (n_points, n_pixels) numpy array
           
         """
-        
+
         self.signal_avg_array = np.empty((self.signal_array.shape[0], self.n_pixels))
-                
+
         for i in range(self.n_pixels):
-        
-            avg = self.signal_array[:, i*self.avgs_per_pixel:(i+1)*self.avgs_per_pixel]
+            avg = self.signal_array[:, i * self.avgs_per_pixel:(i + 1) * self.avgs_per_pixel]
             self.signal_avg_array[:, i] = avg.mean(axis=1)
-        
+
         return self.signal_avg_array
-    
+
     def clear_filter_flags(self):
         """
         Removes flags from parameters for setting filters
         """
-        
-        #self.params['window'] = 0
+
+        # self.params['window'] = 0
         self.params['bandpass_filter'] = 0
-        
+
         return

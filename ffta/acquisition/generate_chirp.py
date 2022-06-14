@@ -5,9 +5,10 @@ Created on Mon Mar 23 16:23:12 2020
 @author: Raj
 """
 
-import scipy.signal as sps
-import numpy as np
 import argparse
+
+import numpy as np
+import scipy.signal as sps
 
 
 def GenChirp(f_center, f_width=100e3, length=1e-2, sampling_rate=1e8, name='chirp'):
@@ -160,7 +161,7 @@ def GenerateTaus(tau, beta, sfx=''):
     :param sfx:
     :type sfx:
     '''
-    
+
     sample_rate = 1.0e8  # sampling rate used in Wavegenerator code
     total_samples = 800000
     pulse_samples = 700000

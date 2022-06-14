@@ -5,8 +5,9 @@ __author__ = "Rajiv Giridharaogpal"
 __email__ = "rgiri@uw.edu"
 __status__ = "Production"
 
-import numpy as np
 from math import pi
+
+import numpy as np
 from scipy.integrate import odeint
 
 from ..pixel import Pixel

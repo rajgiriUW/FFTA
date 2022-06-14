@@ -5,24 +5,23 @@ Created on Tue Feb 11 18:07:06 2020
 @author: Raj
 """
 
-import pyUSID as usid
-import ffta
-from ffta.gkpfm.gkpixel import GKPixel
-from ffta.pixel_utils import badpixels
 import os
-import numpy as np
-from ffta.load import get_utils
-from sidpy.proc.comp_utils import parallel_compute
-from pyUSID import Dimension
+import warnings
+
 import h5py
-
-from scipy.ndimage import gaussian_filter1d
-
-from ffta.hdf_utils.process import FFtrEFM
-
+import numpy as np
+import pyUSID as usid
 from matplotlib import pyplot as plt
 from numpy.linalg import LinAlgError
-import warnings
+from pyUSID import Dimension
+from scipy.ndimage import gaussian_filter1d
+from sidpy.proc.comp_utils import parallel_compute
+
+import ffta
+from ffta.gkpfm.gkpixel import GKPixel
+from ffta.hdf_utils.process import FFtrEFM
+from ffta.load import get_utils
+from ffta.pixel_utils import badpixels
 
 '''
 To do:

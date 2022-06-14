@@ -1,14 +1,12 @@
 import os
 import sys
-import pytest
+
 import numpy as np
-import h5py
 
 sys.path.insert(0, '..')
 
 import ffta
 import pyUSID as usid
-from ffta.simulation import mechanical_drive
 
 
 # Testing of standard process flow
@@ -34,7 +32,7 @@ class TestFFTA:
         self.delete_old_h5()
         h5_path, data_files, parm_dict = ffta.load.load_hdf.load_folder(folder_path=self.ff_folder)
         assert (len(data_files) == 8)
-        assert (len(parm_dict.items()) == 23)        
+        assert (len(parm_dict.items()) == 23)
         assert (type(h5_path) == str)
 
     def test_load_FF(self):

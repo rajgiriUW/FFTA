@@ -5,563 +5,562 @@ Created on Mon Aug 19 12:10:38 2019
 @author: Raj
 """
 
-import pyUSID as usid
-from pyUSID import Dimension
-
-from igor import binarywave as bw
-import numpy as np
-import pandas as pd
-from matplotlib import pyplot as plt
-from scipy import signal as sg
+import time
 from math import pi
 
-import ffta
-import time
+import numpy as np
+import pandas as pd
+import pyUSID as usid
+from igor import binarywave as bw
+from matplotlib import pyplot as plt
+from pyUSID import Dimension
+from scipy import signal as sg
 
+import ffta
 from ..analysis.fft import get_noise_floor
 
 
 def transfer_function(h5_file, tf_file='', params_file='',
-					  psd_freq=1e6, offset=0.0016, sample_freq=10e6,
-					  plot=False):
-	'''
-	Reads in the transfer function .ibw, then creates two datasets within
-	a parent folder 'Transfer_Function'
-	
-	This will destructively overwrite an existing Transfer Function in there
-	
-	1) TF (transfer function)
-	2) Freq (frequency axis for computing Fourier Transforms)
-	
-	:param h5_file:
-	:type h5_file:
-	
-	:param tf_file: Transfer Function .ibw File
-	:type tf_file: ibw
-		
-	:param params_file: The filepath in string format for the parameters file containing
-			Q, AMPINVOLS, etc.
-	:type params_file: string
-		
-	:param psd_freq: The maximum range of the Power Spectral Density.
-		For Asylum Thermal Tunes, this is often 1 MHz on MFPs and 2 MHz on Cyphers
-	:type psd_freq: float
-		
-	:param offset: To avoid divide-by-zero effects since we will divide by the transfer function
-			when generating GKPFM data
-	:type offset: float
-		
-	:param sample_freq: The desired output sampling. This should match your data.   
-	:type sample_freq: float
-		
-	:param plot:
-	:type plot: bool, optional
-	
-	:returns: the Transfer Function group
-	:rtype:
-	'''
-	if not any(tf_file):
-		tf_file = usid.io_utils.file_dialog(caption='Select Transfer Function file ',
-											file_filter='IBW Files (*.ibw)')
-	data = bw.load(tf_file)
-	tf = data.get('wave').get('wData')
+                      psd_freq=1e6, offset=0.0016, sample_freq=10e6,
+                      plot=False):
+    '''
+    Reads in the transfer function .ibw, then creates two datasets within
+    a parent folder 'Transfer_Function'
 
-	if 'Transfer_Function' in h5_file:
-		del h5_file['/Transfer_Function']
-	h5_file.create_group('Transfer_Function')
-	h5_file['Transfer_Function'].create_dataset('TF', data=tf)
+    This will destructively overwrite an existing Transfer Function in there
 
-	freq = np.linspace(0, psd_freq, len(tf))
-	h5_file['Transfer_Function'].create_dataset('Freq', data=freq)
+    1) TF (transfer function)
+    2) Freq (frequency axis for computing Fourier Transforms)
 
-	parms = params_list(params_file, psd_freq=psd_freq)
+    :param h5_file:
+    :type h5_file:
 
-	for k in parms:
-		h5_file['Transfer_Function'].attrs[k] = float(parms[k])
+    :param tf_file: Transfer Function .ibw File
+    :type tf_file: ibw
 
-	tfnorm = float(parms['Q']) * (tf - np.min(tf)) / (np.max(tf) - np.min(tf))
-	tfnorm += offset
-	h5_file['Transfer_Function'].create_dataset('TFnorm', data=tfnorm)
+    :param params_file: The filepath in string format for the parameters file containing
+            Q, AMPINVOLS, etc.
+    :type params_file: string
 
-	TFN_RS, FQ_RS = resample_tf(h5_file, psd_freq=psd_freq, sample_freq=sample_freq)
-	TFN_RS = float(parms['Q']) * (TFN_RS - np.min(TFN_RS)) / (np.max(TFN_RS) - np.min(TFN_RS))
-	TFN_RS += offset
+    :param psd_freq: The maximum range of the Power Spectral Density.
+        For Asylum Thermal Tunes, this is often 1 MHz on MFPs and 2 MHz on Cyphers
+    :type psd_freq: float
 
-	h5_file['Transfer_Function'].create_dataset('TFnorm_resampled', data=TFN_RS)
-	h5_file['Transfer_Function'].create_dataset('Freq_resampled', data=FQ_RS)
+    :param offset: To avoid divide-by-zero effects since we will divide by the transfer function
+            when generating GKPFM data
+    :type offset: float
 
-	if plot:
-		plt.figure()
-		plt.plot(freq, tfnorm, 'b')
-		plt.plot(FQ_RS, TFN_RS, 'r')
-		plt.xlabel('Frequency (Hz)')
-		plt.ylabel('Amplitude (m)')
-		plt.yscale('log')
-		plt.title('Transfer Function')
+    :param sample_freq: The desired output sampling. This should match your data.
+    :type sample_freq: float
 
-	return h5_file['Transfer_Function']
+    :param plot:
+    :type plot: bool, optional
+
+    :returns: the Transfer Function group
+    :rtype:
+    '''
+    if not any(tf_file):
+        tf_file = usid.io_utils.file_dialog(caption='Select Transfer Function file ',
+                                            file_filter='IBW Files (*.ibw)')
+    data = bw.load(tf_file)
+    tf = data.get('wave').get('wData')
+
+    if 'Transfer_Function' in h5_file:
+        del h5_file['/Transfer_Function']
+    h5_file.create_group('Transfer_Function')
+    h5_file['Transfer_Function'].create_dataset('TF', data=tf)
+
+    freq = np.linspace(0, psd_freq, len(tf))
+    h5_file['Transfer_Function'].create_dataset('Freq', data=freq)
+
+    parms = params_list(params_file, psd_freq=psd_freq)
+
+    for k in parms:
+        h5_file['Transfer_Function'].attrs[k] = float(parms[k])
+
+    tfnorm = float(parms['Q']) * (tf - np.min(tf)) / (np.max(tf) - np.min(tf))
+    tfnorm += offset
+    h5_file['Transfer_Function'].create_dataset('TFnorm', data=tfnorm)
+
+    TFN_RS, FQ_RS = resample_tf(h5_file, psd_freq=psd_freq, sample_freq=sample_freq)
+    TFN_RS = float(parms['Q']) * (TFN_RS - np.min(TFN_RS)) / (np.max(TFN_RS) - np.min(TFN_RS))
+    TFN_RS += offset
+
+    h5_file['Transfer_Function'].create_dataset('TFnorm_resampled', data=TFN_RS)
+    h5_file['Transfer_Function'].create_dataset('Freq_resampled', data=FQ_RS)
+
+    if plot:
+        plt.figure()
+        plt.plot(freq, tfnorm, 'b')
+        plt.plot(FQ_RS, TFN_RS, 'r')
+        plt.xlabel('Frequency (Hz)')
+        plt.ylabel('Amplitude (m)')
+        plt.yscale('log')
+        plt.title('Transfer Function')
+
+    return h5_file['Transfer_Function']
 
 
 def resample_tf(h5_file, psd_freq=1e6, sample_freq=10e6):
-	'''
-	Resamples the Transfer Function based on the desired target frequency
-	
-	This is important for dividing the transfer function elements together
-	
-	:param h5_file:
-	:type h5_file:
-	
-	:param psd_freq: The maximum range of the Power Spectral Density.
-		For Asylum Thermal Tunes, this is often 1 MHz on MFPs and 2 MHz on Cyphers
-	:type psd_freq: float
-		
-	:param sample_freq:	The desired output sampling. This should match your data.
-	:type sample_freq: float
-		   
-	:returns: tuple (TFN_RS, FQ_RS)
-		WHERE
-		[type] TFN_RS is...
-		[type] FQ_RS is...
-	'''
-	TFN = h5_file['Transfer_Function/TFnorm'][()]
-	# FQ = h5_file['Transfer_Function/Freq'][()]
+    '''
+    Resamples the Transfer Function based on the desired target frequency
 
-	# Generate the iFFT from the thermal tune data
-	tfn = np.fft.ifft(TFN)
-	# tq = np.linspace(0, 1/np.abs(FQ[1] - FQ[0]), len(tfn))
+    This is important for dividing the transfer function elements together
 
-	# Resample
-	scale = int(sample_freq / psd_freq)
-	print('Rescaling by', scale, 'X')
-	tfn_rs = sg.resample(tfn, len(tfn) * scale)  # from 1 MHz to 10 MHz
-	TFN_RS = np.fft.fft(tfn_rs)
-	FQ_RS = np.linspace(0, sample_freq, len(tfn_rs))
+    :param h5_file:
+    :type h5_file:
 
-	return TFN_RS, FQ_RS
+    :param psd_freq: The maximum range of the Power Spectral Density.
+        For Asylum Thermal Tunes, this is often 1 MHz on MFPs and 2 MHz on Cyphers
+    :type psd_freq: float
+
+    :param sample_freq:	The desired output sampling. This should match your data.
+    :type sample_freq: float
+
+    :returns: tuple (TFN_RS, FQ_RS)
+        WHERE
+        [type] TFN_RS is...
+        [type] FQ_RS is...
+    '''
+    TFN = h5_file['Transfer_Function/TFnorm'][()]
+    # FQ = h5_file['Transfer_Function/Freq'][()]
+
+    # Generate the iFFT from the thermal tune data
+    tfn = np.fft.ifft(TFN)
+    # tq = np.linspace(0, 1/np.abs(FQ[1] - FQ[0]), len(tfn))
+
+    # Resample
+    scale = int(sample_freq / psd_freq)
+    print('Rescaling by', scale, 'X')
+    tfn_rs = sg.resample(tfn, len(tfn) * scale)  # from 1 MHz to 10 MHz
+    TFN_RS = np.fft.fft(tfn_rs)
+    FQ_RS = np.linspace(0, sample_freq, len(tfn_rs))
+
+    return TFN_RS, FQ_RS
 
 
 def params_list(path='', psd_freq=1e6, lift=50):
-	'''
-	Reads in a Parameters file as saved in Igor as a dictionary
-	
-	For use in creating attributes of transfer Function
-	
-	:param path:
-	:type path: str
-	
-	:param psd_freq:
-	:type psd_freq:
-	
-	:param lift:
-	:type lift:
-	
-	:returns: parameters dictionary
-	:rtype: dict
-	'''
-	if not any(path):
-		path = usid.io.io_utils.file_dialog(caption='Select Parameters Files ',
-											file_filter='Text (*.txt)')
+    '''
+    Reads in a Parameters file as saved in Igor as a dictionary
 
-	df = pd.read_csv(path, sep='\t', header=1)
-	df = df.set_index(df['Unnamed: 0'])
-	df = df.drop(columns='Unnamed: 0')
+    For use in creating attributes of transfer Function
 
-	parm_dict = df.to_dict()['Initial']
-	parm_dict['PSDFreq'] = psd_freq
-	parm_dict['Lift'] = lift
+    :param path:
+    :type path: str
 
-	return parm_dict
+    :param psd_freq:
+    :type psd_freq:
+
+    :param lift:
+    :type lift:
+
+    :returns: parameters dictionary
+    :rtype: dict
+    '''
+    if not any(path):
+        path = usid.io.io_utils.file_dialog(caption='Select Parameters Files ',
+                                            file_filter='Text (*.txt)')
+
+    df = pd.read_csv(path, sep='\t', header=1)
+    df = df.set_index(df['Unnamed: 0'])
+    df = df.drop(columns='Unnamed: 0')
+
+    parm_dict = df.to_dict()['Initial']
+    parm_dict['PSDFreq'] = psd_freq
+    parm_dict['Lift'] = lift
+
+    return parm_dict
 
 
 def test_Ycalc(h5_main, pixel_ind=[0, 0], transfer_func=None, resampled=True, ratios=None,
-			   verbose=True, noise_floor=1e-3, phase=-pi, plot=False, scaling=1):
-	'''
-	Divides the response by the transfer function
-	
-	:param h5_main:
-	:type h5_main: h5py dataset of USIDataset
-	
-	:param pixel_ind:
-	:type pixel_ind: list
-	
-	:param transfer_func: This can be the resampled or normal transfer function
-		For best results, use the "normalized" transfer function
-		"None" will default to /Transfer_Function folder
-	:type transfer_func: transfer function, optional
-		
-	:param resampled: Whether to use the upsampled Transfer Function or the original
-	:type resampled: bool, optional
-		
-	:param ratios:
-	:type ratios:
-	
-	:param verbose: Gives user feedback during processing
-	:type verbose: bool, optional
-		
-	:param noise_floor: For calculating what values to filter as the noise floor of the data
-		0 or None circumvents this
-	:type noise_floor: float, optional
-		
-	:param phase: Practically any value between -pi and +pi works
-	:type phase: float, optional
-		
-	:param plot:
-	:type plot: bool, optional
-	
-	:param scaling: scales the transfer function by this number if, for example, the TF was
-		acquired on a line and you're dividing by a point (or vice versa)'
-	:type scaling: int, optional
-			
-	:returns: tuple (TFratios, Yout, yout)
-		WHERE
-		[type] TFratios is...
-		[type] Yout is...
-		[type] yout is...
-	
-	'''
-	t0 = time.time()
+               verbose=True, noise_floor=1e-3, phase=-pi, plot=False, scaling=1):
+    '''
+    Divides the response by the transfer function
 
-	parm_dict = usid.hdf_utils.get_attributes(h5_main)
-	drive_freq = parm_dict['drive_freq']
-	response = ffta.hdf_utils.get_utils.get_pixel(h5_main, pixel_ind, array_form=True, transpose=False).flatten()
+    :param h5_main:
+    :type h5_main: h5py dataset of USIDataset
 
-	response -= np.mean(response)
-	RESP = np.fft.fft(response)
-	Yout = np.zeros(len(RESP), dtype=complex)
+    :param pixel_ind:
+    :type pixel_ind: list
 
-	# Create frequency axis for the pixel
-	samp = parm_dict['sampling_rate']
-	fq_y = np.linspace(0, samp, len(Yout))
+    :param transfer_func: This can be the resampled or normal transfer function
+        For best results, use the "normalized" transfer function
+        "None" will default to /Transfer_Function folder
+    :type transfer_func: transfer function, optional
 
-	noise_limit = np.ceil(get_noise_floor(RESP, noise_floor)[0])
+    :param resampled: Whether to use the upsampled Transfer Function or the original
+    :type resampled: bool, optional
 
-	# Get the transfer function and transfer function frequency values
-	fq_tf = h5_main.file['Transfer_Function/Freq'][()]
-	if not transfer_func:
-		if resampled:
+    :param ratios:
+    :type ratios:
 
-			transfer_func = h5_main.file['Transfer_Function/TFnorm_resampled'][()]
-			fq_tf = h5_main.file['Transfer_Function/Freq_resampled'][()]
+    :param verbose: Gives user feedback during processing
+    :type verbose: bool, optional
 
-		else:
+    :param noise_floor: For calculating what values to filter as the noise floor of the data
+        0 or None circumvents this
+    :type noise_floor: float, optional
 
-			transfer_func = h5_main.file['Transfer_Function/TFnorm'][()]
+    :param phase: Practically any value between -pi and +pi works
+    :type phase: float, optional
 
-	if verbose:
-		t1 = time.time()
-		print('Time for pixels:', t1 - t0)
+    :param plot:
+    :type plot: bool, optional
 
-	Yout_divided = np.zeros(len(RESP), dtype=bool)
+    :param scaling: scales the transfer function by this number if, for example, the TF was
+        acquired on a line and you're dividing by a point (or vice versa)'
+    :type scaling: int, optional
 
-	TFratios = np.ones(len(RESP))
+    :returns: tuple (TFratios, Yout, yout)
+        WHERE
+        [type] TFratios is...
+        [type] Yout is...
+        [type] yout is...
 
-	# Calculate the TF scaled to the sample size of response function
-	for x, f in zip(transfer_func, fq_tf):
+    '''
+    t0 = time.time()
 
-		if np.abs(x) > noise_floor:
+    parm_dict = usid.hdf_utils.get_attributes(h5_main)
+    drive_freq = parm_dict['drive_freq']
+    response = ffta.hdf_utils.get_utils.get_pixel(h5_main, pixel_ind, array_form=True, transpose=False).flatten()
 
-			xx = np.searchsorted(fq_y, f)
-			if not Yout_divided[xx]:
-				TFratios[xx] = x
-				TFratios[-xx] = x
+    response -= np.mean(response)
+    RESP = np.fft.fft(response)
+    Yout = np.zeros(len(RESP), dtype=complex)
 
-				Yout_divided[xx] = True
+    # Create frequency axis for the pixel
+    samp = parm_dict['sampling_rate']
+    fq_y = np.linspace(0, samp, len(Yout))
 
-	signal_bins = np.arange(len(TFratios))
-	signal_kill = np.where(np.abs(RESP) < noise_limit)
-	pass_frequencies = np.delete(signal_bins, signal_kill)
+    noise_limit = np.ceil(get_noise_floor(RESP, noise_floor)[0])
 
-	drive_bin = (np.abs(fq_y - drive_freq)).argmin()
-	RESP_ph = (RESP) * np.exp(-1j * fq_y / (fq_y[drive_bin]) * phase)
+    # Get the transfer function and transfer function frequency values
+    fq_tf = h5_main.file['Transfer_Function/Freq'][()]
+    if not transfer_func:
+        if resampled:
 
-	# Step 3C)  iFFT the response above a user defined noise floor to recover Force in time domain.
-	Yout[pass_frequencies] = RESP_ph[pass_frequencies]
-	Yout = Yout / (TFratios * scaling)
-	yout = np.real(np.fft.ifft(np.fft.ifftshift(Yout)))
+            transfer_func = h5_main.file['Transfer_Function/TFnorm_resampled'][()]
+            fq_tf = h5_main.file['Transfer_Function/Freq_resampled'][()]
 
-	if verbose:
-		t2 = time.time()
-		print('Time for pixels:', t2 - t1)
+        else:
 
-	if plot:
-		fig, ax = plt.subplots(figsize=(12, 7))
-		ax.semilogy(fq_y, np.abs(Yout), 'b', label='F3R')
-		ax.semilogy(fq_y[signal_bins], np.abs(Yout[signal_bins]), 'og', label='F3R')
-		ax.semilogy(fq_y[signal_bins], np.abs(RESP[signal_bins]), '.r', label='Response')
-		ax.set_xlabel('Frequency (kHz)', fontsize=16)
-		ax.set_ylabel('Amplitude (a.u.)', fontsize=16)
-		ax.legend(fontsize=14)
-		ax.set_yscale('log')
-		ax.set_xlim(0, 3 * drive_freq)
-		ax.set_title('Noise Spectrum', fontsize=16)
+            transfer_func = h5_main.file['Transfer_Function/TFnorm'][()]
 
-	return TFratios, Yout, yout
+    if verbose:
+        t1 = time.time()
+        print('Time for pixels:', t1 - t0)
+
+    Yout_divided = np.zeros(len(RESP), dtype=bool)
+
+    TFratios = np.ones(len(RESP))
+
+    # Calculate the TF scaled to the sample size of response function
+    for x, f in zip(transfer_func, fq_tf):
+
+        if np.abs(x) > noise_floor:
+
+            xx = np.searchsorted(fq_y, f)
+            if not Yout_divided[xx]:
+                TFratios[xx] = x
+                TFratios[-xx] = x
+
+                Yout_divided[xx] = True
+
+    signal_bins = np.arange(len(TFratios))
+    signal_kill = np.where(np.abs(RESP) < noise_limit)
+    pass_frequencies = np.delete(signal_bins, signal_kill)
+
+    drive_bin = (np.abs(fq_y - drive_freq)).argmin()
+    RESP_ph = (RESP) * np.exp(-1j * fq_y / (fq_y[drive_bin]) * phase)
+
+    # Step 3C)  iFFT the response above a user defined noise floor to recover Force in time domain.
+    Yout[pass_frequencies] = RESP_ph[pass_frequencies]
+    Yout = Yout / (TFratios * scaling)
+    yout = np.real(np.fft.ifft(np.fft.ifftshift(Yout)))
+
+    if verbose:
+        t2 = time.time()
+        print('Time for pixels:', t2 - t1)
+
+    if plot:
+        fig, ax = plt.subplots(figsize=(12, 7))
+        ax.semilogy(fq_y, np.abs(Yout), 'b', label='F3R')
+        ax.semilogy(fq_y[signal_bins], np.abs(Yout[signal_bins]), 'og', label='F3R')
+        ax.semilogy(fq_y[signal_bins], np.abs(RESP[signal_bins]), '.r', label='Response')
+        ax.set_xlabel('Frequency (kHz)', fontsize=16)
+        ax.set_ylabel('Amplitude (a.u.)', fontsize=16)
+        ax.legend(fontsize=14)
+        ax.set_yscale('log')
+        ax.set_xlim(0, 3 * drive_freq)
+        ax.set_title('Noise Spectrum', fontsize=16)
+
+    return TFratios, Yout, yout
 
 
 def Y_calc(h5_main, transfer_func=None, resampled=True, ratios=None, verbose=False,
-		   noise_floor=1e-3, phase=-pi, plot=False, scaling=1):
-	'''
-	Divides the response by the transfer function
-	
-	:param h5_main:
-	:type h5_main: h5py dataset of USIDataset
-	
-	:param transfer_func: This can be supplied or use the calculated version
-		For best results, use the "normalized" transfer function
-		"None" will default to /Transfer_Function folder
-	:type transfer_func: transfer function, optional
-		
-	:param resampled: Whether to use the upsampled Transfer Function or the original
-	:type resampled: bool, optional
-		
-	:param ratios: Array of the size of h5_main (1-D) with the transfer function data
-		If not given, it's found via the test_Y_calc function
+           noise_floor=1e-3, phase=-pi, plot=False, scaling=1):
+    '''
+    Divides the response by the transfer function
 
-	:type ratios: array, optional
-	
-	:param verbose: Gives user feedback during processing
-	:type verbose: bool, optional
-		
-	:param noise_floor:	For calculating what values to filter as the noise floor of the data
-		0 or None circumvents this
-	:type noise_floor: float, optional
-	
-	:param phase: Practically any value between -pi and +pi works
-	:type phase: float, optional
-		
-	:param plot:
-	:type plot: bool, optional
-	
-	:param scaling: scales the transfer function by this number if, for example, the TF was
-		acquired on a line and you're dividing by a point (or vice versa)'
-	scaling : int, optional
-	
-	:returns: tuple (Yout, yout)
-		WHERE
-		[type] Yout is...
-		[type] yout is...
-	'''
-	parm_dict = usid.hdf_utils.get_attributes(h5_main)
-	drive_freq = parm_dict['drive_freq']
+    :param h5_main:
+    :type h5_main: h5py dataset of USIDataset
 
-	ds = h5_main[()]
-	Yout = np.zeros(ds.shape, dtype=complex)
-	yout = np.zeros(ds.shape)
+    :param transfer_func: This can be supplied or use the calculated version
+        For best results, use the "normalized" transfer function
+        "None" will default to /Transfer_Function folder
+    :type transfer_func: transfer function, optional
 
-	# Create frequency axis for the pixel
-	samp = parm_dict['sampling_rate']
-	fq_y = np.linspace(0, samp, Yout.shape[1])
+    :param resampled: Whether to use the upsampled Transfer Function or the original
+    :type resampled: bool, optional
 
-	response = ds[0, :]
-	response -= np.mean(response)
-	RESP = np.fft.fft(response)
-	noise_limit = np.ceil(get_noise_floor(RESP, noise_floor)[0])
+    :param ratios: Array of the size of h5_main (1-D) with the transfer function data
+        If not given, it's found via the test_Y_calc function
 
-	# Get the transfer function and transfer function frequency values
-	# Use test calc to scale the transfer function to the correct size
-	if not transfer_func:
-		if resampled:
+    :type ratios: array, optional
 
-			transfer_func, _, _ = test_Ycalc(h5_main, resampled=True,
-											 verbose=verbose, noise_floor=noise_floor)
-		else:
+    :param verbose: Gives user feedback during processing
+    :type verbose: bool, optional
 
-			transfer_func, _, _ = test_Ycalc(h5_main, resampled=False,
-											 verbose=verbose, noise_floor=noise_floor)
+    :param noise_floor:	For calculating what values to filter as the noise floor of the data
+        0 or None circumvents this
+    :type noise_floor: float, optional
 
-	import time
-	t0 = time.time()
+    :param phase: Practically any value between -pi and +pi works
+    :type phase: float, optional
 
-	signal_bins = np.arange(len(transfer_func))
-	for c in np.arange(h5_main.shape[0]):
+    :param plot:
+    :type plot: bool, optional
 
-		if verbose:
-			if c % 100 == 0:
-				print('Pixel:', c)
+    :param scaling: scales the transfer function by this number if, for example, the TF was
+        acquired on a line and you're dividing by a point (or vice versa)'
+    scaling : int, optional
 
-		response = ds[c, :]
-		response -= np.mean(response)
-		RESP = np.fft.fft(response)
+    :returns: tuple (Yout, yout)
+        WHERE
+        [type] Yout is...
+        [type] yout is...
+    '''
+    parm_dict = usid.hdf_utils.get_attributes(h5_main)
+    drive_freq = parm_dict['drive_freq']
 
-		signal_kill = np.where(np.abs(RESP) < noise_limit)
-		pass_frequencies = np.delete(signal_bins, signal_kill)
+    ds = h5_main[()]
+    Yout = np.zeros(ds.shape, dtype=complex)
+    yout = np.zeros(ds.shape)
 
-		drive_bin = (np.abs(fq_y - drive_freq)).argmin()
-		RESP_ph = (RESP) * np.exp(-1j * fq_y / (fq_y[drive_bin]) * phase)
+    # Create frequency axis for the pixel
+    samp = parm_dict['sampling_rate']
+    fq_y = np.linspace(0, samp, Yout.shape[1])
 
-		Yout[c, pass_frequencies] = RESP_ph[pass_frequencies]
-		Yout[c, :] = Yout[c, :] / (transfer_func * scaling)
-		yout[c, :] = np.real(np.fft.ifft(Yout[c, :]))
+    response = ds[0, :]
+    response -= np.mean(response)
+    RESP = np.fft.fft(response)
+    noise_limit = np.ceil(get_noise_floor(RESP, noise_floor)[0])
 
-	t1 = time.time()
+    # Get the transfer function and transfer function frequency values
+    # Use test calc to scale the transfer function to the correct size
+    if not transfer_func:
+        if resampled:
 
-	print('Time for pixels:', t1 - t0)
+            transfer_func, _, _ = test_Ycalc(h5_main, resampled=True,
+                                             verbose=verbose, noise_floor=noise_floor)
+        else:
 
-	return Yout, yout
+            transfer_func, _, _ = test_Ycalc(h5_main, resampled=False,
+                                             verbose=verbose, noise_floor=noise_floor)
+
+    import time
+    t0 = time.time()
+
+    signal_bins = np.arange(len(transfer_func))
+    for c in np.arange(h5_main.shape[0]):
+
+        if verbose:
+            if c % 100 == 0:
+                print('Pixel:', c)
+
+        response = ds[c, :]
+        response -= np.mean(response)
+        RESP = np.fft.fft(response)
+
+        signal_kill = np.where(np.abs(RESP) < noise_limit)
+        pass_frequencies = np.delete(signal_bins, signal_kill)
+
+        drive_bin = (np.abs(fq_y - drive_freq)).argmin()
+        RESP_ph = (RESP) * np.exp(-1j * fq_y / (fq_y[drive_bin]) * phase)
+
+        Yout[c, pass_frequencies] = RESP_ph[pass_frequencies]
+        Yout[c, :] = Yout[c, :] / (transfer_func * scaling)
+        yout[c, :] = np.real(np.fft.ifft(Yout[c, :]))
+
+    t1 = time.time()
+
+    print('Time for pixels:', t1 - t0)
+
+    return Yout, yout
 
 
 def check_phase(h5_main, transfer_func, phase_list=[-pi, -pi / 2, 0],
-				plot=True, noise_tolerance=1e-6, samp_rate=10e6):
-	'''
-	Uses the list of phases in phase_list to plot the various phase offsets
-	relative to the driving excitation
-	
-	:param h5_main:
-	:type h5_main: h5py dataset of USIDataset
-	
-	:param transfer_func: This can be supplied or use the calculated version
-		For best results, use the "normalized" transfer function
-		"None" will default to /Transfer_Function folder
-	:type transfer_func: transfer function, optional
-	
-	:param phase_list:
-	:type phase_list: List of float
-	
-	:param plot:
-	:type plot: bool, optional
-	
-	:param noise_tolerance:
-	:type noise_tolerance:
-	
-	:param samp_rate:
-	:type samp_rate: 
-	'''
-	ph = -3.492  # phase from cable delays between excitation and response
-	row_ind = 0
+                plot=True, noise_tolerance=1e-6, samp_rate=10e6):
+    '''
+    Uses the list of phases in phase_list to plot the various phase offsets
+    relative to the driving excitation
 
-	test_row = np.fft.fftshift(np.fft.fft(h5_main[row_ind]))
-	noise_floor = get_noise_floor(test_row, noise_tolerance)[0]
-	print('Noise floor = ', noise_floor)
-	Noiselimit = np.ceil(noise_floor)
+    :param h5_main:
+    :type h5_main: h5py dataset of USIDataset
 
-	parm_dict = usid.hdf_utils.get_attributes(h5_main)
-	drive_freq = parm_dict['drive_freq']
+    :param transfer_func: This can be supplied or use the calculated version
+        For best results, use the "normalized" transfer function
+        "None" will default to /Transfer_Function folder
+    :type transfer_func: transfer function, optional
 
-	freq = np.arange(-samp_rate / 2, samp_rate / 2, samp_rate / len(test_row))
-	tx = np.arange(0, parm_dict['total_time'], parm_dict['total_time'] / len(freq))
+    :param phase_list:
+    :type phase_list: List of float
 
-	exc_params = {'ac': 1, 'dc': 0, 'phase': 0, 'frequency': drive_freq}
-	exc_params['ac']
-	excitation = (exc_params['ac'] * np.sin(tx * 2 * pi * exc_params['frequency'] \
-											+ exc_params['phase']) + exc_params['dc'])
+    :param plot:
+    :type plot: bool, optional
 
-	for ph in phase_list:
-		# Try Force Conversion on Filtered data of single line (row_ind above)
-		G_line = np.zeros(freq.size, dtype=complex)  # G = raw
-		G_wPhase_line = np.zeros(freq.size, dtype=complex)  # G_wphase = phase-shifted
+    :param noise_tolerance:
+    :type noise_tolerance:
 
-		signal_ind_vec = np.arange(freq.size)
-		ind_drive = (np.abs(freq - drive_freq)).argmin()
+    :param samp_rate:
+    :type samp_rate:
+    '''
+    ph = -3.492  # phase from cable delays between excitation and response
+    row_ind = 0
 
-		# filt_line is from filtered data above
-		test_line = test_row - np.mean(test_row)
-		test_line = np.fft.fftshift(np.fft.fft(test_line))
-		signal_kill = np.where(np.abs(test_line) < Noiselimit)
-		signal_ind_vec = np.delete(signal_ind_vec, signal_kill)
+    test_row = np.fft.fftshift(np.fft.fft(h5_main[row_ind]))
+    noise_floor = get_noise_floor(test_row, noise_tolerance)[0]
+    print('Noise floor = ', noise_floor)
+    Noiselimit = np.ceil(noise_floor)
 
-		# Original/raw data; TF_norm is from the Tune file transfer function
-		G_line[signal_ind_vec] = test_line[signal_ind_vec]
-		G_line = (G_line / transfer_func)
-		G_time_line = np.real(np.fft.ifft(np.fft.ifftshift(G_line)))  # time-domain
+    parm_dict = usid.hdf_utils.get_attributes(h5_main)
+    drive_freq = parm_dict['drive_freq']
 
-		# Phase-shifted data
-		test_shifted = (test_line) * np.exp(-1j * freq / (freq[ind_drive]) * ph)
-		G_wPhase_line[signal_ind_vec] = test_shifted[signal_ind_vec]
-		G_wPhase_line = (G_wPhase_line / transfer_func)
-		G_wPhase_time_line = np.real(np.fft.ifft(np.fft.ifftshift(G_wPhase_line)))
+    freq = np.arange(-samp_rate / 2, samp_rate / 2, samp_rate / len(test_row))
+    tx = np.arange(0, parm_dict['total_time'], parm_dict['total_time'] / len(freq))
 
-		phaseshifted = np.reshape(G_wPhase_time_line, (parm_dict['num_cols'], parm_dict['num_rows']))
-		fig, axes = usid.plot_utils.plot_curves(excitation, phaseshifted, use_rainbow_plots=True,
-												x_label='Voltage (Vac)', title='Phase Shifted',
-												num_plots=4, y_label='Deflection (a.u.)')
-		axes[0][0].set_title('Phase ' + str(ph))
+    exc_params = {'ac': 1, 'dc': 0, 'phase': 0, 'frequency': drive_freq}
+    exc_params['ac']
+    excitation = (exc_params['ac'] * np.sin(tx * 2 * pi * exc_params['frequency'] \
+                                            + exc_params['phase']) + exc_params['dc'])
 
-	return
+    for ph in phase_list:
+        # Try Force Conversion on Filtered data of single line (row_ind above)
+        G_line = np.zeros(freq.size, dtype=complex)  # G = raw
+        G_wPhase_line = np.zeros(freq.size, dtype=complex)  # G_wphase = phase-shifted
+
+        signal_ind_vec = np.arange(freq.size)
+        ind_drive = (np.abs(freq - drive_freq)).argmin()
+
+        # filt_line is from filtered data above
+        test_line = test_row - np.mean(test_row)
+        test_line = np.fft.fftshift(np.fft.fft(test_line))
+        signal_kill = np.where(np.abs(test_line) < Noiselimit)
+        signal_ind_vec = np.delete(signal_ind_vec, signal_kill)
+
+        # Original/raw data; TF_norm is from the Tune file transfer function
+        G_line[signal_ind_vec] = test_line[signal_ind_vec]
+        G_line = (G_line / transfer_func)
+        G_time_line = np.real(np.fft.ifft(np.fft.ifftshift(G_line)))  # time-domain
+
+        # Phase-shifted data
+        test_shifted = (test_line) * np.exp(-1j * freq / (freq[ind_drive]) * ph)
+        G_wPhase_line[signal_ind_vec] = test_shifted[signal_ind_vec]
+        G_wPhase_line = (G_wPhase_line / transfer_func)
+        G_wPhase_time_line = np.real(np.fft.ifft(np.fft.ifftshift(G_wPhase_line)))
+
+        phaseshifted = np.reshape(G_wPhase_time_line, (parm_dict['num_cols'], parm_dict['num_rows']))
+        fig, axes = usid.plot_utils.plot_curves(excitation, phaseshifted, use_rainbow_plots=True,
+                                                x_label='Voltage (Vac)', title='Phase Shifted',
+                                                num_plots=4, y_label='Deflection (a.u.)')
+        axes[0][0].set_title('Phase ' + str(ph))
+
+    return
 
 
 def save_Yout(h5_main, Yout, yout):
-	'''
-	Writes the results to teh HDF5 file
-	
-	:param h5_main:
-	:type h5_main: h5py dataset of USIDataset
-	
-	:param Yout:
-	:type Yout:
-	
-	:param yout:
-	:type yout:
-	'''
-	parm_dict = usid.hdf_utils.get_attributes(h5_main)
+    '''
+    Writes the results to teh HDF5 file
 
-	# Get relevant parameters
-	num_rows = parm_dict['num_rows']
-	num_cols = parm_dict['num_cols']
-	pnts_per_avg = parm_dict['pnts_per_avg']
+    :param h5_main:
+    :type h5_main: h5py dataset of USIDataset
 
-	h5_gp = h5_main.parent
-	h5_meas_group = usid.hdf_utils.create_indexed_group(h5_gp, 'GKPFM_Frequency')
+    :param Yout:
+    :type Yout:
 
-	# Create dimensions
-	pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
-				Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
+    :param yout:
+    :type yout:
+    '''
+    parm_dict = usid.hdf_utils.get_attributes(h5_main)
 
-	# ds_pos_ind, ds_pos_val = build_ind_val_matrices(pos_desc, is_spectral=False)
-	spec_desc = [Dimension('Frequency', 'Hz', np.linspace(0, parm_dict['sampling_rate'], pnts_per_avg))]
-	# ds_spec_inds, ds_spec_vals = build_ind_val_matrices(spec_desc, is_spectral=True)
+    # Get relevant parameters
+    num_rows = parm_dict['num_rows']
+    num_cols = parm_dict['num_cols']
+    pnts_per_avg = parm_dict['pnts_per_avg']
 
-	# Writes main dataset
-	h5_y = usid.hdf_utils.write_main_dataset(h5_meas_group,
-											 Yout,
-											 'Y',  # Name of main dataset
-											 'Deflection',  # Physical quantity contained in Main dataset
-											 'V',  # Units for the physical quantity
-											 pos_desc,  # Position dimensions
-											 spec_desc,  # Spectroscopic dimensions
-											 dtype=np.cdouble,  # data type / precision
-											 main_dset_attrs=parm_dict)
+    h5_gp = h5_main.parent
+    h5_meas_group = usid.hdf_utils.create_indexed_group(h5_gp, 'GKPFM_Frequency')
 
-	usid.hdf_utils.copy_attributes(h5_y, h5_gp)
+    # Create dimensions
+    pos_desc = [Dimension('X', 'm', np.linspace(0, parm_dict['FastScanSize'], num_cols)),
+                Dimension('Y', 'm', np.linspace(0, parm_dict['SlowScanSize'], num_rows))]
 
-	h5_meas_group = usid.hdf_utils.create_indexed_group(h5_gp, 'GKPFM_Time')
-	spec_desc = [Dimension('Time', 's', np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
-	h5_y = usid.hdf_utils.write_main_dataset(h5_meas_group,
-											 yout,
-											 'y_time',  # Name of main dataset
-											 'Deflection',  # Physical quantity contained in Main dataset
-											 'V',  # Units for the physical quantity
-											 pos_desc,  # Position dimensions
-											 spec_desc,  # Spectroscopic dimensions
-											 dtype=np.float32,  # data type / precision
-											 main_dset_attrs=parm_dict)
+    # ds_pos_ind, ds_pos_val = build_ind_val_matrices(pos_desc, is_spectral=False)
+    spec_desc = [Dimension('Frequency', 'Hz', np.linspace(0, parm_dict['sampling_rate'], pnts_per_avg))]
+    # ds_spec_inds, ds_spec_vals = build_ind_val_matrices(spec_desc, is_spectral=True)
 
-	usid.hdf_utils.copy_attributes(h5_y, h5_gp)
+    # Writes main dataset
+    h5_y = usid.hdf_utils.write_main_dataset(h5_meas_group,
+                                             Yout,
+                                             'Y',  # Name of main dataset
+                                             'Deflection',  # Physical quantity contained in Main dataset
+                                             'V',  # Units for the physical quantity
+                                             pos_desc,  # Position dimensions
+                                             spec_desc,  # Spectroscopic dimensions
+                                             dtype=np.cdouble,  # data type / precision
+                                             main_dset_attrs=parm_dict)
 
-	h5_y.file.flush()
+    usid.hdf_utils.copy_attributes(h5_y, h5_gp)
 
-	return
+    h5_meas_group = usid.hdf_utils.create_indexed_group(h5_gp, 'GKPFM_Time')
+    spec_desc = [Dimension('Time', 's', np.linspace(0, parm_dict['total_time'], pnts_per_avg))]
+    h5_y = usid.hdf_utils.write_main_dataset(h5_meas_group,
+                                             yout,
+                                             'y_time',  # Name of main dataset
+                                             'Deflection',  # Physical quantity contained in Main dataset
+                                             'V',  # Units for the physical quantity
+                                             pos_desc,  # Position dimensions
+                                             spec_desc,  # Spectroscopic dimensions
+                                             dtype=np.float32,  # data type / precision
+                                             main_dset_attrs=parm_dict)
+
+    usid.hdf_utils.copy_attributes(h5_y, h5_gp)
+
+    h5_y.file.flush()
+
+    return
 
 
 def check_response(h5_main, pixel=0, ph=0):
-	"""
-	
-	:param h5_main:
-	:type h5_main: h5py dataset of USIDataset
-	
-	:param pixel:
-	:type pixel:
-	
-	:param ph:
-	:type ph:
-	
-	"""
-	parm_dict = usid.hdf_utils.get_attributes(h5_main)
-	freq = parm_dict['drive_freq']
-	txl = np.linspace(0, parm_dict['total_time'], h5_main[pixel, :].shape[0])
+    """
 
-	resp_wfm = np.sin(txl * 2 * pi * freq + ph)
+    :param h5_main:
+    :type h5_main: h5py dataset of USIDataset
 
-	plt.figure()
-	plt.plot(resp_wfm, h5_main[()][pixel, :])
+    :param pixel:
+    :type pixel:
 
-	return
+    :param ph:
+    :type ph:
+
+    """
+    parm_dict = usid.hdf_utils.get_attributes(h5_main)
+    freq = parm_dict['drive_freq']
+    txl = np.linspace(0, parm_dict['total_time'], h5_main[pixel, :].shape[0])
+
+    resp_wfm = np.sin(txl * 2 * pi * freq + ph)
+
+    plt.figure()
+    plt.plot(resp_wfm, h5_main[()][pixel, :])
+
+    return

@@ -9,7 +9,9 @@ Created on Tue Jan 05 07:55:56 2016
 """
 
 from __future__ import division, print_function, absolute_import
+
 import itertools
+
 import numpy as np
 
 
@@ -72,7 +74,7 @@ def get_component_slice(components, total_components=None):
     elif isinstance(components, slice):
         # Components is already a slice
         comp_slice = components
-        num_comps = np.arange(components.stop+1)[comp_slice].size
+        num_comps = np.arange(components.stop + 1)[comp_slice].size
 
         if total_components is not None:
             num_comps = np.min(num_comps, total_components)

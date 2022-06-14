@@ -5,9 +5,9 @@ __copyright__ = "Copyright 2020, Ginger Lab"
 __email__ = "rgiri@uw.edu"
 __status__ = "Production"
 
-import numpy as np
 from math import pi
-from scipy.integrate import odeint
+
+import numpy as np
 
 from .cantilever import Cantilever
 from .utils import excitation
@@ -17,7 +17,6 @@ PI2 = 2 * pi
 
 
 class ElectricDrive(Cantilever):
-    
 
     def __init__(self, can_params, force_params, sim_params, v_array=[], v_step=np.nan,
                  func=excitation.single_exp, func_args=[]):

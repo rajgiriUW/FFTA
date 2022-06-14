@@ -17,15 +17,16 @@ USAGE:
     
 '''
 
-import time
-import numpy as np
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
-from ffta import line, pixel_utils
-from matplotlib import pyplot as plt
 import argparse
+import time
 
+import numpy as np
 import pyUSID as usid
+from matplotlib import pyplot as plt
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
+
+from ffta import line, pixel_utils
 
 
 class MyHandler(FileSystemEventHandler):

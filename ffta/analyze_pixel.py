@@ -5,11 +5,12 @@ Created on Wed Jan 22 12:35:38 2020
 @author: Raj
 """
 
-#Script that loads, analyzes, and plots fast free point scan with fit
-from ffta.pixel import Pixel
-from ffta.pixel_utils.load import signal
-from ffta.pixel_utils.load import configuration
 import matplotlib.pyplot as plt
+
+# Script that loads, analyzes, and plots fast free point scan with fit
+from ffta.pixel import Pixel
+from ffta.pixel_utils.load import configuration
+from ffta.pixel_utils.load import signal
 
 
 def analyze_pixel(ibw_file, param_file):
@@ -29,12 +30,12 @@ def analyze_pixel(ibw_file, param_file):
     signal_array = signal(ibw_file)
     n_pixels, params = configuration(param_file)
     pixel = Pixel(signal_array, params=params)
-    
+
     pixel.analyze()
-    pixel.plot() 
+    pixel.plot()
     plt.xlabel('Time Step')
     plt.ylabel('Freq Shift (Hz)')
-    
+
     print('tFP is', pixel.tfp, 's')
-    
+
     return pixel.tfp

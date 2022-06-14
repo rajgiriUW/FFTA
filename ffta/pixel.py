@@ -6,25 +6,23 @@ __maintainer__ = "Rajiv Giridharagopal"
 __email__ = "rgiri@uw.edu"
 __status__ = "Development"
 
-import numpy as np
-from scipy import signal as sps
-from scipy import integrate as spg
-
-from ffta.pixel_utils import noise
-from ffta.pixel_utils import parab
-from ffta.pixel_utils import dwavelet
-from ffta.pixel_utils import tfp_calc
-from ffta.nfmd import NFMD
-
-from matplotlib import pyplot as plt
-import pywt
-
 import time
 import warnings
 
+import numpy as np
+import pywt
+from matplotlib import pyplot as plt
+from scipy import integrate as spg
+from scipy import signal as sps
+
+from ffta.nfmd import NFMD
+from ffta.pixel_utils import dwavelet
+from ffta.pixel_utils import noise
+from ffta.pixel_utils import parab
+from ffta.pixel_utils import tfp_calc
+
 
 class Pixel:
-
 
     def __init__(self,
                  signal_array,
