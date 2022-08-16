@@ -26,7 +26,6 @@ class Cantilever:
     omega(self, t)
     dZdt(self, t) if the given ODE form will not work
 
-
     Attributes
     ----------
     amp : float
@@ -70,6 +69,21 @@ class Cantilever:
     >>> c.analyze()
     >>> c.analyze(roi=0.004) # can change the parameters as desired
 
+    To correctly construct this, Cantilever requires the following parameters
+    passed in the dictionaries can_params, force_params, and sim_params.
+    Note: the dictionaries are functionally the same, you could leave force_params
+    and sim_params blank and only create can_params.    
+
+    Minimum parameters needed:
+        amp = float (in m)
+        or:
+            amp_invols = float (in m/V)
+            soft_amp = float (in V)
+        drive_freq = float (in Hz)
+        res_freq = float (in Hz)
+        k = float (in N/m)
+        q_factor = float
+        total_time = float (in seconds)
 
     :param can_params: Parameters for cantilever properties. The dictionary contains:
         amp_invols = float (in m/V)
@@ -98,21 +112,39 @@ class Cantilever:
     :type sim_params: dict
     """
 
-    def __init__(self, can_params, force_params, sim_params):
+    def __init__(self, 
+                 can_params={}, 
+                 force_params={}, 
+                 sim_params={}):
 
         # Initialize cantilever parameters and calculate some others.
         for key, value in can_params.items():
             setattr(self, key, value)
+        
+        # Initialize force parameters and calculate some others.
+        for key, value in force_params.items():
+            setattr(self, key, value)
 
+        # Initialize simulation parameters.
+        for key, value in sim_params.items():
+            setattr(self, key, value)
+        
         self.w0 = PI2 * self.res_freq  # Radial resonance frequency.
         self.wd = PI2 * self.drive_freq  # Radial drive frequency.
-
+        
         if not np.allclose(self.w0, self.wd):
+            print(self.w0, self.wd)
             print('Resonance and Drive not equal. Make sure simulation is long enough!')
 
+        if not hasattr(self, 'tau'):
+            self.tau = 0
+
+        self.delta_w = 0
         self.beta = self.w0 / (2 * self.q_factor)  # Damping factor.
         self.mass = self.k / (self.w0 ** 2)  # Mass of the cantilever in kg.
-        self.amp = self.soft_amp * self.amp_invols  # Amplitude in meters.
+        
+        if hasattr(self, 'soft_amp') and hasattr(self, 'amp_invols'):
+            self.amp = self.soft_amp * self.amp_invols  # Amplitude in meters.
 
         # Calculate reduced driving force and phase in equilibrium.
         np.seterr(divide='ignore')  # suprress divide-by-0 warning in arctan
@@ -120,17 +152,13 @@ class Cantilever:
                                      4 * self.beta ** 2 * self.wd ** 2)
         self.delta = np.abs(np.arctan(np.divide(2 * self.wd * self.beta,
                                                 self.w0 ** 2 - self.wd ** 2)))
-
-        # Initialize force parameters and calculate some others.
-        for key, value in force_params.items():
-            setattr(self, key, value)
-
-        self.delta_w = PI2 * self.delta_freq  # Frequency shift in radians.
-        self.fe = self.es_force / self.mass  # Reduced electrostatic force.
-
-        # Initialize simulation parameters.
-        for key, value in sim_params.items():
-            setattr(self, key, value)
+        self.fe = 0 
+        
+        if hasattr(self, 'delta_freq'):
+            self.delta_w = PI2 * self.delta_freq  # Frequency shift in radians.
+        
+        if hasattr(self, 'es_force'):
+            self.fe = self.es_force / self.mass  # Reduced electrostatic force.
 
         # Calculate time axis for simulated tip motion without extra cycles
         num_pts = int(self.total_time * self.sampling_rate)
@@ -144,7 +172,7 @@ class Cantilever:
         self.parameters = force_params
         self.parameters.update(**sim_params)
         self.can_params = can_params
-        self.create_parameters(self.parameters, self.can_params)
+        #self.create_parameters(self.parameters, self.can_params)
 
         return
 

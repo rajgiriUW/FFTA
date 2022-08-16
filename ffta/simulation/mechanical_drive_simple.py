@@ -16,13 +16,16 @@ PI2 = 2 * pi
 
 class MechanicalDrive_Simple(Cantilever):
 
-    def __init__(self, can_params, force_params, sim_params,
+    def __init__(self, 
+                 can_params={}, 
+                 force_params={}, 
+                 sim_params={},
                  w_array=[]):
         """Damped Driven Harmonic Oscillator Simulator for AFM Cantilevers under 
         Mechanical drive (i.e. conventional DDHO)
 
-        Simulates a DDHO under excitation with explicitly supplied resonance frequency shift
-        and NO electrostatic force change
+        Simulates a DDHO under excitation with explicitly supplied resonance 
+        frequency shift and NO electrostatic force change
 
         Attributes
         ----------
@@ -48,7 +51,7 @@ class MechanicalDrive_Simple(Cantilever):
         >>> params_file = '../examples/sim_params.cfg'
         >>> params = load.simulation_configuration(params_file)
         >>>
-        >>> c = mechanical_dirve.MechanicalDrive(*params)
+        >>> c = mechanical_dirve.MechanicalDrive_Simple(*params)
         >>> Z, infodict = c.simulate()
         >>> c.analyze()
         >>> c.analyze(roi=0.004) # can change the parameters as desired
@@ -101,7 +104,7 @@ class MechanicalDrive_Simple(Cantilever):
         if len(w_array) != int(self.total_time * self.sampling_rate):
             print(int(self.total_time * self.sampling_rate))
             print(len(w_array))
-            raise ValueError('v_array must match sampling rate/length of parameters')
+            raise ValueError('w_array must match sampling rate/length of parameters')
 
         self.w_array = w_array
 

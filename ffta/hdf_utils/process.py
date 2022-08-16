@@ -32,8 +32,6 @@ class FFtrEFM(Process):
     Implements the pixel-by-pixel processing using ffta.pixel routines
     Abstracted using the Process class for parallel processing on image dataset
     
-    
-
     Example usage:
 
         >> from ffta.hdf_utils import process
