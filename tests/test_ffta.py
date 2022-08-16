@@ -8,6 +8,9 @@ sys.path.insert(0, '..')
 import ffta
 import pyUSID as usid
 
+from ffta.simulation.mechanical_drive import MechanicalDrive
+from ffta.simulation.load import simulation_configuration
+from ffta.simulation import excitation
 
 # Testing of standard process flow
 class TestFFTA:
@@ -115,3 +118,26 @@ class TestSignal:
     #     pix.analyze()
     #
     #     assert (pix.tfp > 1e-6 and pix.tfp < 500e-4)
+
+class TestSimulation:
+
+    if 'testdata' in os.getcwd():
+        os.chdir('..')
+        os.chdir('..')
+    path = r'tests/example_sim_params.cfg'
+
+    def test_read_sim_config(self):
+        can_params, force_params, sim_params = simulation_configuration(path)
+        assert (force_params['es_force'] == 3e-09 and force_params['delta_freq'] == -200.0
+                and force_params['tau'] ==1e-05)
+        return
+
+    def test_mech_drive(self):
+        cant = MechanicalDrive(can_params, force_params, sim_params)
+        assert (cant.tau == 1e-5)
+
+        Z, info = cant.simulate()
+        asset(Z.shape > 0)
+
+        return
+

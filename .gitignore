@@ -355,3 +355,5 @@ docs/mdmo/Calibration_Curve.csv
 docs/mdmo/FF04_Calibrated_DataSet_full.png
 
 docs/mdmo/FF04_SVD_Abundance_Maps.png
+
+venv/
