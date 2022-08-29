@@ -128,9 +128,9 @@ class NFMD:
             prev_freqs = freqs
             prev_A = A
 
-        self.freqs = np.asarray(self.freqs)
-        self.A = np.asarray(self.A)
-        self.losses = np.asarray(self.losses)
+        self.freqs = np.array(self.freqs)
+        self.A = np.array(self.A)
+        self.losses = self.losses.detach().numpy()
 
         return self.freqs, self.A, self.losses, self.indices
 
