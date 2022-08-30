@@ -130,7 +130,7 @@ class NFMD:
 
         self.freqs = np.array(self.freqs)
         self.A = np.array(self.A)
-        self.losses = self.losses.detach().numpy()
+        self.losses = [loss.detach().numpy() for loss in self.losses]
 
         return self.freqs, self.A, self.losses, self.indices
 
