@@ -5,6 +5,7 @@ from . import hdf_utils
 from . import line
 from . import load
 from . import pixel
+from . import nfmd
 from . import pixel_utils
 from . import simulation
 from .__version__ import version as __version__
@@ -17,3 +18,4 @@ __all__ += analysis.__all__
 __all__ += gkpfm.__all__
 __all__ += load.__all__
 __all__ += simulation.__all__
+__all__ += nfmd.__all__
