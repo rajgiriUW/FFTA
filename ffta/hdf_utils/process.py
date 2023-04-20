@@ -722,8 +722,8 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
         num_cols = attr['num_cols']
         num_rows = attr['num_rows']
         
-        tfp = ffprocess['tfp']
-        shift = ffprocess['shift']
+        tfp = ffprocess['tfp'][()]
+        shift = ffprocess['shift'][()]
         
         if 'tfp_cal' in ffprocess:
             tfp_cal = ffprocess['tfp_cal'][()]
