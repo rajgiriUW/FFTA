@@ -9,7 +9,7 @@ import ffta
 import pyUSID as usid
 
 from ffta.simulation.mechanical_drive import MechanicalDrive
-from ffta.simulation.load import simulation_configuration
+from ffta.simulation.utils.load import simulation_configuration
 from ffta.simulation import excitation
 
 # Testing of standard process flow
