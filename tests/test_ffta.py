@@ -127,17 +127,18 @@ class TestSimulation:
     path = r'tests/example_sim_params.cfg'
 
     def test_read_sim_config(self):
-        can_params, force_params, sim_params = simulation_configuration(path)
-        assert (force_params['es_force'] == 3e-09 and force_params['delta_freq'] == -200.0
+        can_params, force_params, sim_params = simulation_configuration(self.path)
+        assert (force_params['es_force'] == 3e-09 and force_params['delta_freq'] == -277.53 
                 and force_params['tau'] ==1e-05)
         return
 
     def test_mech_drive(self):
+        can_params, force_params, sim_params = simulation_configuration(self.path)
         cant = MechanicalDrive(can_params, force_params, sim_params)
         assert (cant.tau == 1e-5)
 
         Z, info = cant.simulate()
-        asset(Z.shape > 0)
+        assert(len(Z.shape) > 0)
 
         return
 
