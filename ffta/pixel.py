@@ -1,7 +1,7 @@
 """pixel.py: Contains pixel class."""
 # pylint: disable=E1101,R0902,C0103
 __author__ = "Rajiv Giridharagopal"
-__copyright__ = "Copyright 2021"
+__copyright__ = "Copyright 2023"
 __maintainer__ = "Rajiv Giridharagopal"
 __email__ = "rgiri@uw.edu"
 __status__ = "Development"
@@ -48,7 +48,8 @@ class Pixel:
 
         a) Hilbert Transform
         b) Wavelet Transform
-        c) Short-Time Fourier Transform (STFT))
+        c) Short-Time Fourier Transform (STFT)
+        d) Non-stationary Fourier mode decomposition (NFMD)
             
         Attributes
         ----------
@@ -192,13 +193,13 @@ class Pixel:
         self.scales = np.arange(100, 2, -1)
         self.wavelet_params = {}  # currently just optimize flag is supported
 
-        # Short Time Fourier Transform
+        # Short Time Fourier Transform parameters
         self.fft_analysis = False
         self.fft_cycles = 2
         self.fft_params = {}  # for STFT
         self.fft_time_res = 20e-6
 
-        # NFMD 
+        # NFMD parameters
         self.nfmd_analysis = False
         self.num_freqs = 2
         self.window_size = 40
@@ -206,6 +207,7 @@ class Pixel:
         self.max_iters = 100
         self.target_loss = 1e-4
         self.update_freq = None
+        self.device = 'cpu'
 
         # Misc Settings
         self.phase_fitting = False
@@ -901,7 +903,8 @@ class Pixel:
                     window_size=self.window_size,
                     optimizer_opts=self.optimizer_opts,
                     max_iters=self.max_iters,
-                    target_loss=self.target_loss)
+                    target_loss=self.target_loss,
+                    device=self.device)
 
         if verbose:
             freqs, A, losses, indices = nfmd.decompose_signal(self.update_freq)
@@ -1075,7 +1078,7 @@ class Pixel:
 
         return
 
-    def generate_inst_freq(self, timing=False):
+    def generate_inst_freq(self, timing=False, dc=True):
         """
         Generates the instantaneous frequency
         
@@ -1093,7 +1096,7 @@ class Pixel:
             t1 = time.time()
 
         # Remove DC component, first.
-        if self.method != 'nfmd':
+        if dc:
             self.remove_dc()
         else:
             self.signal = np.copy(self.signal_array)
@@ -1154,7 +1157,7 @@ class Pixel:
                 self.amplitude_filter()
 
         else:
-            raise ValueError('Invalid analysis method! Valid options: hilbert, wavelet, fft')
+            raise ValueError('Invalid analysis method! Valid options: hilbert, wavelet, fft, nfmd')
 
         if timing:
             print('Time:', time.time() - t1, 's')
