@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 
+import time
 
 class NFMD:
     def __init__(self, signal, num_freqs, window_size,
@@ -48,12 +49,15 @@ class NFMD:
         # Signal -- assumed 1D, needs to be type double
         self.x = signal.astype(np.double).flatten()
         self.n = signal.shape[0]
+        
         # Signal Decomposition options
         self.num_freqs = num_freqs
         self.window_size = window_size
         self.windows = windows
+        
         if not windows:
             self.windows = self.n
+            
         # Stochastic Gradient Descent Options
         self.optimizer = optimizer
         self.optimizer_opts = optimizer_opts
@@ -82,6 +86,8 @@ class NFMD:
 
         '''
         # Compute window indices
+
+        t1 = time.time()
         self.compute_window_indices()
 
         # Determine if printing updates
@@ -112,7 +118,7 @@ class NFMD:
             max_iters = self.max_iters
 
             if i == 0:
-                max_iters = 10000
+                self.max_iters = 10000
 
             # Fit data in window to model
             loss, freqs, A = self.fit_window(x_i,
@@ -128,9 +134,16 @@ class NFMD:
             prev_freqs = freqs
             prev_A = A
 
+        #print (time.time() - t1, 's for decompose_signal')
+        t2 = time.time()
         self.freqs = np.array(self.freqs)
         self.A = np.array(self.A)
-        self.losses = [loss.detach().numpy() for loss in self.losses]
+        if self.device == 'cpu':
+            self.losses = [loss.detach().numpy() for loss in self.losses]
+        else:
+            self.losses = [loss.detach().cpu().numpy() for loss in self.losses]
+
+        #print (time.time() - t2, 's for detach')
 
         return self.freqs, self.A, self.losses, self.indices
 
@@ -139,24 +152,32 @@ class NFMD:
         Sets the 'indices' attribute with computed index slices corresponding
         to the windows used in the analysis.
         Note: this is equivalent to computing rectangular windows.
-
         '''
+
+
+        t2 = time.time()
         # Define how many points between centerpoint of windows
         increment = int(self.n / self.windows)
         window_size = self.window_size
+        
         # Initialize the indices lists
         self.indices = []
         self.mid_idcs = []
+        
         # Populate the indices lists
         for i in range(self.windows):
+        
             # Compute window slice indices
             idx_start = int(max(0, i * increment - window_size / 2))
             idx_end = int(min(self.n, i * increment + window_size / 2))
+            
             if idx_end - idx_start == window_size:
                 # Add the index slice to the indices list
                 self.indices.append(slice(idx_start, idx_end))
                 idx_mid = int((idx_end + idx_start) / 2)
                 self.mid_idcs.append(idx_mid)
+
+        #print(time.time() - t2, 's for compute_window_indices')
 
     def fit_window(self, xt, freqs=None, A=None):
         '''
@@ -181,11 +202,14 @@ class NFMD:
 
         '''
         # If no frequency is provided, generate initial frequency guess:
+
         if freqs is None:
             freqs, A = self.fft(xt)
 
+        t2 = time.time()
         # Then begin SGD
         loss, freqs, A = self.sgd(xt, freqs, A, max_iters=self.max_iters)
+        print(time.time() - t2, 's for sgd')
 
         return loss, freqs, A
 
@@ -324,7 +348,8 @@ class NFMD:
         return loss, freqs, A
 
     def predict(self, T):
-        ''' Predicts the data from 1 to T.
+        '''
+        Predicts the data from 1 to T.
 
         :param T: Prediction horizon (number of timepoints T)
         :type T: int
