@@ -403,11 +403,12 @@ class Pixel:
         """
         Averages signals.
         """
-
         if self.n_signals != 1:  # if not multi-signal, don't average
 
-            # self.signal = self.signal_array.mean(axis=1)
-            self.signal = self.signal.mean(axis=1)
+            try:
+                self.signal = self.signal.mean(axis=1)
+            except:
+                self.signal = self.signal_array.mean(axis=1)
 
         return
 
