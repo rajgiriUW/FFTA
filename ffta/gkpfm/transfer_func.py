@@ -11,7 +11,7 @@ from math import pi
 import numpy as np
 import pandas as pd
 import pyUSID as usid
-from igor import binarywave as bw
+from igor2 import binarywave as bw
 from matplotlib import pyplot as plt
 from pyUSID import Dimension
 from scipy import signal as sg

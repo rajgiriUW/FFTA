@@ -10,7 +10,7 @@ import os
 import h5py
 import numpy as np
 import pyUSID as usid
-from igor.binarywave import load as loadibw
+from igor2.binarywave import load as loadibw
 from matplotlib import pyplot as plt
 from scipy.optimize import minimize
 from sidpy import Dimension

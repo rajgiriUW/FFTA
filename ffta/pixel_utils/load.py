@@ -12,7 +12,7 @@ from os.path import splitext
 
 import numpy as np
 import pandas as pd
-from igor.binarywave import load as loadibw
+from igor2.binarywave import load as loadibw
 from numpy.lib.npyio import loadtxt
 
 

@@ -12,7 +12,10 @@ Created on Tue Oct 20 17:42:41 2015
 
 from __future__ import division, print_function, absolute_import
 
-from collections import Iterable
+try:
+    from collections import Iterable
+except:
+    from collections.abc import Iterable
 from warnings import warn
 
 import matplotlib.pyplot as plt  # for all plots

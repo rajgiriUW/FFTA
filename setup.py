@@ -25,7 +25,7 @@ setup(
 
     install_requires=['numpy>=1.20.0',
                       'scipy>=1.4.1',
-                      'igor>=0.3',
+                      'igor2>=0.5.2',
                       'numexpr>=2.7.1',
                       'pyUSID>=0.0.10',
                       'pywavelets>=1.1.1',

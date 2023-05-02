@@ -11,7 +11,7 @@ from os import path  # File Path formatting
 
 import h5py
 import numpy as np  # For array operations
-from igor import binarywave as bw
+from igor2 import binarywave as bw
 from pyUSID.io import Dimension
 from pyUSID.io.hdf_utils import write_ind_val_dsets
 from pyUSID.io.hdf_utils import write_main_dataset, create_indexed_group

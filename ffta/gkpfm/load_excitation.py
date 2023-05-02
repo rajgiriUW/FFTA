@@ -13,7 +13,7 @@ import os
 import h5py
 import numpy as np
 import pyUSID as usid
-from igor.binarywave import load as loadibw
+from igor2.binarywave import load as loadibw
 
 
 def load_exc(ibw_folder='', pixels=64, scale=1, offset=1, verbose=False):

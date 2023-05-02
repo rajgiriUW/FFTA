@@ -12,7 +12,7 @@ import numpy as np
 import numpy.polynomial.polynomial as npPoly
 import pyUSID as usid
 from BGlib.be.analysis.utils.be_sho import SHOfunc, SHOfit
-from igor.binarywave import load as loadibw
+from igor2.binarywave import load as loadibw
 from matplotlib import pyplot as plt
 from scipy.optimize import fmin_tnc
 from scipy.signal import fftconvolve, chirp
