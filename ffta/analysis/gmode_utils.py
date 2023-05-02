@@ -13,7 +13,10 @@ Created on Thu May 05 13:29:12 2016
 from __future__ import division, print_function, absolute_import
 
 import sys
-from collections import Iterable
+try:
+    from collections import Iterable
+except:
+    from collections.abc import Iterable
 from numbers import Number
 from warnings import warn
 
