@@ -136,9 +136,14 @@ def fit_product(Q, drive_freq, t, inst_freq):
     
     """
     # Initial guess for relaxation constant.
-    inv_beta = Q / (np.pi * drive_freq)
+    inv_beta = float(Q / (np.pi * drive_freq))
 
     # Cost function to minimize.
+    
+    if not isinstance(inst_freq, np.ndarray):
+        inst_freq = inst_freq.get()
+        t = t.get()
+    
     cost = lambda p: np.sum((ddho_freq_product(t, *p) - inst_freq) ** 2)
 
     # bounded optimization using scipy.minimize
@@ -171,6 +176,9 @@ def fit_product_unbound(Q, drive_freq, t, inst_freq):
     :returns:
     :rtype:
     """
+
+    if not isinstance(inst_freq, np.ndarray):
+        inst_freq = inst_freq.get()
 
     # Initial guess for relaxation constant.
     inv_beta = Q / (np.pi * drive_freq)
