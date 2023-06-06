@@ -819,7 +819,6 @@ class Pixel:
         pts_per_ncycle = int(self.fft_time_res * self.sampling_rate)
 
         if nfft < pts_per_ncycle:
-            print('Error with nfft setting')
             nfft = pts_per_ncycle
 
         if pts_per_ncycle > len(self.signal):
