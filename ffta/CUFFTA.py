@@ -214,7 +214,7 @@ class CUFFTA:
         self.max_iters = 100
         self.target_loss = 1e-4
         self.update_freq = None
-        self.device = 'cpu'
+        self.device = 'cuda'
 
         # Misc Settings
         self.phase_fitting = False
@@ -507,7 +507,7 @@ class CUFFTA:
         AMP[:center - int(DRIVE / 2) + 1] = 0
         AMP[center + int(DRIVE / 2) - 1:] = 0
 
-        self.amplitude = np.abs(np.fft.ifft(np.fft.ifftshift(AMP)))
+        self.amplitude = cp.abs(cp.fft.ifft(cp.fft.ifftshift(AMP)))
 
         return
 
@@ -516,12 +516,12 @@ class CUFFTA:
         Filters the instantaneous frequency around DC peak to remove noise
         Uses self.filter_bandwidth for the frequency filter
         '''
-        FREQ = np.fft.fftshift(np.fft.fft(self.inst_freq))
+        FREQ = cp.fft.fftshift(cp.fft.fft(self.inst_freq))
 
         center = int(len(FREQ) / 2)
 
         df = self.sampling_rate / self.n_points
-        drive_bin = int(np.ceil(self.drive_freq / df))
+        drive_bin = int(cp.ceil(self.drive_freq / df))
         bin_width = int(self.filter_bandwidth / df)
 
         if bin_width > drive_bin:
@@ -531,7 +531,7 @@ class CUFFTA:
         FREQ[:center - bin_width] = 0
         FREQ[center + bin_width:] = 0
 
-        self.inst_freq = np.real(np.fft.ifft(np.fft.ifftshift(FREQ)))
+        self.inst_freq = cp.real(cp.fft.ifft(cp.fft.ifftshift(FREQ)))
 
         return
 
@@ -666,7 +666,7 @@ class CUFFTA:
         # using 5 point 1st order polynomial.
 
         # -self.phase to correct for sign in DDHO solution
-        _inst_freq_raw = sps.savgol_filter(-self.phase.get()), 5, 1, deriv=1,
+        _inst_freq_raw = sps.savgol_filter(-self.phase.get(), 5, 1, deriv=1,
                                                delta=dtime)
         
 
@@ -711,65 +711,70 @@ class CUFFTA:
         sc = pywt.scale2frequency(self.wavelet, self.scales) / dt
 
         if verbose:
-            print('Wavelet scale from', np.min(sc), 'to', np.max(sc))
+            print('Wavelet scale from', numpy.min(sc), 'to', numpy.max(sc))
 
-        if f_center < np.min(sc) or f_center > np.max(sc):
+        if f_center < numpy.min(sc) or f_center > numpy.max(sc):
             raise ValueError('Choose a scale that captures frequency of interest')
 
         if optimize:
             print('!')
-            drive_bin = self.scales[np.searchsorted(sc, f_center)]
+            drive_bin = self.scales[numpy.searchsorted(sc, f_center)]
             hi = int(1.2 * drive_bin)
             lo = int(0.8 * drive_bin)
-            self.scales = np.arange(hi, lo, -0.1)
+            self.scales = numpy.arange(hi, lo, -0.1)
 
-        spectrogram, freq = pywt.cwt(self.signal, self.scales, self.wavelet, sampling_period=dt)
+        spectrogram, freq = pywt.cwt(self.signal.get(), self.scales, self.wavelet, sampling_period=dt)
 
         if not fit:
 
-            inst_freq, amplitude, _ = parab.ridge_finder(np.abs(spectrogram), np.arange(len(freq)))
+            inst_freq, amplitude, _ = parab.ridge_finder(numpy.abs(spectrogram), 
+                                                         numpy.arange(len(freq)))
 
         # slow serial curve fitting
         else:
 
-            inst_freq = np.zeros(self.n_points)
-            amplitude = np.zeros(self.n_points)
+            inst_freq = numpy.zeros(self.n_points)
+            amplitude = numpy.zeros(self.n_points)
 
             for c in range(spectrogram.shape[1]):
 
                 SIG = spectrogram[:, c]
                 if fit:
-                    pk = np.argmax(np.abs(SIG))
-                    popt = np.polyfit(np.arange(20),
-                                      np.abs(SIG[pk - 10:pk + 10]), 2)
+                    pk = numpy.argmax(numpy.abs(SIG))
+                    popt = numpy.polyfit(numpy.arange(20),
+                                         numpy.abs(SIG[pk - 10:pk + 10]), 2)
                     inst_freq[c] = -0.5 * popt[1] / popt[0]
-                    amplitude[c] = np.abs(SIG)[pk]
+                    amplitude[c] = numpy.abs(SIG)[pk]
 
         # rescale to correct frequency 
         inst_freq = pywt.scale2frequency(self.wavelet, inst_freq + self.scales[0]) / dt
 
         if calc_phase:
             phase = spg.cumtrapz(inst_freq)
-            phase = np.append(phase, phase[-1])
+            phase = numpy.append(phase, phase[-1])
         else:
-            phase = np.zeros(len(inst_freq))
+            phase = numpy.zeros(len(inst_freq))
 
         tidx = int(self.tidx * len(inst_freq) / self.n_points)
 
         self.amplitude = amplitude
         self.inst_freq_raw = inst_freq
         self.inst_freq = -1 * (inst_freq - inst_freq[tidx])  # -1 due to way scales are ordered
-        self.spectrogram = np.abs(spectrogram)
+        self.spectrogram = numpy.abs(spectrogram)
         self.wavelet_freq = freq  # the wavelet frequencies
 
         # subtract the w*t line (drive frequency line) from phase
         if calc_phase:
             start = int(0.3 * tidx)
             end = int(0.7 * tidx)
-            xfit = np.polyfit(np.arange(start, end), phase[start:end], 1)
-            phase -= (xfit[0] * np.arange(len(inst_freq))) + xfit[1]
+            xfit = numpy.polyfit(numpy.arange(start, end), phase[start:end], 1)
+            phase -= (xfit[0] * numpy.arange(len(inst_freq))) + xfit[1]
 
         self.phase = phase
+        
+        self.inst_freq = cp.array(self.inst_freq)
+        self.phase = cp.array(self.phase)
+        self.amplitude = cp.array(self.amplitude)
 
         return
 
@@ -809,17 +814,18 @@ class CUFFTA:
 
         # Correctly pad the signals
         _pts = self.n_points - len(inst_freq)
-        _pre = int(np.floor(_pts / 2))
-        _post = int(np.ceil(_pts / 2))
+        _pre = int(cp.floor(_pts / 2))
+        _post = int(cp.ceil(_pts / 2))
 
-        inst_freq = np.pad(inst_freq, (_pre, _post))
-        amplitude = np.pad(amplitude, (_pre, _post))
+        inst_freq = cp.pad(inst_freq, (_pre, _post))
+        amplitude = cp.pad(amplitude, (_pre, _post))
 
         if calc_phase:
-            phase = spg.cumtrapz(inst_freq)
-            phase = np.append(phase, phase[-1])
+            phase = spg.cumtrapz(inst_freq.get())
+            phase = numpy.append(phase, phase[-1])
+            phase = cp.array(phase)
         else:
-            phase = np.zeros(len(inst_freq))
+            phase = cp.zeros(len(inst_freq))
         tidx = int(self.tidx * len(inst_freq) / self.n_points)
 
         self.amplitude = amplitude
@@ -833,8 +839,8 @@ class CUFFTA:
         if calc_phase:
             start = int(0.3 * tidx)
             end = int(0.7 * tidx)
-            xfit = np.polyfit(np.arange(start, end), phase[start:end], 1)
-            phase -= (xfit[0] * np.arange(len(inst_freq))) + xfit[1]
+            xfit = cp.polyfit(cp.arange(start, end), phase[start:end], 1)
+            phase -= (xfit[0] * cp.arange(len(inst_freq))) + xfit[1]
 
         self.phase = phase
 
@@ -856,7 +862,7 @@ class CUFFTA:
     
         '''
         if not self.signal.any():
-            self.signal = np.copy(self.signal_array)
+            self.signal = cp.copy(self.signal_array)
             self.average()
 
         z = self.signal
@@ -869,7 +875,7 @@ class CUFFTA:
             if verbose:
                 print('window size automatically adjusted to ', self.window_size)
 
-        nfmd = NFMD(z / np.std(z),
+        nfmd = NFMD(z / cp.std(z),
                     num_freqs=self.num_freqs,
                     window_size=self.window_size,
                     optimizer_opts=self.optimizer_opts,
@@ -892,7 +898,7 @@ class CUFFTA:
 
         if calc_phase:
             phase = spg.cumtrapz(self.inst_freq)
-            self.phase = np.append(phase, phase[-1])
+            self.phase = cp.append(phase, phase[-1])
         else:
             self.phase = self.n_mean
 
@@ -903,10 +909,10 @@ class CUFFTA:
         Calculate tfp and shift based self.fit_form and self.fit selection
         """
         ridx = int(self.roi * self.sampling_rate)
-        cut = np.copy(self.inst_freq[self.tidx:(self.tidx + ridx)])
+        cut = cp.copy(self.inst_freq[self.tidx:(self.tidx + ridx)])
         cut -= self.inst_freq[self.tidx]
         self.cut = cut
-        t = np.arange(cut.shape[0]) / self.sampling_rate
+        t = cp.arange(cut.shape[0]) / self.sampling_rate
 
         try:
 
@@ -921,7 +927,7 @@ class CUFFTA:
             elif self.fit_form == 'exp':
 
                 if self.method == 'nfmd':
-                    cut = np.copy(self.phase[self.tidx:(self.tidx + ridx)])
+                    cut = cp.copy(self.phase[self.tidx:(self.tidx + ridx)])
                     cut -= self.phase[self.tidx]
                     self.cut = cut
 
@@ -943,9 +949,9 @@ class CUFFTA:
 
         except:
 
-            self.tfp = np.nan
-            self.shift = np.nan
-            self.best_fit = np.zeros(cut.shape[0])
+            self.tfp = cp.nan
+            self.shift = cp.nan
+            self.best_fit = cp.zeros(cut.shape[0])
             print('error with fitting')
 
         if not (self.method == 'nfmd' and self.fit_form == 'exp'):
@@ -973,24 +979,24 @@ class CUFFTA:
         if d_trig >= d_points:
 
             # Pad from left and set the original length.
-            self.inst_freq = np.pad(self.inst_freq, (d_trig, 0), 'edge')
+            self.inst_freq = cp.pad(self.inst_freq, (d_trig, 0), 'edge')
             self.inst_freq = self.inst_freq[:self._n_points_orig]
 
-            self.phase = np.pad(self.phase, (d_trig, 0), 'edge')
+            self.phase = cp.pad(self.phase, (d_trig, 0), 'edge')
             self.phase = self.phase[:self._n_points_orig]
 
-            self.amplitude = np.pad(self.amplitude, (d_trig, 0), 'edge')
+            self.amplitude = cp.pad(self.amplitude, (d_trig, 0), 'edge')
             self.amplitude = self.amplitude[:self._n_points_orig]
 
         else:
 
             # Calculate how many points is needed for padding from right.
             pad_right = d_points - d_trig
-            self.inst_freq = np.pad(self.inst_freq, (d_trig, pad_right),
+            self.inst_freq = cp.pad(self.inst_freq, (d_trig, pad_right),
                                     'edge')
-            self.phase = np.pad(self.phase, (d_trig, pad_right),
+            self.phase = cp.pad(self.phase, (d_trig, pad_right),
                                 'edge')
-            self.amplitude = np.pad(self.amplitude, (d_trig, pad_right),
+            self.amplitude = cp.pad(self.amplitude, (d_trig, pad_right),
                                     'edge')
 
         # Set the public variables back to original values.
@@ -1021,7 +1027,7 @@ class CUFFTA:
         cut = self.amplitude[fidx:(fidx + ridx)]
 
         cut = [fidx, (fidx + ridx)]
-        tx = np.arange(cut[0], cut[1]) * dt
+        tx = cp.arange(cut[0], cut[1]) * dt
 
         a[0].plot(tx * 1e3, self.inst_freq[cut[0]:cut[1]], 'r-')
 
@@ -1037,7 +1043,7 @@ class CUFFTA:
         if self.fit_form == 'exp' and self.method == 'nfmd':
             a[2].plot(tx * 1e3, self.phase[cut[0]:cut[1]], 'm')
         else:
-            a[2].plot(tx * 1e3, self.phase[cut[0]:cut[1]] * 180 / np.pi, 'm')
+            a[2].plot(tx * 1e3, self.phase[cut[0]:cut[1]] * 180 / cp.pi, 'm')
 
         a[0].set_title('Instantaneous Frequency')
         a[0].set_ylabel('Frequency Shift (Hz)')
@@ -1070,7 +1076,7 @@ class CUFFTA:
         if dc:
             self.remove_dc()
         else:
-            self.signal = np.copy(self.signal_array)
+            self.signal = cp.copy(self.signal_array)
 
         # Phase-lock signals.
         # self.phase_lock()
