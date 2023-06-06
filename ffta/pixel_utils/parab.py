@@ -1,7 +1,7 @@
 """parab.py: Parabola fit around three points to find a true vertex."""
 
 import numpy as np
-
+import cupy as cp
 
 def fit_peak(f, x):
     '''
@@ -64,6 +64,7 @@ def ridge_finder(spectrogram, freq_bin):
         ndarray xindex is 1D array of the frequency bins returned by parabolic approximation
         ndarray yindex is 1D array of the peak values at the xindices supplied
     '''
+    
     _argmax = np.argmax(np.abs(spectrogram), axis=0)
     cols = spectrogram.shape[1]
 
@@ -74,6 +75,33 @@ def ridge_finder(spectrogram, freq_bin):
 
     return fit_2d(maxspec, _argmax, freq_bin)
 
+def cu_ridge_finder(spectrogram, freq_bin):
+    '''
+    Uses parabolda to fit peak and two surrounding points, using cupy
+    This takes a spectrogram and the frequency bin spacing and wraps parab.fit_2d
+
+    :param spectrogram: Returned by scipy.signal.spectrogram or stft or cwt
+        Arranged in (frequencies, times) shape
+    :type spectrogram: ndarray
+
+    :param freq_bin: arrays corresponding the frequencies in the spectrogram
+    :type freq_bin: ndarray
+
+    :returns: tuple (xindex, yindex)
+        WHERE
+        ndarray xindex is 1D array of the frequency bins returned by parabolic approximation
+        ndarray yindex is 1D array of the peak values at the xindices supplied
+    '''
+    
+    _argmax = cp.argmax(cp.abs(spectrogram), axis=0)
+    cols = spectrogram.shape[1]
+
+    # generate a (3, cols) matrix of the spectrogram values
+    maxspec = cp.array([spectrogram[(_argmax - 1, cp.arange(cols))],
+                        spectrogram[(_argmax, cp.arange(cols))],
+                        spectrogram[(_argmax + 1, cp.arange(cols))]])
+
+    return fit_2d(maxspec, _argmax, freq_bin)
 
 def fit_2d(f, p, dx):
     '''

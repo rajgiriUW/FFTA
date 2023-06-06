@@ -801,16 +801,16 @@ class CUFFTA:
             pts_per_ncycle = len(self.signal)
 
         # drivebin = int(self.drive_freq / (self.sampling_rate / nfft ))
-        freq, times, spectrogram = sps.spectrogram(self.signal,
-                                                   self.sampling_rate,
-                                                   nperseg=pts_per_ncycle,
-                                                   noverlap=pts_per_ncycle - 1,
-                                                   nfft=nfft,
-                                                   window=self.window,
-                                                   mode='magnitude')
+        freq, times, spectrogram = cusignal.spectrogram(self.signal,
+                                                        self.sampling_rate,
+                                                        nperseg=pts_per_ncycle,
+                                                        noverlap=pts_per_ncycle - 1,
+                                                        nfft=nfft,
+                                                        window=self.window,
+                                                        mode='magnitude')
 
         # Parabolic ridge finder
-        inst_freq, amplitude, _ = parab.ridge_finder(spectrogram, freq)
+        inst_freq, amplitude, _ = parab.cu_ridge_finder(spectrogram, freq)
 
         # Correctly pad the signals
         _pts = self.n_points - len(inst_freq)
