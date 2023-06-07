@@ -67,7 +67,7 @@ class MechanicalDrive(Cantilever):
     >>> c.analyze()
     >>>
     >>> # To use a function instead of artbitary array, say stretch exponential
-    >>> c = mechanical_dirve.MechanicalDrive(*params, func=excitation.str_exp, func_args=[1e-3, 0.8])
+    >>> c = mechanical_drive.MechanicalDrive(*params, func=excitation.str_exp, func_args=[1e-3, 0.8])
     >>> Z, _ = c.simulate()
     >>> c.analyze()
     >>> c.func_args = [1e-3, 0.7] # change beta value in stretched exponential
@@ -99,8 +99,13 @@ class MechanicalDrive(Cantilever):
 
     """
 
-    def __init__(self, can_params, force_params, sim_params,
-                 v_array=[], func=excitation.single_exp, func_args=[]):
+    def __init__(self, 
+                 can_params, 
+                 force_params, 
+                 sim_params,
+                 v_array=[], 
+                 func=excitation.single_exp, 
+                 func_args=[]):
 
         parms = [can_params, force_params, sim_params]
         super(MechanicalDrive, self).__init__(*parms)
@@ -190,7 +195,6 @@ class MechanicalDrive(Cantilever):
             
         """
 
-        # return self.w0 + self.delta_w * self.__gamma__(t, t0, tau)
         return self.w0 + self.delta_w * self.__gamma__(t)
 
     def force(self, t, t0, tau):
@@ -213,7 +217,6 @@ class MechanicalDrive(Cantilever):
         """
 
         driving_force = self.f0 * np.sin(self.wd * t)
-        # electro_force = self.fe * self.__gamma__(t, t0, tau)
         electro_force = self.fe * self.__gamma__(t)
 
         return driving_force - electro_force
