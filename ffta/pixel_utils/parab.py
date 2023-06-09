@@ -1,7 +1,11 @@
 """parab.py: Parabola fit around three points to find a true vertex."""
 
 import numpy as np
-import cupy as cp
+try:
+    import cupy as cp
+except:
+    import warnings
+    warnings.warn('cuPy not installed; no GPU available')
 
 def fit_peak(f, x):
     '''
