@@ -4,6 +4,7 @@ import pyUSID as usid
 import sidpy
 from matplotlib import pyplot as plt
 from scipy import signal as sps
+import sys
 
 '''
 Note: A 'str is not callable' bug is often due to not running set_mpeg
@@ -92,7 +93,10 @@ def create_freq_movie(h5_ds,
                       cmap='inferno',
                       interval=60,
                       repeat_delay=100,
-                      crop=None):
+                      crop=None,
+                      verbose = True,
+                      discharge_time = False,
+                      discharge=2000):
     '''
     Creates an animation that goes through all the instantaneous frequency data.
 
@@ -134,6 +138,10 @@ def create_freq_movie(h5_ds,
     :param crop: Crops the image to a certain line, in case part of the scan is bad
     :type crop: int
 
+    :param verbose: Whether to print info to the console about the progress
+    :param discharge_time: Whether to change the title based on discharging data
+    :param discharge: index at which to change the title
+
     '''
 
     if not isinstance(h5_ds, usid.USIDataset):
@@ -166,9 +174,17 @@ def create_freq_movie(h5_ds,
 
     # Loop through time segments
     ims = []
-    for k, t in zip(np.arange(idx_start, len(tx) - idx_stop, time_step),
-                    tx[idx_start:-idx_stop:time_step]):
+    
+    steps = np.arange(idx_start, len(tx) - idx_stop, time_step)
+    verb_steps = np.arange(idx_start, len(tx) - idx_stop, 10*time_step)
+        
+    for k, t in zip(steps, tx[idx_start:-idx_stop:time_step]):
 
+        if verbose:
+            if k in verb_steps:
+                sys.stdout.write('#')
+                sys.stdout.flush()
+            
         _if = h5_ds.get_n_dim_form()[:, :, k]
         if isinstance(crop, int):
             if crop < 0:
