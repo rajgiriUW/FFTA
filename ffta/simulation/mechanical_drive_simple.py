@@ -151,7 +151,6 @@ class MechanicalDrive_Simple(Cantilever):
         """
 
         driving_force = self.f0 * np.sin(self.wd * t)
-        # electro_force = self.fe * self.__gamma__(t)
         electro_force = self.fe
 
         return driving_force - electro_force
