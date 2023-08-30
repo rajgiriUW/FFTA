@@ -43,7 +43,7 @@ class MechanicalDrive_Arb(Cantilever):
 
     Examples
     --------
-    >>> from ffta.simulation import mechanical_drive
+    >>> from ffta.simulation import mechanical_drive_arb
     >>> from ffta.simulation.utils import load
     >>>
     >>> params_file = '../examples/sim_params.cfg'
@@ -52,7 +52,7 @@ class MechanicalDrive_Arb(Cantilever):
     >>> # Example applying an arbitrary frequency shift pattern
     >>> n_points = int(params[2]['total_time'] * params[2]['sampling_rate'])
     >>> v_array = np.ones(n_points) # create just a flat excitation
-    >>> c = mechanical_dirve.MechanicalDrive(*params, v_array = v_array)
+    >>> c = mechanical_drive_arb.MechanicalDrive_Arb(*params, v_array)
     >>> Z, _ = c.simulate()
     >>> c.analyze()
     >>> c.analyze(roi=0.004) # can change the parameters as desired
