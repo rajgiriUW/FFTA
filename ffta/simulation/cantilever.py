@@ -277,7 +277,7 @@ class Cantilever:
 
         return np.array([v, vdot])
 
-    def simulate(self, trigger_phase=180, Z0=None):
+    def simulate(self, trigger_phase=180, Z0=np.array([])):
         """
         Simulates the cantilever motion.
 
@@ -296,7 +296,7 @@ class Cantilever:
       
         """
 
-        if Z0:
+        if Z0.any():
 
             if not isinstance(Z0, (np.ndarray, list)):
                 raise TypeError('Must be 2-size array or list')
