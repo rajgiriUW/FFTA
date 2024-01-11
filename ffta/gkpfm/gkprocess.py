@@ -15,7 +15,7 @@ from matplotlib import pyplot as plt
 from numpy.linalg import LinAlgError
 from pyUSID import Dimension
 from scipy.ndimage import gaussian_filter1d
-from sidpy.proc.comp_utils import parallel_compute
+from pyUSID.processing.comp_utils import parallel_compute
 
 import ffta
 from ffta.gkpfm.gkpixel import GKPixel

@@ -17,6 +17,7 @@ from multiprocessing import cpu_count
 
 import h5py
 import numpy as np
+import psutil
 from matplotlib import pyplot as plt
 from pyUSID import Dimension
 from pyUSID import USIDataset
@@ -29,7 +30,7 @@ from sidpy.base.string_utils import format_time
 from sidpy.hdf.dtype_utils import check_dtype, stack_real_to_target_dtype
 from sidpy.hdf.hdf_utils import get_attr, write_simple_attrs, copy_attributes
 from sidpy.hdf.reg_ref import get_indices_for_region_ref, create_region_reference
-from sidpy.proc.comp_utils import get_available_memory
+from pyUSID.processing.comp_utils import get_available_memory
 # from pyUSID.viz import plot_utils
 from sidpy.viz import plot_utils
 from sklearn.utils import gen_batches
@@ -260,6 +261,7 @@ class SVD(Process):
 
         mem_per_comp = s_mem_per_comp + u_mem_per_comp + v_mem_per_comp
         max_mem = get_available_memory()
+
         avail_mem = 0.75 * max_mem
         free_mem = avail_mem - self.h5_main.__sizeof__()
 

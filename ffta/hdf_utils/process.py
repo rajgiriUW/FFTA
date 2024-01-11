@@ -14,7 +14,8 @@ from pyUSID import Dimension
 from pyUSID import Process
 from pyUSID.io.hdf_utils import write_main_dataset, find_dataset, create_results_group
 from sidpy.hdf.hdf_utils import get_attributes, copy_attributes
-from sidpy.proc.comp_utils import parallel_compute
+#from sidpy.proc.comp_utils import parallel_compute
+from pyUSID.processing.comp_utils import parallel_compute
 from sidpy.viz import plot_utils
 from skimage import restoration
 
@@ -49,7 +50,8 @@ class FFtrEFM(Process):
     """
 
     def __init__(self, h5_main, parm_dict={}, can_params={},
-                 pixel_params={}, if_only=False, override=False, process_name='Fast_Free',
+                 pixel_params={}, if_only=False, override=False, 
+                 process_name='Fast_Free', cuda=False,
                  **kwargs):
         """
 
@@ -92,6 +94,9 @@ class FFtrEFM(Process):
         :param process_name:
         :type process_name: str, optional
         
+        :param cuda: If true, uses a GPU and CUFFTA to process the data. Faster for STFT/related, less so for Hilbert
+        :type cuda: bool, optional
+        
         :param kwargs: Keyword pairs to pass to Process constructor
         :type kwargs: dictionary or variable
             
@@ -117,7 +122,8 @@ class FFtrEFM(Process):
 
         self.pixel_params = pixel_params
         self.override = override
-
+        self.cuda = cuda
+        
         self.impulse = None
 
         super(FFtrEFM, self).__init__(h5_main, process_name, parms_dict=self.parm_dict, **kwargs)
