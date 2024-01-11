@@ -175,7 +175,7 @@ def plot_svd(h5_main, savefig=False, num_plots=16, **kwargs):
 
     fig_abun, axes = plot_utils.plot_map_stack(abun_maps, num_comps=num_plots, title='SVD Abundance Maps',
                                                color_bar_mode='single', cmap='inferno', reverse_dims=True,
-                                               fig_mult=(3.5, 3.5), facecolor='white', **kwargs)
+                                               fig_mult=(3.5, 3.5), **kwargs)
     fig_abun.tight_layout()
     if savefig:
         plt.savefig('Abundance_maps.png')

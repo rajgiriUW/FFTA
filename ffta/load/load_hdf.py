@@ -94,11 +94,11 @@ def load_wrapper(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False,
     """
 
     if not any(ibw_file_path):
-        ibw_file_path = sidpy.io.interface_utils.openfile_dialog(caption='Select IBW Image ',
+        ibw_file_path = sidpy.io.interface_utils.openfile_dialog_qt(caption='Select IBW Image ',
                                                                  file_types='IBW Files (*.ibw)')
 
     if not any(ff_file_path):
-        ff_file_path = sidpy.io.interface_utils.openfile_dialog(caption='Select FF config in folder',
+        ff_file_path = sidpy.io.interface_utils.openfile_dialog_qt(caption='Select FF config in folder',
                                                                 file_types='Config File (*.cfg)')
         ff_file_path = '/'.join(ff_file_path.split('/')[:-1])
 

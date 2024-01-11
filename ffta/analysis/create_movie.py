@@ -176,14 +176,16 @@ def create_freq_movie(h5_ds,
     ims = []
     
     steps = np.arange(idx_start, len(tx) - idx_stop, time_step)
-    verb_steps = np.arange(idx_start, len(tx) - idx_stop, 10*time_step)
-        
+    verb_steps = np.linspace(idx_start, len(tx) - idx_stop, 10)
+    _v = 0 #display counter
     for k, t in zip(steps, tx[idx_start:-idx_stop:time_step]):
 
         if verbose:
-            if k in verb_steps:
+            
+            if k >= verb_steps[_v]:
                 sys.stdout.write('#')
                 sys.stdout.flush()
+                _v += 1
             
         _if = h5_ds.get_n_dim_form()[:, :, k]
         if isinstance(crop, int):

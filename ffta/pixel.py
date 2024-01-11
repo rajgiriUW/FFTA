@@ -182,6 +182,9 @@ class Pixel:
         # Create parameter attributes for optional parameters.
         # These defaults are overwritten by values in 'params'
 
+        warnings.warn('This class will be rename "FFTA" in next major release.', 
+                      category=DeprecationWarning, stacklevel=2)
+
         # FIR (Hilbert) filtering parameters
         self.n_taps = 1499
         self.filter_bandwidth = 5000
