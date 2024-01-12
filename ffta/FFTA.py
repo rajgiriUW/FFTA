@@ -1,4 +1,4 @@
-"""pixel.py: Contains pixel class."""
+"""FFTA.py: Contains pixel class."""
 # pylint: disable=E1101,R0902,C0103
 __author__ = "Rajiv Giridharagopal"
 __copyright__ = "Copyright 2023"
@@ -9,22 +9,20 @@ __status__ = "Development"
 import time
 import warnings
 
-import numpy
+import numpy as np
 import pywt
 from matplotlib import pyplot as plt
 from scipy import integrate as spg
 from scipy import signal as sps
 
-import cupy as cp
-import cusignal
-
-from ffta.nfmd.cuNFMD import CUNFMD
+from ffta.nfmd import NFMD
 from ffta.pixel_utils import dwavelet
+from ffta.pixel_utils import noise
 from ffta.pixel_utils import parab
 from ffta.pixel_utils import tfp_calc
 
 
-class CUFFTA:
+class FFTA:
 
     def __init__(self,
                  signal_array,
@@ -42,8 +40,7 @@ class CUFFTA:
                  sampling_rate=None,
                  roi=None):
         """
-        Signal Processing to Extract Time-to-First-Peak. This version enables
-        GPU-computation via cuda (cusignal and cupy)
+        Signal Processing to Extract Time-to-First-Peak.
 
         Extracts Time-to-First-Peak (tFP) from digitized Fast-Free Time-Resolved
         Electrostatic Force Microscopy (FF-trEFM) signals [1-2]. It includes a few
@@ -126,7 +123,7 @@ class CUFFTA:
             drive_freq = float (in Hz)
             roi = float (in seconds)
             window = string (see documentation of scipy.signal.get_window)
-            bandpass_filter = int (0: no filtering, 1: FIR filter)
+            bandpass_filter = int (0: no filtering, 1: FIR filter, 2: IIR filter)
             filter_bandwidth = float (default: 5kHz)
             n_taps = integer (default: 1799)
             wavelet_analysis = bool (0: Hilbert method, 1: Wavelet Method)
@@ -185,11 +182,8 @@ class CUFFTA:
         # Create parameter attributes for optional parameters.
         # These defaults are overwritten by values in 'params'
 
-        if isinstance(signal_array, numpy.ndarray):
-            raise TypeError('Signal must be a cupy.ndarray. For Numpy processing use FFTA/Pixel')
-            
-        elif not isinstance (signal_array, cp.ndarray):
-            raise TypeError('Signal must be a cupy.ndarray.')
+        warnings.warn('This class will be rename "FFTA" in next major release.', 
+                      category=DeprecationWarning, stacklevel=2)
 
         # FIR (Hilbert) filtering parameters
         self.n_taps = 1499
@@ -199,7 +193,7 @@ class CUFFTA:
         # Wavelet parameters
         self.wavelet_analysis = False
         self.wavelet = 'cmor1-1'  # default complex Morlet wavelet
-        self.scales = cp.arange(100, 2, -1)
+        self.scales = np.arange(100, 2, -1)
         self.wavelet_params = {}  # currently just optimize flag is supported
 
         # Short Time Fourier Transform parameters
@@ -216,7 +210,7 @@ class CUFFTA:
         self.max_iters = 100
         self.target_loss = 1e-4
         self.update_freq = None
-        self.device = 'cuda'
+        self.device = 'cpu'
 
         # Misc Settings
         self.phase_fitting = False
@@ -259,7 +253,7 @@ class CUFFTA:
             self.signal_array = signal_array.T
 
         # The copy of the signal we will manipulate
-        self.signal = cp.copy(self.signal_array)
+        self.signal = np.copy(self.signal_array)
 
         # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
@@ -318,7 +312,7 @@ class CUFFTA:
             self.bandpass_filter = 0  # turns off FIR
 
         # Initialize attributes that are going to be assigned later.
-        self.signal = cp.array([])
+        self.signal = np.array([])
         self.phase = None
         self.inst_freq = None
         self.tfp = None
@@ -363,34 +357,48 @@ class CUFFTA:
         :type plot: bool, optional
         """
 
-        self.signal = cp.copy(self.signal_array)
+        self.signal = np.copy(self.signal_array)
 
         if self.n_signals == 1:
-            self.signal = cp.reshape(self.signal, (self.n_points, self.n_signals))
+            self.signal = np.reshape(self.signal, (self.n_points, self.n_signals))
 
         for i in range(self.n_signals):
-            f_ax = cp.linspace(-self.sampling_rate / 2, self.sampling_rate / 2, self.n_points)
+            f_ax = np.linspace(-self.sampling_rate / 2, self.sampling_rate / 2, self.n_points)
             mid = int(len(f_ax) / 2)
             # drive_bin = np.searchsorted(f_ax[mid:], self.drive_freq) + mid
             delta_freq = self.sampling_rate / self.n_points
 
-            SIG_DC = cp.fft.fftshift(cp.fft.fft(self.signal[:, i]))
+            SIG_DC = np.fft.fftshift(np.fft.fft(self.signal[:, i]))
 
             SIG_DC[:mid - int(dc_width / delta_freq)] = 0
             SIG_DC[mid + int(dc_width / delta_freq):] = 0
-            sig_dc = cp.real(cp.fft.ifft(cp.fft.ifftshift(SIG_DC)))
+            sig_dc = np.real(np.fft.ifft(np.fft.ifftshift(SIG_DC)))
 
             self.signal[:, i] -= sig_dc
 
         if plot:
             fig, ax = plt.subplots(nrows=2, figsize=(6, 10))
-            ax[0].plot(cp.arange(0, self.total_time, 1 / self.sampling_rate), sig_dc, 'b')
-            ax[1].plot(cp.arange(0, self.total_time, 1 / self.sampling_rate), self.signal_array, 'b')
-            ax[1].plot(cp.arange(0, self.total_time, 1 / self.sampling_rate), self.signal, 'r')
+            ax[0].plot(np.arange(0, self.total_time, 1 / self.sampling_rate), sig_dc, 'b')
+            ax[1].plot(np.arange(0, self.total_time, 1 / self.sampling_rate), self.signal_array, 'b')
+            ax[1].plot(np.arange(0, self.total_time, 1 / self.sampling_rate), self.signal, 'r')
             plt.title('DC Offset')
 
         if self.n_signals == 1:
             self.signal = self.signal[:, 0]
+
+        return
+
+    def phase_lock(self):
+        """
+        Phase-locks signals in the signal array. This also cuts signals.
+        """
+
+        # Phase-lock signals.
+        self.signal_array, self.tidx = noise.phase_lock(self.signal_array, self.tidx,
+                                                        np.ceil(self.sampling_rate / self.drive_freq))
+
+        # Update number of points after phase-locking.
+        self.n_points = self.signal_array.shape[0]
 
         return
 
@@ -411,12 +419,12 @@ class CUFFTA:
         """
         Calculates drive frequency of averaged signals
         """
-        n_fft = 2 ** int(cp.log2(self.tidx))  # For FFT, power of 2.
+        n_fft = 2 ** int(np.log2(self.tidx))  # For FFT, power of 2.
         dfreq = self.sampling_rate / n_fft  # Frequency separation.
 
         # Calculate drive frequency from maximum power of the FFT spectrum.
         signal = self.signal[:n_fft]
-        fft_amplitude = cp.abs(cp.fft.rfft(signal))
+        fft_amplitude = np.abs(np.fft.rfft(signal))
         drive_freq = fft_amplitude.argmax() * dfreq
 
         self.drive_freq = drive_freq
@@ -429,16 +437,16 @@ class CUFFTA:
         the given drive frequency.
         """
 
-        n_fft = 2 ** int(cp.log2(self.tidx))  # For FFT, power of 2.
+        n_fft = 2 ** int(np.log2(self.tidx))  # For FFT, power of 2.
         dfreq = self.sampling_rate / n_fft  # Frequency separation.
 
         # Calculate drive frequency from maximum power of the FFT spectrum.
         signal = self.signal[:n_fft]
-        fft_amplitude = cp.abs(cp.fft.rfft(signal))
+        fft_amplitude = np.abs(np.fft.rfft(signal))
         drive_freq = fft_amplitude.argmax() * dfreq
 
         # Difference between given and calculated drive frequencies.
-        difference = cp.abs(drive_freq - self.drive_freq)
+        difference = np.abs(drive_freq - self.drive_freq)
 
         # If difference is too big, reassign. Otherwise, continue. != 0 for accidental DC errors
         if difference >= dfreq and drive_freq != 0:
@@ -451,7 +459,7 @@ class CUFFTA:
         Applies the window given in parameters.
         """
 
-        self.signal *= cusignal.get_window(self.window, self.n_points)
+        self.signal *= sps.get_window(self.window, self.n_points)
 
         return
 
@@ -482,17 +490,41 @@ class CUFFTA:
 
         # Create taps using window method.
         try:
-            taps = cusignal.firwin(int(self.n_taps), band, pass_zero=False,
+            taps = sps.firwin(int(self.n_taps), band, pass_zero=False,
                               window='blackman')
         except:
             print('band=', band)
             print('nyq=', nyq_rate)
             print('drive=', self.drive_freq)
 
-        self.signal = cusignal.fftconvolve(self.signal, taps, mode='same')
+        self.signal = sps.fftconvolve(self.signal, taps, mode='same')
 
         # Shifts trigger due to causal nature of FIR filter
         self.tidx -= (self.n_taps - 1) / 2
+
+        return
+
+    def iir_filter(self):
+        """
+        Filters signal with two Butterworth filters (one lowpass,
+        one highpass) using filtfilt. This method has linear phase and no
+        time delay.
+        """
+
+        # Calculate bandpass region from given parameters.
+        nyq_rate = 0.5 * self.sampling_rate
+        bw_half = self.filter_bandwidth / 2
+
+        freq_low = (self.drive_freq - bw_half) / nyq_rate
+        freq_high = (self.drive_freq + bw_half) / nyq_rate
+
+        # Do a high-pass filtfilt operation.
+        b, a = sps.butter(9, freq_low, btype='high')
+        self.signal = sps.filtfilt(b, a, self.signal)
+
+        # Do a low-pass filtfilt operation.
+        b, a = sps.butter(9, freq_high, btype='low')
+        self.signal = sps.filtfilt(b, a, self.signal)
 
         return
 
@@ -500,7 +532,7 @@ class CUFFTA:
         '''
         Filters the drive signal out of the amplitude response
         '''
-        AMP = cp.fft.fftshift(cp.fft.fft(self.amplitude))
+        AMP = np.fft.fftshift(np.fft.fft(self.amplitude))
 
         DRIVE = self.drive_freq / (self.sampling_rate / self.n_points)  # drive location in frequency space
         center = int(len(AMP) / 2)
@@ -509,7 +541,7 @@ class CUFFTA:
         AMP[:center - int(DRIVE / 2) + 1] = 0
         AMP[center + int(DRIVE / 2) - 1:] = 0
 
-        self.amplitude = cp.abs(cp.fft.ifft(cp.fft.ifftshift(AMP)))
+        self.amplitude = np.abs(np.fft.ifft(np.fft.ifftshift(AMP)))
 
         return
 
@@ -518,12 +550,12 @@ class CUFFTA:
         Filters the instantaneous frequency around DC peak to remove noise
         Uses self.filter_bandwidth for the frequency filter
         '''
-        FREQ = cp.fft.fftshift(cp.fft.fft(self.inst_freq))
+        FREQ = np.fft.fftshift(np.fft.fft(self.inst_freq))
 
         center = int(len(FREQ) / 2)
 
         df = self.sampling_rate / self.n_points
-        drive_bin = int(cp.ceil(self.drive_freq / df))
+        drive_bin = int(np.ceil(self.drive_freq / df))
         bin_width = int(self.filter_bandwidth / df)
 
         if bin_width > drive_bin:
@@ -533,7 +565,7 @@ class CUFFTA:
         FREQ[:center - bin_width] = 0
         FREQ[center + bin_width:] = 0
 
-        self.inst_freq = cp.real(cp.fft.ifft(cp.fft.ifftshift(FREQ)))
+        self.inst_freq = np.real(np.fft.ifft(np.fft.ifftshift(FREQ)))
 
         return
 
@@ -546,21 +578,21 @@ class CUFFTA:
         :type width: int, optional
             
         '''
-        FREQ = cp.fft.fftshift(cp.fft.fft(self.inst_freq))
+        FREQ = np.fft.fftshift(np.fft.fft(self.inst_freq))
 
         center = int(len(FREQ) / 2)
 
         # Find drive_bin
         df = self.sampling_rate / self.n_points
-        drive_bin = int(cp.ceil(self.drive_freq / df))
-        bins = cp.arange(len(FREQ) / 2)[::drive_bin]
-        bins = cp.append(center - bins, center + bins)
+        drive_bin = int(np.ceil(self.drive_freq / df))
+        bins = np.arange(len(FREQ) / 2)[::drive_bin]
+        bins = np.append(center - bins, center + bins)
 
-        FREQ_filt = cp.zeros(len(FREQ), dtype='complex128')
+        FREQ_filt = np.zeros(len(FREQ), dtype='complex128')
         for b in bins:
             FREQ_filt[int(b) - width:int(b) + width] = FREQ[int(b) - width:int(b) + width]
 
-        self.inst_freq = cp.real(cp.fft.ifft(cp.fft.ifftshift(FREQ)))
+        self.inst_freq = np.real(np.fft.ifft(np.fft.ifftshift(FREQ)))
 
         return
 
@@ -581,7 +613,7 @@ class CUFFTA:
         Gets the analytical signal doing a Hilbert transform.
         """
 
-        self.signal = cusignal.hilbert(self.signal)
+        self.signal = sps.hilbert(self.signal)
 
         return
 
@@ -596,9 +628,9 @@ class CUFFTA:
         else:
             signal_orig = self.signal_array
 
-        self.amplitude = cp.abs(cusignal.hilbert(signal_orig))
+        self.amplitude = np.abs(sps.hilbert(signal_orig))
 
-        if not cp.isnan(self.AMPINVOLS):
+        if not np.isnan(self.AMPINVOLS):
             self.amplitude *= self.AMPINVOLS
 
         return
@@ -612,7 +644,7 @@ class CUFFTA:
         phase = self.phase  # + np.pi/2 #offsets the phase to be pi/2 at resonance
 
         A = self.k / self.Q * self.amplitude ** 2 * (self.inst_freq + self.drive_freq)
-        B = self.Q * self.DriveAmplitude * cp.sin(phase) / self.amplitude
+        B = self.Q * self.DriveAmplitude * np.sin(phase) / self.amplitude
         C = self.inst_freq / self.drive_freq
 
         self.power_dissipated = A * (B - C)
@@ -629,7 +661,7 @@ class CUFFTA:
         """
 
         # Unwrap the phase.
-        self.phase = cp.unwrap(cp.angle(self.signal))
+        self.phase = np.unwrap(np.angle(self.signal))
 
         try:
             if correct_slope:
@@ -642,17 +674,17 @@ class CUFFTA:
                 end = int(0.7 * self.tidx)
                 fit = self.phase[start:end]
 
-                xfit = cp.polyfit(cp.arange(start, end), fit, 1)
+                xfit = np.polyfit(np.arange(start, end), fit, 1)
 
                 # Remove the fit from phase.
-                self.phase -= (xfit[0] * cp.arange(self.n_points)) + xfit[1]
+                self.phase -= (xfit[0] * np.arange(self.n_points)) + xfit[1]
         except:
-            self.phase -= (2 * cp.pi * self.drive_freq *
-                           cp.arange(self.n_points) / self.sampling_rate)
+            self.phase -= (2 * np.pi * self.drive_freq *
+                           np.arange(self.n_points) / self.sampling_rate)
 
         self.phase = -self.phase  # need to correct for negative in DDHO solution
 
-        self.phase += cp.pi / 2  # corrects to be at resonance pre-trigger
+        self.phase += np.pi / 2  # corrects to be at resonance pre-trigger
 
         return
 
@@ -668,13 +700,12 @@ class CUFFTA:
         # using 5 point 1st order polynomial.
 
         # -self.phase to correct for sign in DDHO solution
-        _inst_freq_raw = sps.savgol_filter(-self.phase.get(), 5, 1, deriv=1,
+        self.inst_freq_raw = sps.savgol_filter(-self.phase, 5, 1, deriv=1,
                                                delta=dtime)
-        
 
         # Bring trigger to zero.
         self.tidx = int(self.tidx)
-        self.inst_freq = cp.array(_inst_freq_raw - _inst_freq_raw[self.tidx])
+        self.inst_freq = self.inst_freq_raw - self.inst_freq_raw[self.tidx]
 
         return
 
@@ -713,70 +744,65 @@ class CUFFTA:
         sc = pywt.scale2frequency(self.wavelet, self.scales) / dt
 
         if verbose:
-            print('Wavelet scale from', numpy.min(sc), 'to', numpy.max(sc))
+            print('Wavelet scale from', np.min(sc), 'to', np.max(sc))
 
-        if f_center < numpy.min(sc) or f_center > numpy.max(sc):
+        if f_center < np.min(sc) or f_center > np.max(sc):
             raise ValueError('Choose a scale that captures frequency of interest')
 
         if optimize:
             print('!')
-            drive_bin = self.scales[numpy.searchsorted(sc, f_center)]
+            drive_bin = self.scales[np.searchsorted(sc, f_center)]
             hi = int(1.2 * drive_bin)
             lo = int(0.8 * drive_bin)
-            self.scales = numpy.arange(hi, lo, -0.1)
+            self.scales = np.arange(hi, lo, -0.1)
 
-        spectrogram, freq = pywt.cwt(self.signal.get(), self.scales, self.wavelet, sampling_period=dt)
+        spectrogram, freq = pywt.cwt(self.signal, self.scales, self.wavelet, sampling_period=dt)
 
         if not fit:
 
-            inst_freq, amplitude, _ = parab.ridge_finder(numpy.abs(spectrogram), 
-                                                         numpy.arange(len(freq)))
+            inst_freq, amplitude, _ = parab.ridge_finder(np.abs(spectrogram), np.arange(len(freq)))
 
         # slow serial curve fitting
         else:
 
-            inst_freq = numpy.zeros(self.n_points)
-            amplitude = numpy.zeros(self.n_points)
+            inst_freq = np.zeros(self.n_points)
+            amplitude = np.zeros(self.n_points)
 
             for c in range(spectrogram.shape[1]):
 
                 SIG = spectrogram[:, c]
                 if fit:
-                    pk = numpy.argmax(numpy.abs(SIG))
-                    popt = numpy.polyfit(numpy.arange(20),
-                                         numpy.abs(SIG[pk - 10:pk + 10]), 2)
+                    pk = np.argmax(np.abs(SIG))
+                    popt = np.polyfit(np.arange(20),
+                                      np.abs(SIG[pk - 10:pk + 10]), 2)
                     inst_freq[c] = -0.5 * popt[1] / popt[0]
-                    amplitude[c] = numpy.abs(SIG)[pk]
+                    amplitude[c] = np.abs(SIG)[pk]
 
         # rescale to correct frequency 
         inst_freq = pywt.scale2frequency(self.wavelet, inst_freq + self.scales[0]) / dt
 
         if calc_phase:
             phase = spg.cumtrapz(inst_freq)
-            phase = numpy.append(phase, phase[-1])
+            phase = np.append(phase, phase[-1])
         else:
-            phase = numpy.zeros(len(inst_freq))
+            phase = np.zeros(len(inst_freq))
 
         tidx = int(self.tidx * len(inst_freq) / self.n_points)
 
         self.amplitude = amplitude
         self.inst_freq_raw = inst_freq
         self.inst_freq = -1 * (inst_freq - inst_freq[tidx])  # -1 due to way scales are ordered
-        self.spectrogram = numpy.abs(spectrogram)
+        self.spectrogram = np.abs(spectrogram)
         self.wavelet_freq = freq  # the wavelet frequencies
 
         # subtract the w*t line (drive frequency line) from phase
         if calc_phase:
             start = int(0.3 * tidx)
             end = int(0.7 * tidx)
-            xfit = numpy.polyfit(numpy.arange(start, end), phase[start:end], 1)
-            phase -= (xfit[0] * numpy.arange(len(inst_freq))) + xfit[1]
+            xfit = np.polyfit(np.arange(start, end), phase[start:end], 1)
+            phase -= (xfit[0] * np.arange(len(inst_freq))) + xfit[1]
 
         self.phase = phase
-        
-        self.inst_freq = cp.array(self.inst_freq)
-        self.phase = cp.array(self.phase)
-        self.amplitude = cp.array(self.amplitude)
 
         return
 
@@ -796,38 +822,36 @@ class CUFFTA:
         pts_per_ncycle = int(self.fft_time_res * self.sampling_rate)
 
         if nfft < pts_per_ncycle:
-
             nfft = pts_per_ncycle
 
         if pts_per_ncycle > len(self.signal):
             pts_per_ncycle = len(self.signal)
 
         # drivebin = int(self.drive_freq / (self.sampling_rate / nfft ))
-        freq, times, spectrogram = cusignal.spectrogram(self.signal,
-                                                        self.sampling_rate,
-                                                        nperseg=pts_per_ncycle,
-                                                        noverlap=pts_per_ncycle - 1,
-                                                        nfft=nfft,
-                                                        window=self.window,
-                                                        mode='magnitude')
+        freq, times, spectrogram = sps.spectrogram(self.signal,
+                                                   self.sampling_rate,
+                                                   nperseg=pts_per_ncycle,
+                                                   noverlap=pts_per_ncycle - 1,
+                                                   nfft=nfft,
+                                                   window=self.window,
+                                                   mode='magnitude')
 
         # Parabolic ridge finder
-        inst_freq, amplitude, _ = parab.cu_ridge_finder(spectrogram, freq)
+        inst_freq, amplitude, _ = parab.ridge_finder(spectrogram, freq)
 
         # Correctly pad the signals
         _pts = self.n_points - len(inst_freq)
-        _pre = int(cp.floor(_pts / 2))
-        _post = int(cp.ceil(_pts / 2))
+        _pre = int(np.floor(_pts / 2))
+        _post = int(np.ceil(_pts / 2))
 
-        inst_freq = cp.pad(inst_freq, (_pre, _post))
-        amplitude = cp.pad(amplitude, (_pre, _post))
+        inst_freq = np.pad(inst_freq, (_pre, _post))
+        amplitude = np.pad(amplitude, (_pre, _post))
 
         if calc_phase:
-            phase = spg.cumtrapz(inst_freq.get())
-            phase = numpy.append(phase, phase[-1])
-            phase = cp.array(phase)
+            phase = spg.cumtrapz(inst_freq)
+            phase = np.append(phase, phase[-1])
         else:
-            phase = cp.zeros(len(inst_freq))
+            phase = np.zeros(len(inst_freq))
         tidx = int(self.tidx * len(inst_freq) / self.n_points)
 
         self.amplitude = amplitude
@@ -841,8 +865,8 @@ class CUFFTA:
         if calc_phase:
             start = int(0.3 * tidx)
             end = int(0.7 * tidx)
-            xfit = cp.polyfit(cp.arange(start, end), phase[start:end], 1)
-            phase -= (xfit[0] * cp.arange(len(inst_freq))) + xfit[1]
+            xfit = np.polyfit(np.arange(start, end), phase[start:end], 1)
+            phase -= (xfit[0] * np.arange(len(inst_freq))) + xfit[1]
 
         self.phase = phase
 
@@ -864,7 +888,7 @@ class CUFFTA:
     
         '''
         if not self.signal.any():
-            self.signal = cp.copy(self.signal_array)
+            self.signal = np.copy(self.signal_array)
             self.average()
 
         z = self.signal
@@ -877,7 +901,7 @@ class CUFFTA:
             if verbose:
                 print('window size automatically adjusted to ', self.window_size)
 
-        nfmd = CUNFMD(z / cp.std(z),
+        nfmd = NFMD(z / np.std(z),
                     num_freqs=self.num_freqs,
                     window_size=self.window_size,
                     optimizer_opts=self.optimizer_opts,
@@ -900,7 +924,7 @@ class CUFFTA:
 
         if calc_phase:
             phase = spg.cumtrapz(self.inst_freq)
-            self.phase = cp.append(phase, phase[-1])
+            self.phase = np.append(phase, phase[-1])
         else:
             self.phase = self.n_mean
 
@@ -911,10 +935,10 @@ class CUFFTA:
         Calculate tfp and shift based self.fit_form and self.fit selection
         """
         ridx = int(self.roi * self.sampling_rate)
-        cut = cp.copy(self.inst_freq[self.tidx:(self.tidx + ridx)])
+        cut = np.copy(self.inst_freq[self.tidx:(self.tidx + ridx)])
         cut -= self.inst_freq[self.tidx]
         self.cut = cut
-        t = cp.arange(cut.shape[0]) / self.sampling_rate
+        t = np.arange(cut.shape[0]) / self.sampling_rate
 
         try:
 
@@ -929,7 +953,7 @@ class CUFFTA:
             elif self.fit_form == 'exp':
 
                 if self.method == 'nfmd':
-                    cut = cp.copy(self.phase[self.tidx:(self.tidx + ridx)])
+                    cut = np.copy(self.phase[self.tidx:(self.tidx + ridx)])
                     cut -= self.phase[self.tidx]
                     self.cut = cut
 
@@ -951,9 +975,9 @@ class CUFFTA:
 
         except:
 
-            self.tfp = cp.nan
-            self.shift = cp.nan
-            self.best_fit = cp.zeros(cut.shape[0])
+            self.tfp = np.nan
+            self.shift = np.nan
+            self.best_fit = np.zeros(cut.shape[0])
             print('error with fitting')
 
         if not (self.method == 'nfmd' and self.fit_form == 'exp'):
@@ -981,24 +1005,24 @@ class CUFFTA:
         if d_trig >= d_points:
 
             # Pad from left and set the original length.
-            self.inst_freq = cp.pad(self.inst_freq, (d_trig, 0), 'edge')
+            self.inst_freq = np.pad(self.inst_freq, (d_trig, 0), 'edge')
             self.inst_freq = self.inst_freq[:self._n_points_orig]
 
-            self.phase = cp.pad(self.phase, (d_trig, 0), 'edge')
+            self.phase = np.pad(self.phase, (d_trig, 0), 'edge')
             self.phase = self.phase[:self._n_points_orig]
 
-            self.amplitude = cp.pad(self.amplitude, (d_trig, 0), 'edge')
+            self.amplitude = np.pad(self.amplitude, (d_trig, 0), 'edge')
             self.amplitude = self.amplitude[:self._n_points_orig]
 
         else:
 
             # Calculate how many points is needed for padding from right.
             pad_right = d_points - d_trig
-            self.inst_freq = cp.pad(self.inst_freq, (d_trig, pad_right),
+            self.inst_freq = np.pad(self.inst_freq, (d_trig, pad_right),
                                     'edge')
-            self.phase = cp.pad(self.phase, (d_trig, pad_right),
+            self.phase = np.pad(self.phase, (d_trig, pad_right),
                                 'edge')
-            self.amplitude = cp.pad(self.amplitude, (d_trig, pad_right),
+            self.amplitude = np.pad(self.amplitude, (d_trig, pad_right),
                                     'edge')
 
         # Set the public variables back to original values.
@@ -1029,23 +1053,23 @@ class CUFFTA:
         cut = self.amplitude[fidx:(fidx + ridx)]
 
         cut = [fidx, (fidx + ridx)]
-        tx = cp.arange(cut[0], cut[1]).get() * dt
+        tx = np.arange(cut[0], cut[1]) * dt
 
-        a[0].plot(tx * 1e3, self.inst_freq[cut[0]:cut[1]].get(), 'r-')
+        a[0].plot(tx * 1e3, self.inst_freq[cut[0]:cut[1]], 'r-')
 
         if fit:
             if self.fit_form == 'ringdown':
-                a[1].plot(tx * 1e3, self.best_fit.get(), 'g--')
+                a[1].plot(tx * 1e3, self.best_fit, 'g--')
             elif self.fit_form == 'exp' and self.method == 'nfmd':
-                a[2].plot(tx * 1e3, self.best_fit.get() + self.phase[self.tidx].get(), 'g--')
+                a[2].plot(tx * 1e3, self.best_fit + self.phase[self.tidx], 'g--')
             else:
-                a[0].plot(tx * 1e3, self.best_fit.get(), 'g--')
+                a[0].plot(tx * 1e3, self.best_fit, 'g--')
 
-        a[1].plot(tx * 1e3, self.amplitude[cut[0]:cut[1]].get(), 'b')
+        a[1].plot(tx * 1e3, self.amplitude[cut[0]:cut[1]], 'b')
         if self.fit_form == 'exp' and self.method == 'nfmd':
-            a[2].plot(tx * 1e3, self.phase[cut[0]:cut[1]].get(), 'm')
+            a[2].plot(tx * 1e3, self.phase[cut[0]:cut[1]], 'm')
         else:
-            a[2].plot(tx * 1e3, self.phase[cut[0]:cut[1]].get() * 180 / cp.pi, 'm')
+            a[2].plot(tx * 1e3, self.phase[cut[0]:cut[1]] * 180 / np.pi, 'm')
 
         a[0].set_title('Instantaneous Frequency')
         a[0].set_ylabel('Frequency Shift (Hz)')
@@ -1078,7 +1102,7 @@ class CUFFTA:
         if dc:
             self.remove_dc()
         else:
-            self.signal = cp.copy(self.signal_array)
+            self.signal = np.copy(self.signal_array)
 
         # Phase-lock signals.
         # self.phase_lock()
@@ -1123,6 +1147,10 @@ class CUFFTA:
             if self.bandpass_filter == 1:
 
                 self.fir_filter()
+
+            elif self.bandpass_filter == 2:
+
+                self.iir_filter()
 
             # Get the analytical signal doing a Hilbert transform.
             self.hilbert()

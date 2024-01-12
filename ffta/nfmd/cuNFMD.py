@@ -1,9 +1,9 @@
-import cupy as np
+import cupy as cp
 import torch
 
 import time
 
-class NFMD:
+class CUNFMD:
     def __init__(self, signal, num_freqs, window_size,
                  windows=None,
                  optimizer=torch.optim.SGD,
@@ -47,7 +47,7 @@ class NFMD:
 
         '''
         # Signal -- assumed 1D, needs to be type double
-        self.x = signal.astype(np.double).flatten()
+        self.x = signal.astype(cp.double).flatten()
         self.n = signal.shape[0]
         
         # Signal Decomposition options
@@ -138,8 +138,8 @@ class NFMD:
 
         print (time.time() - t1, 's for decompose_signal')
         t2 = time.time()
-        self.freqs = np.array(self.freqs)
-        self.A = np.array(self.A)
+        self.freqs = cp.array(self.freqs)
+        self.A = cp.array(self.A)
         if self.device == 'cpu':
             self.losses = [loss.detach().numpy() for loss in self.losses]
         else:
@@ -156,7 +156,6 @@ class NFMD:
         Note: this is equivalent to computing rectangular windows.
         '''
 
-        t2 = time.time()
         # Define how many points between centerpoint of windows
         increment = int(self.n / self.windows)
         window_size = self.window_size
@@ -177,8 +176,6 @@ class NFMD:
                 self.indices.append(slice(idx_start, idx_end))
                 idx_mid = int((idx_end + idx_start) / 2)
                 self.mid_idcs.append(idx_mid)
-
-        print(time.time() - t2, 's for compute_window_indices')
 
     def fit_window(self, xt, freqs=None, A=None):
         '''
@@ -207,10 +204,8 @@ class NFMD:
         if freqs is None:
             freqs, A = self.fft(xt)
 
-        t2 = time.time()
         # Then begin SGD
         loss, freqs, A = self.sgd(xt, freqs, A, max_iters=self.max_iters)
-        #print(time.time() - t2, 's for sgd')
 
         return loss, freqs, A
 
@@ -245,33 +240,33 @@ class NFMD:
             if len(freqs) == 0:
                 residual = xt
             else:
-                t = np.expand_dims(np.arange(N) + 1, -1)
-                ws = np.asarray(freqs)
-                Omega = np.concatenate([np.cos(t * 2 * np.pi * ws),
-                                        np.sin(t * 2 * np.pi * ws)], -1)
-                A = np.dot(np.linalg.pinv(Omega), xt)
+                t = cp.expand_dims(cp.arange(N) + 1, -1)
+                ws = cp.asarray(freqs)
+                Omega = cp.concatenate([cp.cos(t * 2 * cp.pi * ws),
+                                        cp.sin(t * 2 * cp.pi * ws)], -1)
+                A = cp.dot(cp.linalg.pinv(Omega), xt)
 
-                pred = np.dot(Omega, A)
+                pred = cp.dot(Omega, A)
 
                 residual = pred - xt
 
             ffts = 0
 
             for j in range(xt.shape[1]):
-                ffts += np.abs(np.fft.fft(residual[:, j])[:N // 2])
+                ffts += cp.abs(cp.fft.fft(residual[:, j])[:N // 2])
 
-            w = np.fft.fftfreq(N, 1)[:N // 2]
-            idxs = np.argmax(ffts)
+            w = cp.fft.fftfreq(N, 1)[:N // 2]
+            idxs = cp.argmax(ffts)
 
             freqs.append(w[idxs])
-            ws = np.asarray(freqs)
+            ws = cp.asarray(freqs)
 
-            t = np.expand_dims(np.arange(N) + 1, -1)
+            t = cp.expand_dims(cp.arange(N) + 1, -1)
 
-            Omega = np.concatenate([np.cos(t * 2 * np.pi * ws),
-                                    np.sin(t * 2 * np.pi * ws)], -1)
+            Omega = cp.concatenate([cp.cos(t * 2 * cp.pi * ws),
+                                    cp.sin(t * 2 * cp.pi * ws)], -1)
 
-            A = np.dot(np.linalg.pinv(Omega), xt)
+            A = cp.dot(cp.linalg.pinv(Omega), xt)
 
         return freqs, A
 
@@ -359,13 +354,13 @@ class NFMD:
         :rtype: numpy.array
             
         '''
-        t = np.expand_dims(np.arange(T) + 1, -1)
+        t = cp.expand_dims(cp.arange(T) + 1, -1)
 
         for i, idx_slice in enumerate(self.indices):
             local_freqs = self.freqs[i]
-        Omega = np.concatenate([np.cos(t * 2 * np.pi * self.freqs),
-                                np.sin(t * 2 * np.pi * self.freqs)], -1)
-        return np.dot(Omega, self.A)
+        Omega = cp.concatenate([cp.cos(t * 2 * cp.pi * self.freqs),
+                                cp.sin(t * 2 * cp.pi * self.freqs)], -1)
+        return cp.dot(Omega, self.A)
 
     def correct_frequencies(self, dt):
         '''
@@ -382,7 +377,7 @@ class NFMD:
         corrected_freqs = []
         for freq in self.freqs:
             corrected_freqs.append(freq / dt)
-        corrected_freqs = np.asarray(corrected_freqs)
+        corrected_freqs = cp.asarray(corrected_freqs)
         return corrected_freqs
 
     def compute_amps(self):
@@ -395,7 +390,7 @@ class NFMD:
             
         '''
         # initialize amps list
-        Amps = np.ndarray((self.A.shape[0], self.num_freqs))
+        Amps = cp.ndarray((self.A.shape[0], self.num_freqs))
         # print(Amps.shape)
         # Populate amps list
         for i, A in enumerate(self.A):
@@ -407,7 +402,7 @@ class NFMD:
             for j in range(AsBs.shape[-1]):
                 Amp = complex(*AsBs[:, j])
                 Amps[i, j] = abs(Amp)
-        Amps = np.asarray(Amps)
+        Amps = cp.asarray(Amps)
         return Amps
 
     def compute_mean(self, lf_mode=None):
@@ -426,10 +421,10 @@ class NFMD:
             
         '''
         # Initialize empty array
-        means = np.ndarray(len(self.mid_idcs))
+        means = cp.ndarray(len(self.mid_idcs))
         # Identify the low-frequency mode based on initial frequency estimate
         if lf_mode is None:
-            lf_mode = np.argmin(np.mean(self.freqs[:, :], axis=0))
+            lf_mode = cp.argmin(cp.mean(self.freqs[:, :], axis=0))
         mid_idx = int(self.window_size / 2)
         # Iterate through each fourier object and compute the mean
         for i in range(len(self.mid_idcs)):
@@ -437,10 +432,10 @@ class NFMD:
             freq = self.freqs[i, lf_mode]
             A = self.A[i, lf_mode::self.num_freqs]
             # Compute the estimate
-            t = np.expand_dims(np.arange(self.window_size) + 1, -1)
-            Omega = np.concatenate([np.cos(t * 2 * np.pi * freq),
-                                    np.sin(t * 2 * np.pi * freq)], -1)
-            fit = np.dot(Omega, A)
+            t = cp.expand_dims(cp.arange(self.window_size) + 1, -1)
+            Omega = cp.concatenate([cp.cos(t * 2 * cp.pi * freq),
+                                    cp.sin(t * 2 * cp.pi * freq)], -1)
+            fit = cp.dot(Omega, A)
             # Grab the centerpoint and add it to the means list
             means[i] = fit[mid_idx]
         return means

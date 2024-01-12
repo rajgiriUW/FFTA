@@ -103,6 +103,8 @@ class NFMD:
         prev_freqs = None
         prev_A = None
 
+        print(len(self.indices), 'indices')
+
         # iterate through each window:
         for i, idx_slice in enumerate(self.indices):
             # If update frequency is requested, print an update
@@ -134,7 +136,7 @@ class NFMD:
             prev_freqs = freqs
             prev_A = A
 
-        #print (time.time() - t1, 's for decompose_signal')
+        print (time.time() - t1, 's for decompose_signal')
         t2 = time.time()
         self.freqs = np.array(self.freqs)
         self.A = np.array(self.A)
@@ -143,7 +145,7 @@ class NFMD:
         else:
             self.losses = [loss.detach().cpu().numpy() for loss in self.losses]
 
-        #print (time.time() - t2, 's for detach')
+        print (time.time() - t2, 's for detach')
 
         return self.freqs, self.A, self.losses, self.indices
 
@@ -153,7 +155,6 @@ class NFMD:
         to the windows used in the analysis.
         Note: this is equivalent to computing rectangular windows.
         '''
-
 
         t2 = time.time()
         # Define how many points between centerpoint of windows
@@ -177,7 +178,7 @@ class NFMD:
                 idx_mid = int((idx_end + idx_start) / 2)
                 self.mid_idcs.append(idx_mid)
 
-        #print(time.time() - t2, 's for compute_window_indices')
+        print(time.time() - t2, 's for compute_window_indices')
 
     def fit_window(self, xt, freqs=None, A=None):
         '''
@@ -209,7 +210,7 @@ class NFMD:
         t2 = time.time()
         # Then begin SGD
         loss, freqs, A = self.sgd(xt, freqs, A, max_iters=self.max_iters)
-        print(time.time() - t2, 's for sgd')
+        #print(time.time() - t2, 's for sgd')
 
         return loss, freqs, A
 
