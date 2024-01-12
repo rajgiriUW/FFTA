@@ -112,15 +112,15 @@ class Cantilever:
     :type sim_params: dict
     """
 
-    def __init__(self, 
-                 can_params={}, 
-                 force_params={}, 
+    def __init__(self,
+                 can_params={},
+                 force_params={},
                  sim_params={}):
 
         # Initialize cantilever parameters and calculate some others.
         for key, value in can_params.items():
             setattr(self, key, value)
-        
+
         # Initialize force parameters and calculate some others.
         for key, value in force_params.items():
             setattr(self, key, value)
@@ -128,10 +128,10 @@ class Cantilever:
         # Initialize simulation parameters.
         for key, value in sim_params.items():
             setattr(self, key, value)
-        
+
         self.w0 = PI2 * self.res_freq  # Radial resonance frequency.
         self.wd = PI2 * self.drive_freq  # Radial drive frequency.
-        
+
         if not np.allclose(self.w0, self.wd):
             print(self.w0, self.wd)
             print('Resonance and Drive not equal. Make sure simulation is long enough!')
@@ -142,7 +142,7 @@ class Cantilever:
         self.delta_w = 0
         self.beta = self.w0 / (2 * self.q_factor)  # Damping factor.
         self.mass = self.k / (self.w0 ** 2)  # Mass of the cantilever in kg.
-        
+
         if hasattr(self, 'soft_amp') and hasattr(self, 'amp_invols'):
             self.amp = self.soft_amp * self.amp_invols  # Amplitude in meters.
 
@@ -152,11 +152,11 @@ class Cantilever:
                                      4 * self.beta ** 2 * self.wd ** 2)
         self.delta = np.abs(np.arctan(np.divide(2 * self.wd * self.beta,
                                                 self.w0 ** 2 - self.wd ** 2)))
-        self.fe = 0 
-        
+        self.fe = 0
+
         if hasattr(self, 'delta_freq'):
             self.delta_w = PI2 * self.delta_freq  # Frequency shift in radians.
-        
+
         if hasattr(self, 'es_force'):
             self.fe = self.es_force / self.mass  # Reduced electrostatic force.
 
@@ -172,7 +172,7 @@ class Cantilever:
         self.parameters = force_params
         self.parameters.update(**sim_params)
         self.can_params = can_params
-        #self.create_parameters(self.parameters, self.can_params)
+        # self.create_parameters(self.parameters, self.can_params)
 
         return
 

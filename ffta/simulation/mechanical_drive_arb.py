@@ -83,9 +83,9 @@ class MechanicalDrive_Arb(Cantilever):
 
     """
 
-    def __init__(self, 
-                 can_params, 
-                 force_params, 
+    def __init__(self,
+                 can_params,
+                 force_params,
                  sim_params,
                  v_array):
 
@@ -122,7 +122,6 @@ class MechanicalDrive_Arb(Cantilever):
         t0 = self.t0
 
         if t >= t0:
-
             _g = self.v_array[p] if p < n_points else self.v_array[-1]
 
             return _g
@@ -170,6 +169,6 @@ class MechanicalDrive_Arb(Cantilever):
 
         driving_force = self.f0 * np.sin(self.wd * t)
         scale = [np.max(self.v_array) - np.min(self.v_array), np.min(self.v_array)]
-        electro_force = self.fe * (self.__gamma__(t) - scale[1])/scale[0]
-        
+        electro_force = self.fe * (self.__gamma__(t) - scale[1]) / scale[0]
+
         return driving_force - electro_force

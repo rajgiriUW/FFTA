@@ -1,11 +1,14 @@
 """parab.py: Parabola fit around three points to find a true vertex."""
 
 import numpy as np
+
 try:
     import cupy as cp
 except:
     import warnings
+
     warnings.warn('cuPy not installed; no GPU available')
+
 
 def fit_peak(f, x):
     '''
@@ -68,7 +71,7 @@ def ridge_finder(spectrogram, freq_bin):
         ndarray xindex is 1D array of the frequency bins returned by parabolic approximation
         ndarray yindex is 1D array of the peak values at the xindices supplied
     '''
-    
+
     _argmax = np.argmax(np.abs(spectrogram), axis=0)
     cols = spectrogram.shape[1]
 
@@ -78,6 +81,7 @@ def ridge_finder(spectrogram, freq_bin):
                         spectrogram[(_argmax + 1, range(cols))]])
 
     return fit_2d(maxspec, _argmax, freq_bin)
+
 
 def cu_ridge_finder(spectrogram, freq_bin):
     '''
@@ -96,7 +100,7 @@ def cu_ridge_finder(spectrogram, freq_bin):
         ndarray xindex is 1D array of the frequency bins returned by parabolic approximation
         ndarray yindex is 1D array of the peak values at the xindices supplied
     '''
-    
+
     _argmax = cp.argmax(cp.abs(spectrogram), axis=0)
     cols = spectrogram.shape[1]
 
@@ -106,6 +110,7 @@ def cu_ridge_finder(spectrogram, freq_bin):
                         spectrogram[(_argmax + 1, cp.arange(cols))]])
 
     return fit_2d(maxspec, _argmax, freq_bin)
+
 
 def fit_2d(f, p, dx):
     '''

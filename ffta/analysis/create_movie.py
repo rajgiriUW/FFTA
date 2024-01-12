@@ -94,8 +94,8 @@ def create_freq_movie(h5_ds,
                       interval=60,
                       repeat_delay=100,
                       crop=None,
-                      verbose = True,
-                      discharge_time = False,
+                      verbose=True,
+                      discharge_time=False,
                       discharge=2000):
     '''
     Creates an animation that goes through all the instantaneous frequency data.
@@ -174,19 +174,19 @@ def create_freq_movie(h5_ds,
 
     # Loop through time segments
     ims = []
-    
+
     steps = np.arange(idx_start, len(tx) - idx_stop, time_step)
     verb_steps = np.linspace(idx_start, len(tx) - idx_stop, 10)
-    _v = 0 #display counter
+    _v = 0  # display counter
     for k, t in zip(steps, tx[idx_start:-idx_stop:time_step]):
 
         if verbose:
-            
+
             if k >= verb_steps[_v]:
                 sys.stdout.write('#')
                 sys.stdout.flush()
                 _v += 1
-            
+
         _if = h5_ds.get_n_dim_form()[:, :, k]
         if isinstance(crop, int):
             if crop < 0:

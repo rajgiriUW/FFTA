@@ -14,7 +14,7 @@ from scipy import signal as sps
 
 from ffta import pixel
 from ffta.load import get_utils
-from .fft import FrequencyFilter
+from .fft import FrequencyFilter, HarmonicPassFilter, NoiseBandFilter, BandPassFilter, LowPassFilter
 from .gmode_utils import test_filter as gtest_filter
 
 '''
@@ -185,7 +185,7 @@ def lowpass(hdf_file, parameters={}, pixelnum=[0, 0], f_cutoff=None):
     if not f_cutoff:
         lpf_cutoff = np.round(drive / 1e5, decimals=0) * 2 * 1e5  # 2times the drive frequency, round up
 
-    lpf = px.processing.fft.LowPassFilter(num_pts, samp_rate, lpf_cutoff)
+    lpf = LowPassFilter(num_pts, samp_rate, lpf_cutoff)
 
     return lpf
 
@@ -229,7 +229,7 @@ def bandpass(hdf_file, parameters={}, pixelnum=[0, 0], f_center=None, f_width=10
         else:
             f_center = int(drive * harmonic)
 
-    bpf = px.processing.fft.BandPassFilter(num_pts, samp_rate, f_center, f_width, fir=fir)
+    bpf = BandPassFilter(num_pts, samp_rate, f_center, f_width, fir=fir)
 
     return bpf
 
@@ -272,7 +272,7 @@ def harmonic(hdf_file, parameters={}, pixelnum=[0, 0], first_harm=1, bandwidth=N
 
     first_harm = drive * first_harm
 
-    hbf = px.processing.fft.HarmonicPassFilter(num_pts, samp_rate, first_harm, bandwidth, num_harmonics)
+    hbf = HarmonicPassFilter(num_pts, samp_rate, first_harm, bandwidth, num_harmonics)
 
     return hbf
 
@@ -304,7 +304,7 @@ def noise_filter(hdf_file, parameters={}, pixelnum=[0, 0],
 
     hdf_file, num_pts, drive, samp_rate = _get_pixel_for_filtering(hdf_file, parameters, pixelnum)
 
-    nf = px.processing.fft.NoiseBandFilter(num_pts, samp_rate, centers, widths)
+    nf = NoiseBandFilter(num_pts, samp_rate, centers, widths)
 
     return nf
 

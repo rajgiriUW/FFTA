@@ -99,12 +99,12 @@ class MechanicalDrive(Cantilever):
 
     """
 
-    def __init__(self, 
-                 can_params, 
-                 force_params, 
+    def __init__(self,
+                 can_params,
+                 force_params,
                  sim_params,
                  v_array=[],
-                 func=excitation.single_exp, 
+                 func=excitation.single_exp,
                  func_args=[]):
 
         parms = [can_params, force_params, sim_params]

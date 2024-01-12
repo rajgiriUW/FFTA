@@ -16,9 +16,9 @@ PI2 = 2 * pi
 
 class MechanicalDrive_Simple(Cantilever):
 
-    def __init__(self, 
-                 can_params={}, 
-                 force_params={}, 
+    def __init__(self,
+                 can_params={},
+                 force_params={},
                  sim_params={},
                  w_array=[]):
         """Damped Driven Harmonic Oscillator Simulator for AFM Cantilevers under 

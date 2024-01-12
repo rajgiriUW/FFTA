@@ -14,7 +14,7 @@ from pyUSID import Dimension
 from pyUSID import Process
 from pyUSID.io.hdf_utils import write_main_dataset, find_dataset, create_results_group
 from sidpy.hdf.hdf_utils import get_attributes, copy_attributes
-#from sidpy.proc.comp_utils import parallel_compute
+
 from pyUSID.processing.comp_utils import parallel_compute
 from sidpy.viz import plot_utils
 from skimage import restoration
@@ -50,7 +50,7 @@ class FFtrEFM(Process):
     """
 
     def __init__(self, h5_main, parm_dict={}, can_params={},
-                 pixel_params={}, if_only=False, override=False, 
+                 pixel_params={}, if_only=False, override=False,
                  process_name='Fast_Free', cuda=False,
                  **kwargs):
         """
@@ -107,7 +107,7 @@ class FFtrEFM(Process):
             self.parm_dict = get_attributes(h5_main)
             self.parm_dict.update({'if_only': if_only})
 
-        self.parm_dict['deconvolve'] = False 
+        self.parm_dict['deconvolve'] = False
 
         for key, val in parm_dict.items():
             self.parm_dict.update({key: val})
@@ -123,7 +123,7 @@ class FFtrEFM(Process):
         self.pixel_params = pixel_params
         self.override = override
         self.cuda = cuda
-        
+
         self.impulse = None
 
         super(FFtrEFM, self).__init__(h5_main, process_name, parms_dict=self.parm_dict, **kwargs)
@@ -163,7 +163,7 @@ class FFtrEFM(Process):
 
         return
 
-    def impulse_response(self, can_path, voltage = None, plot=True):
+    def impulse_response(self, can_path, voltage=None, plot=True):
         """
         Generates impulse response using simulation with given cantilever parameters file        
 
@@ -176,19 +176,19 @@ class FFtrEFM(Process):
         :param plot: Whether the plot the processed instantaneous frequency/Pixel response
         :type param: bool
         """
-        
+
         can_params, force_params, sim_params, _, _ = load_parm(can_path, self.parm_dict)
-        pix, cant = impulse([can_params, force_params, sim_params], voltage = voltage,
+        pix, cant = impulse([can_params, force_params, sim_params], voltage=voltage,
                             plot=plot, param_cfg=self.parm_dict, **self.parm_dict)
-        
+
         self.impulse = pix.inst_freq
-        self.parm_dict['impulse_window'] = [0, len(self.h5_main)-1]
+        self.parm_dict['impulse_window'] = [0, len(self.h5_main) - 1]
         self.parm_dict['deconvolve'] = True
-        
+
         print("Set self.parm_dict['deconvolve']=False if deconvolution is undesirable")
-        
+
         return
-    
+
     def test_deconv(self, window, pixel_ind=[0, 0], iterations=10):
         """
         Tests the deconvolution by bracketing the impulse around window
@@ -208,11 +208,11 @@ class FFtrEFM(Process):
         """
         if len(window) != 2 or not isinstance(window, list):
             raise ValueError('window must be specified[left, right]')
-        
-        if isinstance(window[0], float): # passed a time index
-            window = np.array(window)/self.parm_dict['sampling_rate']
+
+        if isinstance(window[0], float):  # passed a time index
+            window = np.array(window) / self.parm_dict['sampling_rate']
             window = int(window)
-        
+
         if type(pixel_ind) is not list:
             col = int(pixel_ind % self.parm_dict['num_rows'])
             row = int(np.floor(pixel_ind % self.parm_dict['num_rows']))
@@ -223,55 +223,55 @@ class FFtrEFM(Process):
 
         pixraw = Pixel(defl, self.parm_dict, **self.pixel_params)
         tfp, shift, inst_freq = pixraw.analyze()
-        
+
         impulse = self.impulse[window[0]:window[1]]
         self.parm_dict['impulse_window'] = window
         self.parm_dict['conv_iterations'] = iterations
-        
+
         pixconv = restoration.richardson_lucy(inst_freq, impulse, clip=False, num_iter=iterations)
-        
+
         pixrl = pixraw
         tfp_raw = pixraw.tfp
         fit_raw = pixraw.best_fit
         if_raw = pixraw.inst_freq
-        
+
         pixrl.inst_freq = pixconv
         pixrl.find_tfp()
         tfp_conv = pixrl.tfp
         fit_conv = pixrl.best_fit
         if_conv = pixrl.inst_freq
-    
+
         print(tfp_raw, tfp_conv)
-    
+
         # Plot the results of the original+fit compared to deconvolution+fit
         ridx = int(self.parm_dict['roi'] * self.parm_dict['sampling_rate'])
-        fidx = int(pixraw.tidx)    
-        ifx = np.array([fidx-1100, fidx+ridx])*1e3 / self.parm_dict['sampling_rate']
-        windx = np.array(window)*1e3 / self.parm_dict['sampling_rate']
+        fidx = int(pixraw.tidx)
+        ifx = np.array([fidx - 1100, fidx + ridx]) * 1e3 / self.parm_dict['sampling_rate']
+        windx = np.array(window) * 1e3 / self.parm_dict['sampling_rate']
         yl0 = [if_raw[fidx:(fidx + ridx)].min(), if_raw[fidx:(fidx + ridx)].max()]
         yl1 = [if_conv[fidx:(fidx + ridx)].min(), if_conv[fidx:(fidx + ridx)].max()]
         yl2 = [self.impulse[fidx:(fidx + ridx)].min(), self.impulse[fidx:(fidx + ridx)].max()]
-    
+
         fig, ax = plt.subplots(nrows=2, ncols=2, facecolor='white', figsize=(12, 8))
-        tx = np.arange(0, pixraw.total_time, 1/pixraw.sampling_rate) * 1e3
-        
+        tx = np.arange(0, pixraw.total_time, 1 / pixraw.sampling_rate) * 1e3
+
         ax[0][0].plot(tx, if_raw, 'b', label='Pre-Conv')
         ax[0][0].plot(tx[fidx:(fidx + ridx)], fit_raw, 'r--', label='Pre-Conv, fit')
         ax[0][0].set_title('Raw')
-        
+
         ax[1][0].plot(tx, if_conv, 'b', label='Conv')
         ax[1][0].plot(tx[fidx:(fidx + ridx)], fit_conv, 'r--', label='Conv, fit')
         ax[1][0].set_title('Deconvolved')
-        
+
         ax[0][1].plot(tx, self.impulse, 'k')
         ax[0][1].axvspan(windx[0], windx[1], alpha=0.5, color='red')
         ax[0][1].set_title('Impulse response')
-        
+
         ax[1][1].plot(tx[fidx:(fidx + ridx)], fit_raw, 'r--', label='Pre-Conv, fit')
         ax[1][1].plot(tx[fidx:(fidx + ridx)], fit_conv, 'k--', label='Conv, fit')
         ax[1][1].set_title('Comparing fits')
         ax[1][1].legend()
-        
+
         ax[0][0].set_xlim(ifx)
         ax[0][0].set_ylim(yl0)
         ax[1][0].set_xlim(ifx)
@@ -281,11 +281,10 @@ class FFtrEFM(Process):
         ax[1][1].set_xlim(ifx)
         ax[1][0].set_xlabel('Time (ms)')
         ax[1][1].set_xlabel('Time (ms)')
-        
+
         plt.tight_layout()
 
         return pixrl
-    
 
     def test(self, pixel_ind=[0, 0]):
         """
@@ -422,7 +421,7 @@ class FFtrEFM(Process):
         return
 
     def reshape(self, cal=None):
-        
+
         '''
         Reshapes the tFP and shift data to be a matrix, then saves that dataset instead of the 1D
         
@@ -442,26 +441,26 @@ class FFtrEFM(Process):
         del self.h5_tfp.file[self.h5_tfp.name]
         del self.h5_tfp.file[self.h5_shift.name]
 
-        self.h5_tfp = self.h5_results_grp.create_dataset('tfp', 
-                                                         data=h5_tfp, 
+        self.h5_tfp = self.h5_results_grp.create_dataset('tfp',
+                                                         data=h5_tfp,
                                                          dtype=np.float32)
-        self.h5_shift = self.h5_results_grp.create_dataset('shift', 
-                                                           data=h5_shift, 
+        self.h5_shift = self.h5_results_grp.create_dataset('shift',
+                                                           data=h5_shift,
                                                            dtype=np.float32)
 
         if cal:
-            
+
             if 'tfp_cal' in self.h5_results_grp:
                 del self.h5_results_grp['tfp_cal']
-            tfp_cal = np.exp(cal(np.log(h5_tfp))) # cal spline is by default in log space
-            self.h5_tfp_cal = self.h5_results_grp.create_dataset('tfp_cal', 
-                                                                 data=tfp_cal, 
+            tfp_cal = np.exp(cal(np.log(h5_tfp)))  # cal spline is by default in log space
+            self.h5_tfp_cal = self.h5_results_grp.create_dataset('tfp_cal',
+                                                                 data=tfp_cal,
                                                                  dtype=np.float32)
             tfps = np.linspace(self.h5_tfp[()].min(), self.h5_tfp[()].max(), 50)
             if 'cal_curve' in self.h5_results_grp:
                 del self.h5_results_grp['cal_curve']
             _ = self.h5_results_grp.create_dataset('cal_curve',
-                                                   data = np.array([tfps, cal(np.log(tfps))]),
+                                                   data=np.array([tfps, cal(np.log(tfps))]),
                                                    dtype=np.float32)
 
         return
@@ -564,7 +563,7 @@ class FFtrEFM(Process):
         parm_dict = args[0]
         pixel_params = args[1]
         impulse = args[2]
-        
+
         pix = Pixel(defl, parm_dict, **pixel_params)
 
         if parm_dict['if_only']:
@@ -578,7 +577,7 @@ class FFtrEFM(Process):
             iterations = parm_dict['conv_iterations']
             impulse = impulse[parm_dict['impulse_window'][0]:parm_dict['impulse_window'][1]]
             inst_freq, amplitude, phase = pix.generate_inst_freq()
-            conv = restoration.richardson_lucy(inst_freq, impulse, 
+            conv = restoration.richardson_lucy(inst_freq, impulse,
                                                clip=False, num_iter=iterations)
             pix.inst_freq = conv
             pix.find_tfp()
@@ -630,17 +629,16 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False, offset=0):
 
     tfp = find_dataset(h5_ff[h5_path], 'tfp')[0][()]
     shift = find_dataset(h5_ff[h5_path], 'shift')[0][()]
-    
+
     try:
         tfp_cal = find_dataset(h5_ff[h5_path], 'tfp_cal')[0][()]
     except:
         tfp_cal = None
-        
+
     tfp_fixed, _ = badpixels.fix_array(tfp, threshold=2)
     tfp_fixed = np.array(tfp_fixed)
-    
+
     if isinstance(tfp_cal, np.ndarray):
-        
         tfp_cal_fixed, _ = badpixels.fix_array(tfp_cal, threshold=2)
         tfp_cal_fixed = np.array(tfp_cal_fixed)
 
@@ -655,18 +653,18 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False, offset=0):
         np.savetxt('shift-' + append + '.csv', np.fliplr(shift).T, delimiter=',')
         np.savetxt('tfp_fixed-' + append + '.csv', np.fliplr(tfp_fixed - offset).T, delimiter=',')
     else:
-        np.savetxt('tfp-' + append + '.csv', (tfp- offset).T, delimiter=',')
+        np.savetxt('tfp-' + append + '.csv', (tfp - offset).T, delimiter=',')
         np.savetxt('shift-' + append + '.csv', shift.T, delimiter=',')
-        np.savetxt('tfp_fixed-' + append + '.csv', (tfp_fixed- offset).T, delimiter=',')
+        np.savetxt('tfp_fixed-' + append + '.csv', (tfp_fixed - offset).T, delimiter=',')
 
     if isinstance(tfp_cal, np.ndarray):
-        
+
         if mirror:
-            np.savetxt('tfp_cal-' + append + '.csv', np.fliplr(tfp_cal- offset).T, delimiter=',')
-            np.savetxt('tfp_cal_fixed-' + append + '.csv', np.fliplr(tfp_cal_fixed- offset).T, delimiter=',')
+            np.savetxt('tfp_cal-' + append + '.csv', np.fliplr(tfp_cal - offset).T, delimiter=',')
+            np.savetxt('tfp_cal_fixed-' + append + '.csv', np.fliplr(tfp_cal_fixed - offset).T, delimiter=',')
         else:
-            np.savetxt('tfp_cal-' + append + '.csv', (tfp_cal- offset).T, delimiter=',')
-            np.savetxt('tfp_cal_fixed-' + append + '.csv', (tfp_cal_fixed- offset).T, delimiter=',')
+            np.savetxt('tfp_cal-' + append + '.csv', (tfp_cal - offset).T, delimiter=',')
+            np.savetxt('tfp_cal_fixed-' + append + '.csv', (tfp_cal_fixed - offset).T, delimiter=',')
 
     return
 
@@ -706,37 +704,37 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
 
         img_length = ffprocess.parm_dict['FastScanSize']
         img_height = ffprocess.parm_dict['SlowScanSize']
-        
+
         num_cols = ffprocess.parm_dict['num_cols']
         num_rows = ffprocess.parm_dict['num_rows']
-        
+
         tfp = ffprocess.h5_tfp[()]
         shift = ffprocess.h5_shift[()]
-        
+
         if 'tfp_cal' in ffprocess.h5_tfp.parent:
             tfp_cal = ffprocess.h5_tfp.parent['tfp_cal'][()]
             tfp_cal_fixed, _ = badpixels.fix_array(tfp_cal, threshold=threshold)
         else:
             tfp_cal_fixed = tfp_cal = np.ones(tfp.shape)
-    
+
     elif isinstance(ffprocess, h5py.Group):
-        
+
         attr = get_attributes(ffprocess['Inst_Freq'])
         img_length = attr['FastScanSize']
         img_height = attr['SlowScanSize']
-        
+
         num_cols = attr['num_cols']
         num_rows = attr['num_rows']
-        
+
         tfp = ffprocess['tfp'][()]
         shift = ffprocess['shift'][()]
-        
+
         if 'tfp_cal' in ffprocess:
             tfp_cal = ffprocess['tfp_cal'][()]
             tfp_cal_fixed, _ = badpixels.fix_array(tfp_cal, threshold=threshold)
         else:
-            tfp_cal_fixed = tfp_cal = np.ones(tfp.shape) 
-            
+            tfp_cal_fixed = tfp_cal = np.ones(tfp.shape)
+
     kwarg = {'origin': 'lower', 'x_vec': img_length * 1e6,
              'y_vec': img_height * 1e6, 'num_ticks': 5, 'stdevs': 3, 'show_cbar': True}
 
@@ -758,7 +756,6 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
 
     tfp_fixed, _ = badpixels.fix_array(tfp, threshold=threshold)
 
-
     tfp_image, cbar_tfp = plot_utils.plot_map(tfp_ax, tfp_fixed * scale_tfp,
                                               cmap='inferno', **kwargs)
     shift_image, cbar_sh = plot_utils.plot_map(shift_ax, shift * scale_shift,
@@ -769,8 +766,8 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
         cbar_tfp_cal.set_label('Time Calib. (us)', rotation=90, labelpad=16)
     except:
         tfp_cal_image = tfp_cal_ax.imshow(tfp_cal_fixed * scale_tfp,
-                                                          cmap='inferno', origin='lower')
-    
+                                          cmap='inferno', origin='lower')
+
     cbar_tfp.set_label('Time (us)', rotation=270, labelpad=16)
     cbar_sh.set_label('Frequency Shift (Hz)', rotation=270, labelpad=16)
 

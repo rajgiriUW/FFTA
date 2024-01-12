@@ -3,6 +3,7 @@ import torch
 
 import time
 
+
 class NFMD:
     def __init__(self, signal, num_freqs, window_size,
                  windows=None,
@@ -49,15 +50,15 @@ class NFMD:
         # Signal -- assumed 1D, needs to be type double
         self.x = signal.astype(np.double).flatten()
         self.n = signal.shape[0]
-        
+
         # Signal Decomposition options
         self.num_freqs = num_freqs
         self.window_size = window_size
         self.windows = windows
-        
+
         if not windows:
             self.windows = self.n
-            
+
         # Stochastic Gradient Descent Options
         self.optimizer = optimizer
         self.optimizer_opts = optimizer_opts
@@ -136,7 +137,7 @@ class NFMD:
             prev_freqs = freqs
             prev_A = A
 
-        print (time.time() - t1, 's for decompose_signal')
+        print(time.time() - t1, 's for decompose_signal')
         t2 = time.time()
         self.freqs = np.array(self.freqs)
         self.A = np.array(self.A)
@@ -145,7 +146,7 @@ class NFMD:
         else:
             self.losses = [loss.detach().cpu().numpy() for loss in self.losses]
 
-        print (time.time() - t2, 's for detach')
+        print(time.time() - t2, 's for detach')
 
         return self.freqs, self.A, self.losses, self.indices
 
@@ -160,18 +161,18 @@ class NFMD:
         # Define how many points between centerpoint of windows
         increment = int(self.n / self.windows)
         window_size = self.window_size
-        
+
         # Initialize the indices lists
         self.indices = []
         self.mid_idcs = []
-        
+
         # Populate the indices lists
         for i in range(self.windows):
-        
+
             # Compute window slice indices
             idx_start = int(max(0, i * increment - window_size / 2))
             idx_end = int(min(self.n, i * increment + window_size / 2))
-            
+
             if idx_end - idx_start == window_size:
                 # Add the index slice to the indices list
                 self.indices.append(slice(idx_start, idx_end))
@@ -210,7 +211,7 @@ class NFMD:
         t2 = time.time()
         # Then begin SGD
         loss, freqs, A = self.sgd(xt, freqs, A, max_iters=self.max_iters)
-        #print(time.time() - t2, 's for sgd')
+        # print(time.time() - t2, 's for sgd')
 
         return loss, freqs, A
 

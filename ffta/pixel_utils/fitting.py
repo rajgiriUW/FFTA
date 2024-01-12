@@ -139,11 +139,11 @@ def fit_product(Q, drive_freq, t, inst_freq):
     inv_beta = float(Q / (np.pi * drive_freq))
 
     # Cost function to minimize.
-    
+
     if not isinstance(inst_freq, np.ndarray):
         inst_freq = inst_freq.get()
         t = t.get()
-    
+
     cost = lambda p: np.sum((ddho_freq_product(t, *p) - inst_freq) ** 2)
 
     # bounded optimization using scipy.minimize
@@ -214,11 +214,11 @@ def fit_sum(Q, drive_freq, t, inst_freq):
     :returns:
     :rtype:
     """
-    
+
     if not isinstance(inst_freq, np.ndarray):
         inst_freq = inst_freq.get()
         t = t.get()
-    
+
     # Initial guess for relaxation constant.
     inv_beta = Q / (np.pi * drive_freq)
 
@@ -248,11 +248,11 @@ def fit_exp(t, inst_freq):
     :return:
     :rtype:
     """
-    
+
     if not isinstance(inst_freq, np.ndarray):
         inst_freq = inst_freq.get()
         t = t.get()
-        
+
     # Cost function to minimize.
     cost = lambda p: np.sum((cut_exp(t, *p) - inst_freq) ** 2)
 

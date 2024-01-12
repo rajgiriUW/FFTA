@@ -17,7 +17,6 @@ from multiprocessing import cpu_count
 
 import h5py
 import numpy as np
-import psutil
 from matplotlib import pyplot as plt
 from pyUSID import Dimension
 from pyUSID import USIDataset
@@ -126,7 +125,7 @@ class SVD(Process):
                 print('Returning previously computed results from: {}'.format(self.h5_results_grp.name))
                 print('set the "override" flag to True to recompute results')
                 return reshape_to_n_dims(self.h5_results_grp['U'])[0], self.h5_results_grp['S'][()], \
-                       reshape_to_n_dims(self.h5_results_grp['V'])[0]
+                    reshape_to_n_dims(self.h5_results_grp['V'])[0]
 
         self.h5_results_grp = None
 

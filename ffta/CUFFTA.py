@@ -16,7 +16,7 @@ from scipy import integrate as spg
 from scipy import signal as sps
 
 import cupy as cp
-import cusignal
+# import cusignal
 
 from ffta.nfmd.cuNFMD import CUNFMD
 from ffta.pixel_utils import dwavelet
@@ -187,8 +187,8 @@ class CUFFTA:
 
         if isinstance(signal_array, numpy.ndarray):
             raise TypeError('Signal must be a cupy.ndarray. For Numpy processing use FFTA/Pixel')
-            
-        elif not isinstance (signal_array, cp.ndarray):
+
+        elif not isinstance(signal_array, cp.ndarray):
             raise TypeError('Signal must be a cupy.ndarray.')
 
         # FIR (Hilbert) filtering parameters
@@ -483,7 +483,7 @@ class CUFFTA:
         # Create taps using window method.
         try:
             taps = cusignal.firwin(int(self.n_taps), band, pass_zero=False,
-                              window='blackman')
+                                   window='blackman')
         except:
             print('band=', band)
             print('nyq=', nyq_rate)
@@ -669,8 +669,7 @@ class CUFFTA:
 
         # -self.phase to correct for sign in DDHO solution
         _inst_freq_raw = sps.savgol_filter(-self.phase.get(), 5, 1, deriv=1,
-                                               delta=dtime)
-        
+                                           delta=dtime)
 
         # Bring trigger to zero.
         self.tidx = int(self.tidx)
@@ -729,7 +728,7 @@ class CUFFTA:
 
         if not fit:
 
-            inst_freq, amplitude, _ = parab.ridge_finder(numpy.abs(spectrogram), 
+            inst_freq, amplitude, _ = parab.ridge_finder(numpy.abs(spectrogram),
                                                          numpy.arange(len(freq)))
 
         # slow serial curve fitting
@@ -773,7 +772,7 @@ class CUFFTA:
             phase -= (xfit[0] * numpy.arange(len(inst_freq))) + xfit[1]
 
         self.phase = phase
-        
+
         self.inst_freq = cp.array(self.inst_freq)
         self.phase = cp.array(self.phase)
         self.amplitude = cp.array(self.amplitude)
@@ -796,7 +795,6 @@ class CUFFTA:
         pts_per_ncycle = int(self.fft_time_res * self.sampling_rate)
 
         if nfft < pts_per_ncycle:
-
             nfft = pts_per_ncycle
 
         if pts_per_ncycle > len(self.signal):
@@ -878,12 +876,12 @@ class CUFFTA:
                 print('window size automatically adjusted to ', self.window_size)
 
         nfmd = CUNFMD(z / cp.std(z),
-                    num_freqs=self.num_freqs,
-                    window_size=self.window_size,
-                    optimizer_opts=self.optimizer_opts,
-                    max_iters=self.max_iters,
-                    target_loss=self.target_loss,
-                    device=self.device)
+                      num_freqs=self.num_freqs,
+                      window_size=self.window_size,
+                      optimizer_opts=self.optimizer_opts,
+                      max_iters=self.max_iters,
+                      target_loss=self.target_loss,
+                      device=self.device)
 
         if verbose:
             freqs, A, losses, indices = nfmd.decompose_signal(self.update_freq)
@@ -1121,7 +1119,6 @@ class CUFFTA:
 
             # Filter the signal with a filter, if wanted.
             if self.bandpass_filter == 1:
-
                 self.fir_filter()
 
             # Get the analytical signal doing a Hilbert transform.

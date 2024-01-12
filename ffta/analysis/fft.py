@@ -292,7 +292,8 @@ class NoiseBandFilter(FrequencyFilter):
         freqs = np.array(freqs)
         freq_widths = np.array(freq_widths)
         if freqs.ndim != freq_widths.ndim:
-            raise ValueError('Error in noiseBandFilter: dimensionality of frequencies and frequency widths do not match!')
+            raise ValueError(
+                'Error in noiseBandFilter: dimensionality of frequencies and frequency widths do not match!')
         if freqs.shape != freq_widths.shape:
             raise ValueError('Error in noiseBandFilter: shape of frequencies and frequency widths do not match!')
 
@@ -332,7 +333,7 @@ class NoiseBandFilter(FrequencyFilter):
     def get_parms(self):
         basic_parms = super(NoiseBandFilter, self).get_parms()
         prefix = 'noise_band_'
-        this_parms = {prefix+'freqs': self.freqs, prefix+'widths': self.freq_widths}
+        this_parms = {prefix + 'freqs': self.freqs, prefix + 'widths': self.freq_widths}
         this_parms.update(basic_parms)
         return this_parms
 
@@ -390,7 +391,7 @@ class LowPassFilter(FrequencyFilter):
     def get_parms(self):
         basic_parms = super(LowPassFilter, self).get_parms()
         prefix = 'low_pass_'
-        this_parms = {prefix+'cut_off': self.f_cutoff, prefix+'widths': self.roll_off}
+        this_parms = {prefix + 'cut_off': self.f_cutoff, prefix + 'widths': self.roll_off}
         this_parms.update(basic_parms)
         return this_parms
 
@@ -488,8 +489,8 @@ class HarmonicPassFilter(FrequencyFilter):
     def get_parms(self):
         basic_parms = super(HarmonicPassFilter, self).get_parms()
         prefix = 'harmonic_pass_'
-        this_parms = {prefix+'start_freq': self.first_freq, prefix+'band_width': self.band_width,
-                      prefix+'bands': self.num_harm}
+        this_parms = {prefix + 'start_freq': self.first_freq, prefix + 'band_width': self.band_width,
+                      prefix + 'bands': self.num_harm}
         this_parms.update(basic_parms)
         return this_parms
 
@@ -519,6 +520,7 @@ class HarmonicPassFilter(FrequencyFilter):
     #         end
     #     end
     #     F_AI_vec = removeNoiseFreqs(F_AI_vec,sampRate,freqs,freqWidths);
+
 
 class BandPassFilter(FrequencyFilter):
     def __init__(self, signal_length, samp_rate, f_center, f_width,
