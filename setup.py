@@ -23,8 +23,8 @@ setup(
 
     packages=find_packages(exclude=['xop', 'docs', 'data', 'notebooks']),
 
-    install_requires=['numpy>=1.20.0',
-                      'scipy>=1.4.1',
+    install_requires=['numpy>=1.22.0',
+                      'scipy>=1.7',
                       'igor2>=0.5.2',
                       'numexpr>=2.7.1',
                       'pyUSID>=0.0.11',
@@ -35,6 +35,9 @@ setup(
                       'torch>=2.1.2',
                       'scikit-image>=0.19.2'
                       ],
+    extra_requires=['cuda-python>=12.0.0',
+                    'cupy-cuda12x>=13.0.0'
+                    ],
     test_suite='pytest',
     # entry_points={
     #      'console_scripts': [
