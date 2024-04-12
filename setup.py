@@ -23,7 +23,7 @@ setup(
 
     packages=find_packages(exclude=['xop', 'docs', 'data', 'notebooks']),
 
-    install_requires=['numpy>=1.22.0',
+    install_requires=['numpy>=1.24.0',
                       'scipy>=1.7',
                       'igor2>=0.5.2',
                       'numexpr>=2.7.1',

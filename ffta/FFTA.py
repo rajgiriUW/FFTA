@@ -1,7 +1,7 @@
 """FFTA.py: Contains pixel class."""
 # pylint: disable=E1101,R0902,C0103
 __author__ = "Rajiv Giridharagopal"
-__copyright__ = "Copyright 2023"
+__copyright__ = "Copyright 2024"
 __maintainer__ = "Rajiv Giridharagopal"
 __email__ = "rgiri@uw.edu"
 __status__ = "Development"
@@ -182,11 +182,8 @@ class FFTA:
         # Create parameter attributes for optional parameters.
         # These defaults are overwritten by values in 'params'
 
-        warnings.warn('This class will be rename "FFTA" in next major release.',
-                      category=DeprecationWarning, stacklevel=2)
-
         # FIR (Hilbert) filtering parameters
-        self.n_taps = 1499
+        self.n_taps = 499
         self.filter_bandwidth = 5000
         self.filter_frequency = filter_frequency
 
@@ -972,7 +969,7 @@ class FFTA:
 
                 cut = -1 * (self.phase[self.tidx:(self.tidx + ridx)] - self.phase[self.tidx])
                 tfp_calc.fit_phase(self, cut, t)
-
+            
         except:
 
             self.tfp = np.nan
