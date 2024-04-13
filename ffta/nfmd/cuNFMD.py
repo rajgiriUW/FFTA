@@ -11,7 +11,7 @@ class CUNFMD:
                  optimizer_opts={'lr': 1e-4},
                  max_iters=1000,
                  target_loss=1e-4,
-                 device='cpu'):
+                 device='cuda'):
         '''
         Initialize the object
 
@@ -297,7 +297,7 @@ class CUNFMD:
         '''
         # Set up PyTorch tensors for SGD
         A = torch.tensor(A, requires_grad=False, device=self.device)
-        freqs = torch.tensor(np.asarray(freqs), requires_grad=True, device=self.device)
+        freqs = torch.tensor(cp.asarray(freqs), requires_grad=True, device=self.device)
         xt = torch.tensor(xt, requires_grad=False, device=self.device)
 
         # Set up PyTorch Optimizer
@@ -315,8 +315,8 @@ class CUNFMD:
         # SGD to determine solution
         for i in range(max_iters):
             # Compute new model
-            Omega = torch.cat([torch.cos(t * 2 * np.pi * freqs),
-                               torch.sin(t * 2 * np.pi * freqs)], -1)
+            Omega = torch.cat([torch.cos(t * 2 * cp.pi * freqs),
+                               torch.sin(t * 2 * cp.pi * freqs)], -1)
 
             A = torch.matmul(torch.pinverse(Omega.data), xt)
 
