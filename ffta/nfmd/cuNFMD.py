@@ -106,6 +106,9 @@ class CUNFMD:
 
         print(len(self.indices), 'indices')
 
+        # Determine number of SGD iterations to allow
+        max_iters = self.max_iters
+
         # iterate through each window:
         for i, idx_slice in enumerate(self.indices):
             # If update frequency is requested, print an update
@@ -116,9 +119,6 @@ class CUNFMD:
 
             # Access data slice
             x_i = self.x[idx_slice].copy()
-
-            # Determine number of SGD iterations to allow
-            max_iters = self.max_iters
 
             if i == 0:
                 self.max_iters = 10000
@@ -156,7 +156,9 @@ class CUNFMD:
         to the windows used in the analysis.
         Note: this is equivalent to computing rectangular windows.
         '''
-
+        
+        t1 = time.time()
+        
         # Define how many points between centerpoint of windows
         increment = int(self.n / self.windows)
         window_size = self.window_size
@@ -177,6 +179,8 @@ class CUNFMD:
                 self.indices.append(slice(idx_start, idx_end))
                 idx_mid = int((idx_end + idx_start) / 2)
                 self.mid_idcs.append(idx_mid)
+                
+        print(time.time() - t1, 's for compute')
 
     def fit_window(self, xt, freqs=None, A=None):
         '''
@@ -201,7 +205,6 @@ class CUNFMD:
 
         '''
         # If no frequency is provided, generate initial frequency guess:
-
         if freqs is None:
             freqs, A = self.fft(xt)
 
@@ -217,7 +220,6 @@ class CUNFMD:
 
         :param xt: Temporal data of dimensions [T, ...]
         :type xt: numpy.array
-            
 
         :returns: tuple (freqs, A)
             WHERE

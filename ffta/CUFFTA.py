@@ -76,6 +76,7 @@ class CUFFTA(FFTA):
         # Creature CUDA arrays
         self.signal_array = cp.array(self.signal_array)
         self.signal = cp.array(self.signal)
+        self.device = 'cuda'
         
         return
 
