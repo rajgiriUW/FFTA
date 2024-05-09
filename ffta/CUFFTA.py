@@ -426,7 +426,9 @@ class CUFFTA(FFTA):
         if override_window:
 
             win_size_cycle = int(self.sampling_rate / self.drive_freq)
-            self.window_size = (self.window_size // win_size_cycle) * win_size_cycle
+            self.window_size = max(self.window_size,
+                                   (self.window_size // win_size_cycle) * win_size_cycle)
+                                   
 
             if verbose:
                 print('window size automatically adjusted to ', self.window_size)
@@ -577,3 +579,56 @@ class CUFFTA(FFTA):
             del cut
 
             return
+
+    def plot(self, newplot=True, fit=True):
+        """ 
+        Quick visualization of best_fit and cut.
+        
+        :param newplot: generates a new plot (True) or plots on existing plot figure (False)
+        :type newplot: bool, optional
+        
+        :param fit: Overlays fit on the instantaneous frequency image
+        :type fit: bool, opttional
+            
+        """
+
+        if newplot:
+            fig, a = plt.subplots(nrows=3, figsize=(6, 9), facecolor='white')
+
+        dt = 1 / self.sampling_rate
+        ridx = int(self.roi * self.sampling_rate)
+        fidx = int(self.tidx)
+
+        cut = self.amplitude[fidx:(fidx + ridx)]
+
+        cut = [fidx, (fidx + ridx)]
+        tx = cp.arange(cut[0], cut[1]).get() * dt
+        phase = self.phase.get()
+        ifreq = self.inst_freq.get()
+        ampl = self.amplitude.get()
+        
+        a[0].plot(tx * 1e3, ifreq[cut[0]:cut[1]], 'r-')
+
+        if fit:
+            if self.fit_form == 'ringdown':
+                a[1].plot(tx * 1e3, self.best_fit.get(), 'g--')
+            elif self.fit_form == 'exp' and self.method == 'nfmd':
+                a[2].plot(tx * 1e3, self.best_fit.get() + phase[self.tidx], 'g--')
+            else:
+                a[0].plot(tx * 1e3, self.best_fit.get(), 'g--')
+
+        a[1].plot(tx * 1e3, ampl[cut[0]:cut[1]], 'b')
+        if self.fit_form == 'exp' and self.method == 'nfmd':
+            a[2].plot(tx * 1e3, phase[cut[0]:cut[1]], 'm')
+        else:
+            a[2].plot(tx * 1e3, phase[cut[0]:cut[1]] * 180 / cp.pi, 'm')
+
+        a[0].set_title('Instantaneous Frequency')
+        a[0].set_ylabel('Frequency Shift (Hz)')
+        a[1].set_ylabel('Amplitude (nm)')
+        a[2].set_ylabel('Phase (deg)')
+        a[2].set_xlabel('Time (ms)')
+
+        plt.tight_layout()
+
+        return
