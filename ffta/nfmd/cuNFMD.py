@@ -11,7 +11,9 @@ class CUNFMD:
                  optimizer_opts={'lr': 1e-4},
                  max_iters=1000,
                  target_loss=1e-4,
-                 device='cuda'):
+                 device='cuda',
+                 verbose=False,
+                 zerodata=False):
         '''
         Initialize the object
 
@@ -69,7 +71,9 @@ class CUNFMD:
         self.max_iters = max_iters
         self.target_loss = target_loss
         self.device = device
-
+        self.verbose = verbose
+        self.zerodata = zerodata
+        
     def decompose_signal(self, update_freq: int = None):
         '''
         Compute the slices of the windows used in the analysis.
@@ -89,10 +93,14 @@ class CUNFMD:
         # Compute window indices
 
         t1 = time.time()
-        self.compute_window_indices()
+        # self.compute_window_indices()
+        
+        # 
+        window_size = self.window_size
+        self.indices = [self.n-window_size+1]
 
         # Determine if printing updates
-        verbose = update_freq != None
+        verbose = self.verbose
 
         # lists for results
         self.freqs = []
@@ -104,34 +112,32 @@ class CUNFMD:
         prev_freqs = None
         prev_A = None
 
-        print(len(self.indices), 'indices')
+        if verbose:
+            print(len(self.indices), 'indices')
 
         # Determine number of SGD iterations to allow
-        max_iters = self.max_iters
         self.times = []
-        self.iterations = []
         
         # iterate through each window:
-        for i, idx_slice in enumerate(self.indices):
-            
+        for i in range(self.n-window_size+1):    
             t  = time.time()
             
             # If update frequency is requested, print an update
             # at window <x>
-            if verbose:
+            if update_freq is not None:
                 if i % update_freq == 0:
                     print("{}/{}".format(i, len(self.indices)), end="|")
 
             # Access data slice
-            x_i = self.x[idx_slice].copy()
-
-            if i == 0:
-                self.max_iters = 10000
+            x_i = self.x[i:i+window_size]
+            
+            if self.zerodata:
+                x_i = x_i - cp.mean(x_i)
 
             # Fit data in window to model
             loss, freqs, A, i = self.fit_window(x_i,
-                                             freqs=prev_freqs,
-                                             A=prev_A)
+                                                freqs=prev_freqs,
+                                                A=prev_A)
 
             # Store the results
             self.freqs.append(freqs)
@@ -141,10 +147,12 @@ class CUNFMD:
             # Set the previous freqs and A variables
             prev_freqs = freqs
             prev_A = A
-
-            self.times.append(time.time() - t)
-            self.iterations.append(i)
-        print(time.time() - t1, 's for decompose_signal')
+            
+            if self.verbose: 
+                self.times.append(time.time() - t)
+            
+        if verbose:
+            print(time.time() - t1, 's for decompose_signal')
         
         t2 = time.time()
         self.freqs = cp.array(self.freqs)
@@ -154,11 +162,12 @@ class CUNFMD:
         else:
             self.losses = [loss.detach().cpu().numpy() for loss in self.losses]
 
-        print(time.time() - t2, 's for detach')
+        if verbose:
+            print(time.time() - t2, 's for detach')
 
         return self.freqs, self.A, self.losses, self.indices
 
-    def compute_window_indices(self):
+    def compute_window_indices_old(self):
         '''
         Sets the 'indices' attribute with computed index slices corresponding
         to the windows used in the analysis.
@@ -187,43 +196,56 @@ class CUNFMD:
                 self.indices.append(slice(idx_start, idx_end))
                 idx_mid = int((idx_end + idx_start) / 2)
                 self.mid_idcs.append(idx_mid)
-                
-        print(time.time() - t1, 's for compute')
+        
+        if self.verbose:
+            print(time.time() - t1, 's for compute')
 
-    def compute_window_indices_2(self):
+    def compute_window_indices(self):
         '''
         Auto-sets the windowed indices assuming single index steps
         '''
         
         t1 = time.time()
+
+        window_size = self.window_size        
+        self.indices = [slice(x, x + window_size, None) for x in range(self.n-window_size+1)]
         
-        
-        
-        
-        # Define how many points between centerpoint of windows
-        increment = int(self.n / self.windows)
-        window_size = self.window_size
+        if self.verbose:                
+            print(time.time() - t1, 's for compute')
 
-        # Initialize the indices lists
-        self.indices = []
-        self.mid_idcs = []
+    def calc_window(self, xt, freqs=None, A=None, max_iters=None):
+        '''
+        Uses matrix math and single pass to fit the data, rather than sgd
+        '''
+        if freqs is None:
+            freqs, A = self.fft(xt)
+            
+        # Time indices
+        tx = cp.arange(len(xt))+1
+        # Determine how many iterations will be used
+        if not max_iters:
+            max_iters = self.max_iters
 
-        # Populate the indices lists
-        for i in range(self.windows):
+        omega = cp.vstack( (cp.cos(tx * 2 * cp.pi * freqs[0]),
+                            cp.cos(tx * 2 * cp.pi * freqs[1]),
+                            cp.sin(tx * 2 * cp.pi * freqs[0]),
+                            cp.sin(tx * 2 * cp.pi * freqs[1]))).T
 
-            # Compute window slice indices
-            idx_start = int(max(0, i * increment - window_size / 2))
-            idx_end = int(min(self.n, i * increment + window_size / 2))
+        # SGD to determine solution
 
-            if idx_end - idx_start == window_size:
-                # Add the index slice to the indices list
-                self.indices.append(slice(idx_start, idx_end))
-                idx_mid = int((idx_end + idx_start) / 2)
-                self.mid_idcs.append(idx_mid)
-                
-        print(time.time() - t1, 's for compute')
+        A = cp.matmul(cp.linalg.pinv(omega), xt)
+        xhat = cp.matmul(omega, A)
 
-    
+        loss = cp.mean((xhat - xt) ** 2)
+
+        # Store the model fit:
+        xhat = xhat.get()
+        self.window_fits.append(xhat)
+
+        # Prepare the results
+        A = A.get()
+ 
+        return loss, freqs, A, 0        
 
     def fit_window(self, xt, freqs=None, A=None):
         '''
@@ -315,8 +337,9 @@ class CUNFMD:
                                     cp.sin(t * 2 * cp.pi * ws)], -1)
 
             A = cp.dot(cp.linalg.pinv(Omega), xt)
-
-        print ('fft', time.time()-t1)
+        
+        if self.verbose:
+            print ('fft', time.time()-t1)
         return freqs, A
 
     def sgd(self, xt, freqs, A, max_iters=None):
@@ -359,6 +382,10 @@ class CUNFMD:
         # Determine how many iterations will be used
         if not max_iters:
             max_iters = self.max_iters
+
+        # Below is the method for using the Fourier->Koopman
+        # Instead, given the info that it rarely goes through many iterations
+        # we could instead simply ignore the "training" parts...
 
         # SGD to determine solution
         for i in range(max_iters):
@@ -471,22 +498,28 @@ class CUNFMD:
         '''
         # Initialize empty array
         means = cp.ndarray(len(self.mid_idcs))
+        
         # Identify the low-frequency mode based on initial frequency estimate
         if lf_mode is None:
             lf_mode = cp.argmin(cp.mean(self.freqs[:, :], axis=0))
         mid_idx = int(self.window_size / 2)
+        
         # Iterate through each fourier object and compute the mean
         for i in range(len(self.mid_idcs)):
+        
             # Grab the frequency and the amplitudes
             freq = self.freqs[i, lf_mode]
             A = self.A[i, lf_mode::self.num_freqs]
+            
             # Compute the estimate
             t = cp.expand_dims(cp.arange(self.window_size) + 1, -1)
             Omega = cp.concatenate([cp.cos(t * 2 * cp.pi * freq),
                                     cp.sin(t * 2 * cp.pi * freq)], -1)
             fit = cp.dot(Omega, A)
+            
             # Grab the centerpoint and add it to the means list
             means[i] = fit[mid_idx]
+        
         return means
 
     def predict_window(self, i):
