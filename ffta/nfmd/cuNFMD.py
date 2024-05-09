@@ -108,9 +108,14 @@ class CUNFMD:
 
         # Determine number of SGD iterations to allow
         max_iters = self.max_iters
-
+        self.times = []
+        self.iterations = []
+        
         # iterate through each window:
         for i, idx_slice in enumerate(self.indices):
+            
+            t  = time.time()
+            
             # If update frequency is requested, print an update
             # at window <x>
             if verbose:
@@ -124,7 +129,7 @@ class CUNFMD:
                 self.max_iters = 10000
 
             # Fit data in window to model
-            loss, freqs, A = self.fit_window(x_i,
+            loss, freqs, A, i = self.fit_window(x_i,
                                              freqs=prev_freqs,
                                              A=prev_A)
 
@@ -137,7 +142,10 @@ class CUNFMD:
             prev_freqs = freqs
             prev_A = A
 
+            self.times.append(time.time() - t)
+            self.iterations.append(i)
         print(time.time() - t1, 's for decompose_signal')
+        
         t2 = time.time()
         self.freqs = cp.array(self.freqs)
         self.A = cp.array(self.A)
@@ -182,6 +190,41 @@ class CUNFMD:
                 
         print(time.time() - t1, 's for compute')
 
+    def compute_window_indices_2(self):
+        '''
+        Auto-sets the windowed indices assuming single index steps
+        '''
+        
+        t1 = time.time()
+        
+        
+        
+        
+        # Define how many points between centerpoint of windows
+        increment = int(self.n / self.windows)
+        window_size = self.window_size
+
+        # Initialize the indices lists
+        self.indices = []
+        self.mid_idcs = []
+
+        # Populate the indices lists
+        for i in range(self.windows):
+
+            # Compute window slice indices
+            idx_start = int(max(0, i * increment - window_size / 2))
+            idx_end = int(min(self.n, i * increment + window_size / 2))
+
+            if idx_end - idx_start == window_size:
+                # Add the index slice to the indices list
+                self.indices.append(slice(idx_start, idx_end))
+                idx_mid = int((idx_end + idx_start) / 2)
+                self.mid_idcs.append(idx_mid)
+                
+        print(time.time() - t1, 's for compute')
+
+    
+
     def fit_window(self, xt, freqs=None, A=None):
         '''
         Fits a set of instantaneous frequency and component coefficient vectors
@@ -209,9 +252,9 @@ class CUNFMD:
             freqs, A = self.fft(xt)
 
         # Then begin SGD
-        loss, freqs, A = self.sgd(xt, freqs, A, max_iters=self.max_iters)
+        loss, freqs, A, i = self.sgd(xt, freqs, A, max_iters=self.max_iters)
 
-        return loss, freqs, A
+        return loss, freqs, A, i
 
     def fft(self, xt):
         '''
@@ -227,6 +270,8 @@ class CUNFMD:
             numpy.ndarray A is vector of component coefficients
 
         '''
+        
+        t1 = time.time()
         # Ensure input signal is 1D:
         if len(xt.shape) == 1:
             xt = xt.reshape(-1, 1)
@@ -271,6 +316,7 @@ class CUNFMD:
 
             A = cp.dot(cp.linalg.pinv(Omega), xt)
 
+        print ('fft', time.time()-t1)
         return freqs, A
 
     def sgd(self, xt, freqs, A, max_iters=None):
@@ -344,7 +390,7 @@ class CUNFMD:
         A = A.cpu().detach().numpy()
         freqs = freqs.cpu().detach().numpy()
 
-        return loss, freqs, A
+        return loss, freqs, A, i
 
     def predict(self, T):
         '''
