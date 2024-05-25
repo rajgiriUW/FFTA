@@ -222,7 +222,7 @@ class CUNFMD:
         if isinstance(A, cp.ndarray):
             A = A.get()
         if isinstance(freqs, cp.ndarray):
-            freqs = A.get()
+            freqs = freqs.get()
         
         def omega_calc(freqs, tx):
             if freqs.ndim == 2:
