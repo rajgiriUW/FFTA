@@ -221,6 +221,8 @@ class CUNFMD:
         xt = xt.get()
         if isinstance(A, cp.ndarray):
             A = A.get()
+        if isinstance(freqs, cp.ndarray):
+            freqs = A.get()
         
         def omega_calc(freqs, tx):
             if freqs.ndim == 2:
@@ -302,11 +304,11 @@ class CUNFMD:
         freqs[0] = drive_freq / sampling_rate
         tx = cp.arange(len(xt))+1
         
-        omega1 = np.vstack([[np.cos(tx * 2 * np.pi * freqs[x])] 
+        omega1 = cp.vstack([[cp.cos(tx * 2 * cp.pi * freqs[x])] 
                             for x in range(self.num_freqs)])
-        omega2 = np.vstack([[np.sin(tx * 2 * np.pi * freqs[x])] 
+        omega2 = cp.vstack([[cp.sin(tx * 2 * cp.pi * freqs[x])] 
                             for x in range(self.num_freqs)])
-        omega = np.vstack([omega1, omega2]).T
+        omega = cp.vstack([omega1, omega2]).T
         # omega = cp.vstack( (cp.cos(tx * 2 * cp.pi * freqs[0]),
         #                     cp.cos(tx * 2 * cp.pi * freqs[1]),
         #                     cp.sin(tx * 2 * cp.pi * freqs[0]),
