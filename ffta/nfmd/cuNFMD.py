@@ -1,5 +1,7 @@
 import cupy as cp
+import numpy as np
 import torch
+from scipy.optimize import minimize
 
 import time
 
@@ -13,7 +15,9 @@ class CUNFMD:
                  target_loss=1e-4,
                  device='cuda',
                  verbose=False,
-                 zerodata=False):
+                 zerodata=False,
+                 drive_freq=None,
+                 sampling_rate=None):
         '''
         Initialize the object
 
@@ -73,15 +77,20 @@ class CUNFMD:
         self.device = device
         self.verbose = verbose
         self.zerodata = zerodata
+        self.drive_freq = drive_freq
+        self.sampling_rate = sampling_rate
         
-    def decompose_signal(self, update_freq: int = None):
+    def decompose_signal(self, update_freq: int = None, method='sgd'):
         '''
         Compute the slices of the windows used in the analysis.
         Note: this is equivalent to computing rectangular windows.
 
         :param update_freq: The number of optimizer steps between printed update statements.
         :type update_freq: int
-            
+        
+        :param method: Either 'sgd' or 'scipy' for gradient descent method
+        :type method: str
+        
         :returns: tuple (freqs, A, losses, indices)
             WHERE
             numpy.ndarray freqs is frequency vector
@@ -90,12 +99,10 @@ class CUNFMD:
             List indices is list of slice objects. each slice describes fit window indices`
 
         '''
-        # Compute window indices
 
         t1 = time.time()
         # self.compute_window_indices()
         
-        # 
         window_size = self.window_size
         self.indices = [self.n-window_size+1]
 
@@ -111,10 +118,13 @@ class CUNFMD:
         # Tracker variables for previous freqs and A
         prev_freqs = None
         prev_A = None
+        
+        drive_freq = self.drive_freq
+        sampling_rate = self.sampling_rate
 
         if verbose:
             print(len(self.indices), 'indices')
-
+            print(method)
         # Determine number of SGD iterations to allow
         self.times = []
         
@@ -135,9 +145,18 @@ class CUNFMD:
                 x_i = x_i - cp.mean(x_i)
 
             # Fit data in window to model
-            loss, freqs, A, i = self.fit_window(x_i,
-                                                freqs=prev_freqs,
-                                                A=prev_A)
+            if method == 'sgd':
+                loss, freqs, A, i = self.fit_window(x_i,
+                                                    freqs=prev_freqs,
+                                                    A=prev_A,
+                                                    drive_freq=drive_freq,
+                                                    sampling_rate=sampling_rate)
+            elif method == 'scipy':
+                loss, freqs, A, i = self.calc_window(x_i,
+                                                     freqs=prev_freqs,
+                                                     A=prev_A,
+                                                     drive_freq=drive_freq,
+                                                     sampling_rate=sampling_rate)
 
             # Store the results
             self.freqs.append(freqs)
@@ -157,48 +176,16 @@ class CUNFMD:
         t2 = time.time()
         self.freqs = cp.array(self.freqs)
         self.A = cp.array(self.A)
-        if self.device == 'cpu':
-            self.losses = [loss.detach().numpy() for loss in self.losses]
-        else:
-            self.losses = [loss.detach().cpu().numpy() for loss in self.losses]
+        if method == 'sgd':
+            if self.device == 'cpu':
+                self.losses = [loss.detach().numpy() for loss in self.losses]
+            else:
+                self.losses = [loss.detach().cpu().numpy() for loss in self.losses]
 
         if verbose:
             print(time.time() - t2, 's for detach')
 
         return self.freqs, self.A, self.losses, self.indices
-
-    def compute_window_indices_old(self):
-        '''
-        Sets the 'indices' attribute with computed index slices corresponding
-        to the windows used in the analysis.
-        Note: this is equivalent to computing rectangular windows.
-        '''
-        
-        t1 = time.time()
-        
-        # Define how many points between centerpoint of windows
-        increment = int(self.n / self.windows)
-        window_size = self.window_size
-
-        # Initialize the indices lists
-        self.indices = []
-        self.mid_idcs = []
-
-        # Populate the indices lists
-        for i in range(self.windows):
-
-            # Compute window slice indices
-            idx_start = int(max(0, i * increment - window_size / 2))
-            idx_end = int(min(self.n, i * increment + window_size / 2))
-
-            if idx_end - idx_start == window_size:
-                # Add the index slice to the indices list
-                self.indices.append(slice(idx_start, idx_end))
-                idx_mid = int((idx_end + idx_start) / 2)
-                self.mid_idcs.append(idx_mid)
-        
-        if self.verbose:
-            print(time.time() - t1, 's for compute')
 
     def compute_window_indices(self):
         '''
@@ -213,41 +200,64 @@ class CUNFMD:
         if self.verbose:                
             print(time.time() - t1, 's for compute')
 
-    def calc_window(self, xt, freqs=None, A=None, max_iters=None):
+    def calc_window(self, xt, freqs=None, A=None, max_iters=None, 
+                    drive_freq=None, sampling_rate=1e7):
         '''
-        Uses matrix math and single pass to fit the data, rather than sgd
+        Uses cost function minimization instead of SGD
         '''
         if freqs is None:
-            freqs, A = self.fft(xt)
+            if drive_freq is not None:
+                freqs, A = self.fast_init(drive_freq, xt, sampling_rate)
+            else:
+                freqs, A = self.fft(xt)
             
         # Time indices
-        tx = cp.arange(len(xt))+1
+        tx = np.arange(len(xt))+1
+        
         # Determine how many iterations will be used
         if not max_iters:
             max_iters = self.max_iters
 
-        omega = cp.vstack( (cp.cos(tx * 2 * cp.pi * freqs[0]),
-                            cp.cos(tx * 2 * cp.pi * freqs[1]),
-                            cp.sin(tx * 2 * cp.pi * freqs[0]),
-                            cp.sin(tx * 2 * cp.pi * freqs[1]))).T
+        xt = xt.get()
+        if isinstance(A, cp.ndarray):
+            A = A.get()
+        
+        def omega_calc(freqs, tx):
+            if freqs.ndim == 2:
+                freqs = freqs[0,:]
+            omega1 = np.vstack([[np.cos(tx * 2 * np.pi * freqs[x])] 
+                                for x in range(self.num_freqs)])
+            omega2 = np.vstack([[np.sin(tx * 2 * np.pi * freqs[x])] 
+                                for x in range(self.num_freqs)])
+            omega = np.vstack([omega1, omega2]).T
+            return omega
+            # return np.vstack( (np.cos(tx * 2 * np.pi * freqs[0]),
+            #                    np.cos(tx * 2 * np.pi * freqs[1]),
+            #                    np.sin(tx * 2 * np.pi * freqs[0]),
+            #                    np.sin(tx * 2 * np.pi * freqs[1]))).T
 
-        # SGD to determine solution
-
-        A = cp.matmul(cp.linalg.pinv(omega), xt)
-        xhat = cp.matmul(omega, A)
-
-        loss = cp.mean((xhat - xt) ** 2)
-
+        #cost = lambda p: np.sum(((omega_calc(p,tx) @ np.array(A)) - xt)**2)
+        cost = lambda p: np.mean(((omega_calc(p,tx) @ np.array(A)) - xt)**2)
+        
+        try:
+            pinit = [float(x.get()) for x in freqs]
+        except:
+            pinit = freqs
+        popt = minimize(cost, pinit, method='TNC')
+        freqs = popt.x
+        
+        omega = omega_calc(freqs, tx)
+        A = np.matmul(np.linalg.pinv(omega), xt)
+        xhat = omega @ A
+        loss = np.mean((xhat - xt)**2)
+        
         # Store the model fit:
-        xhat = xhat.get()
         self.window_fits.append(xhat)
+        self.popt = popt
 
-        # Prepare the results
-        A = A.get()
- 
         return loss, freqs, A, 0        
 
-    def fit_window(self, xt, freqs=None, A=None):
+    def fit_window(self, xt, freqs=None, A=None, drive_freq=None, sampling_rate=1e7):
         '''
         Fits a set of instantaneous frequency and component coefficient vectors
         to the provided data.
@@ -271,12 +281,38 @@ class CUNFMD:
         '''
         # If no frequency is provided, generate initial frequency guess:
         if freqs is None:
-            freqs, A = self.fft(xt)
+            if drive_freq is not None:
+                freqs, A = self.fast_init(drive_freq, xt, sampling_rate)
+            else:
+                freqs, A = self.fft(xt)
 
         # Then begin SGD
         loss, freqs, A, i = self.sgd(xt, freqs, A, max_iters=self.max_iters)
 
         return loss, freqs, A, i
+
+    def fast_init(self, drive_freq, xt, sampling_rate = 1e7):
+        '''
+        Uses matrix math and given drive_frequency to initialize, since 
+        these are usually known for our system        
+        '''
+        
+        k = self.num_freqs
+        freqs = cp.zeros(k)
+        freqs[0] = drive_freq / sampling_rate
+        tx = cp.arange(len(xt))+1
+        
+        omega = cp.vstack([[cp.cos(tx * 2 * cp.pi * x), cp.sin(tx * 2 * cp.pi * x)] 
+                           for x in freqs]).T
+        # omega = cp.vstack( (cp.cos(tx * 2 * cp.pi * freqs[0]),
+        #                     cp.cos(tx * 2 * cp.pi * freqs[1]),
+        #                     cp.sin(tx * 2 * cp.pi * freqs[0]),
+        #                     cp.sin(tx * 2 * cp.pi * freqs[1]))).T
+        
+        A = cp.matmul(cp.linalg.pinv(omega), xt)
+        
+        return freqs, A
+        
 
     def fft(self, xt):
         '''
@@ -384,9 +420,6 @@ class CUNFMD:
             max_iters = self.max_iters
 
         # Below is the method for using the Fourier->Koopman
-        # Instead, given the info that it rarely goes through many iterations
-        # we could instead simply ignore the "training" parts...
-
         # SGD to determine solution
         for i in range(max_iters):
             # Compute new model
