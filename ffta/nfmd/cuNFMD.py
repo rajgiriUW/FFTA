@@ -200,6 +200,17 @@ class CUNFMD:
         if self.verbose:                
             print(time.time() - t1, 's for compute')
 
+    @staticmethod 
+    def omega_calc(freqs, tx, num_freqs=4):
+        if freqs.ndim == 2:
+            freqs = freqs[0,:]
+        omega1 = np.vstack([[np.cos(tx * 2 * np.pi * freqs[x])] 
+                            for x in range(num_freqs)])
+        omega2 = np.vstack([[np.sin(tx * 2 * np.pi * freqs[x])] 
+                            for x in range(num_freqs)])
+        omega = np.vstack([omega1, omega2]).T
+        return omega
+
     def calc_window(self, xt, freqs=None, A=None, max_iters=None, 
                     drive_freq=None, sampling_rate=1e7):
         '''
@@ -223,23 +234,9 @@ class CUNFMD:
             A = A.get()
         if isinstance(freqs, cp.ndarray):
             freqs = freqs.get()
+        num_freqs = self.num_freqs
         
-        def omega_calc(freqs, tx):
-            if freqs.ndim == 2:
-                freqs = freqs[0,:]
-            omega1 = np.vstack([[np.cos(tx * 2 * np.pi * freqs[x])] 
-                                for x in range(self.num_freqs)])
-            omega2 = np.vstack([[np.sin(tx * 2 * np.pi * freqs[x])] 
-                                for x in range(self.num_freqs)])
-            omega = np.vstack([omega1, omega2]).T
-            return omega
-            # return np.vstack( (np.cos(tx * 2 * np.pi * freqs[0]),
-            #                    np.cos(tx * 2 * np.pi * freqs[1]),
-            #                    np.sin(tx * 2 * np.pi * freqs[0]),
-            #                    np.sin(tx * 2 * np.pi * freqs[1]))).T
-
-        #cost = lambda p: np.sum(((omega_calc(p,tx) @ np.array(A)) - xt)**2)
-        cost = lambda p: np.mean(((omega_calc(p,tx) @ np.array(A)) - xt)**2)
+        cost = lambda p: np.mean(((self.omega_calc(p,tx,num_freqs) @ np.array(A)) - xt)**2)
         
         try:
             pinit = [float(x.get()) for x in freqs]
@@ -247,8 +244,7 @@ class CUNFMD:
             pinit = freqs
         popt = minimize(cost, pinit, method='TNC')
         freqs = popt.x
-        
-        omega = omega_calc(freqs, tx)
+        omega = self.omega_calc(freqs, tx, num_freqs)
         A = np.matmul(np.linalg.pinv(omega), xt)
         xhat = omega @ A
         loss = np.mean((xhat - xt)**2)
