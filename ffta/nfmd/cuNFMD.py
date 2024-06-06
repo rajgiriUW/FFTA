@@ -242,7 +242,7 @@ class CUNFMD:
             pinit = [float(x.get()) for x in freqs]
         except:
             pinit = freqs
-        popt = minimize(cost, pinit, method='TNC')
+        popt = minimize(cost, pinit)
         freqs = popt.x
         omega = self.omega_calc(freqs, tx, num_freqs)
         A = np.matmul(np.linalg.pinv(omega), xt)

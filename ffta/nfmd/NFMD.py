@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-
+from scipy.optimize import minimize
 import time
 
 
@@ -11,7 +11,11 @@ class NFMD:
                  optimizer_opts={'lr': 1e-4},
                  max_iters=1000,
                  target_loss=1e-4,
-                 device='cpu'):
+                 device='cpu',
+                 verbose=False,
+                 zerodata=False,
+                 drive_freq=None,
+                 sampling_rate=None):
         '''
         Initialize the object
 
@@ -69,8 +73,12 @@ class NFMD:
         self.max_iters = max_iters
         self.target_loss = target_loss
         self.device = device
+        self.verbose = verbose
+        self.zerodata = zerodata
+        self.drive_freq = drive_freq
+        self.sampling_rate = sampling_rate
 
-    def decompose_signal(self, update_freq: int = None):
+    def decompose_signal(self, update_freq: int = None, method='sgd'):
         '''
         Compute the slices of the windows used in the analysis.
         Note: this is equivalent to computing rectangular windows.
@@ -91,6 +99,9 @@ class NFMD:
         t1 = time.time()
         self.compute_window_indices()
 
+        window_size = self.window_size
+        self.indices = [self.n-window_size+1]
+
         # Determine if printing updates
         verbose = update_freq != None
 
@@ -103,31 +114,44 @@ class NFMD:
         # Tracker variables for previous freqs and A
         prev_freqs = None
         prev_A = None
+        
+        drive_freq = self.drive_freq
+        sampling_rate = self.sampling_rate
 
-        print(len(self.indices), 'indices')
-
+        if verbose:
+            print(len(self.indices), 'indices')
+            print(method)
+            
         # iterate through each window:
-        for i, idx_slice in enumerate(self.indices):
+            
+        for i in range(self.n-window_size+1):    
+            t  = time.time()
+            
             # If update frequency is requested, print an update
             # at window <x>
-            if verbose:
+            if update_freq is not None:
                 if i % update_freq == 0:
                     print("{}/{}".format(i, len(self.indices)), end="|")
 
             # Access data slice
-            x_i = self.x[idx_slice].copy()
-
-            # Determine number of SGD iterations to allow
-            max_iters = self.max_iters
-
-            if i == 0:
-                self.max_iters = 10000
+            x_i = self.x[i:i+window_size]
+            
+            if self.zerodata:
+                x_i = x_i - np.mean(x_i)
 
             # Fit data in window to model
-            loss, freqs, A = self.fit_window(x_i,
-                                             freqs=prev_freqs,
-                                             A=prev_A)
-
+            if method == 'sgd':
+                loss, freqs, A, i = self.fit_window(x_i,
+                                                    freqs=prev_freqs,
+                                                    A=prev_A,
+                                                    drive_freq=drive_freq,
+                                                    sampling_rate=sampling_rate)
+            elif method == 'scipy':
+                loss, freqs, A, i = self.calc_window(x_i,
+                                                     freqs=prev_freqs,
+                                                     A=prev_A,
+                                                     drive_freq=drive_freq,
+                                                     sampling_rate=sampling_rate)
             # Store the results
             self.freqs.append(freqs)
             self.A.append(A)
@@ -137,49 +161,42 @@ class NFMD:
             prev_freqs = freqs
             prev_A = A
 
-        print(time.time() - t1, 's for decompose_signal')
+            if self.verbose: 
+                self.times.append(time.time() - t)
+            
+        if verbose:
+            print(time.time() - t1, 's for decompose_signal')
+        
+
         t2 = time.time()
         self.freqs = np.array(self.freqs)
         self.A = np.array(self.A)
-        if self.device == 'cpu':
-            self.losses = [loss.detach().numpy() for loss in self.losses]
-        else:
-            self.losses = [loss.detach().cpu().numpy() for loss in self.losses]
+        if method == 'sgd':
+            if self.device == 'cpu':
+                self.losses = [loss.detach().numpy() for loss in self.losses]
+            else:
+                self.losses = [loss.detach().cpu().numpy() for loss in self.losses]
 
-        print(time.time() - t2, 's for detach')
+        if verbose:
+            print(time.time() - t2, 's for detach')
 
         return self.freqs, self.A, self.losses, self.indices
-
+    
     def compute_window_indices(self):
         '''
+        Auto-sets the windowed indices assuming single index steps
         Sets the 'indices' attribute with computed index slices corresponding
         to the windows used in the analysis.
         Note: this is equivalent to computing rectangular windows.
         '''
+        
+        t1 = time.time()
 
-        t2 = time.time()
-        # Define how many points between centerpoint of windows
-        increment = int(self.n / self.windows)
-        window_size = self.window_size
-
-        # Initialize the indices lists
-        self.indices = []
-        self.mid_idcs = []
-
-        # Populate the indices lists
-        for i in range(self.windows):
-
-            # Compute window slice indices
-            idx_start = int(max(0, i * increment - window_size / 2))
-            idx_end = int(min(self.n, i * increment + window_size / 2))
-
-            if idx_end - idx_start == window_size:
-                # Add the index slice to the indices list
-                self.indices.append(slice(idx_start, idx_end))
-                idx_mid = int((idx_end + idx_start) / 2)
-                self.mid_idcs.append(idx_mid)
-
-        print(time.time() - t2, 's for compute_window_indices')
+        window_size = self.window_size        
+        self.indices = [slice(x, x + window_size, None) for x in range(self.n-window_size+1)]
+        
+        if self.verbose:                
+            print(time.time() - t1, 's for compute')
 
     def fit_window(self, xt, freqs=None, A=None):
         '''
@@ -208,13 +225,82 @@ class NFMD:
         if freqs is None:
             freqs, A = self.fft(xt)
 
-        t2 = time.time()
         # Then begin SGD
         loss, freqs, A = self.sgd(xt, freqs, A, max_iters=self.max_iters)
-        # print(time.time() - t2, 's for sgd')
 
         return loss, freqs, A
 
+    @staticmethod 
+    def omega_calc(freqs, tx, num_freqs=4):
+        if freqs.ndim == 2:
+            freqs = freqs[0,:]
+        omega1 = np.vstack([[np.cos(tx * 2 * np.pi * freqs[x])] 
+                            for x in range(num_freqs)])
+        omega2 = np.vstack([[np.sin(tx * 2 * np.pi * freqs[x])] 
+                            for x in range(num_freqs)])
+        omega = np.vstack([omega1, omega2]).T
+        return omega
+    
+    def calc_window(self, xt, freqs=None, A=None, max_iters=None, 
+                    drive_freq=None, sampling_rate=1e7):
+        '''
+        Uses cost function minimization instead of SGD
+        '''
+        if freqs is None:
+            if drive_freq is not None:
+                freqs, A = self.fast_init(drive_freq, xt, sampling_rate)
+            else:
+                freqs, A = self.fft(xt)
+            
+        # Time indices
+        tx = np.arange(len(xt))+1
+        
+        # Determine how many iterations will be used
+        if not max_iters:
+            max_iters = self.max_iters
+
+        num_freqs = self.num_freqs
+        
+        cost = lambda p: np.mean(((self.omega_calc(p,tx,num_freqs) @ np.array(A)) - xt)**2)
+        
+        try:
+            pinit = [float(x.get()) for x in freqs]
+        except:
+            pinit = freqs
+        popt = minimize(cost, pinit, method='TNC')
+        freqs = popt.x
+        omega = self.omega_calc(freqs, tx, num_freqs)
+        A = np.matmul(np.linalg.pinv(omega), xt)
+        xhat = omega @ A
+        loss = np.mean((xhat - xt)**2)
+        
+        # Store the model fit:
+        self.window_fits.append(xhat)
+        self.popt = popt
+
+        return loss, freqs, A, 0        
+ 
+    def fast_init(self, drive_freq, xt, sampling_rate = 1e7):
+        '''
+        Uses matrix math and given drive_frequency to initialize, since 
+        these are usually known for our system        
+        '''
+        
+        k = self.num_freqs
+        freqs = np.zeros(k)
+        freqs[0] = drive_freq / sampling_rate
+        tx = np.arange(len(xt))+1
+        
+        omega1 = np.vstack([[np.cos(tx * 2 * np.pi * freqs[x])] 
+                            for x in range(self.num_freqs)])
+        omega2 = np.vstack([[np.sin(tx * 2 * np.pi * freqs[x])] 
+                            for x in range(self.num_freqs)])
+        omega = np.vstack([omega1, omega2]).T
+
+        A = np.matmul(np.linalg.pinv(omega), xt)
+        
+        return freqs, A
+    
     def fft(self, xt):
         '''
         Given temporal data xt, fft performs the initial guess of the
