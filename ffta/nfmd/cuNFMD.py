@@ -10,7 +10,7 @@ class CUNFMD:
     def __init__(self, signal, num_freqs, window_size,
                  windows=None,
                  optimizer=torch.optim.SGD,
-                 optimizer_opts={'lr': 1e-4},
+                 optimizer_opts={'lr': 5e-4},
                  max_iters=1000,
                  target_loss=1e-4,
                  device='cuda',
