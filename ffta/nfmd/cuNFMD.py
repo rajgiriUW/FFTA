@@ -101,10 +101,10 @@ class CUNFMD:
         '''
 
         t1 = time.time()
-        # self.compute_window_indices()
+        self.compute_window_indices()
         
         window_size = self.window_size
-        self.indices = [self.n-window_size+1]
+        #self.indices = [self.n-window_size+1]
 
         # Determine if printing updates
         verbose = self.verbose
@@ -195,7 +195,9 @@ class CUNFMD:
         t1 = time.time()
 
         window_size = self.window_size        
-        self.indices = [slice(x, x + window_size, None) for x in range(self.n-window_size+1)]
+        self.indices = [slice(x - window_size//2, x + window_size//2, None) 
+                        for x in range(window_size//2, self.n - window_size//2 + 1)]
+        self.mid_idcs = [x for x in range(window_size//2, self.n - window_size//2 + 1)]
         
         if self.verbose:                
             print(time.time() - t1, 's for compute')
@@ -305,10 +307,6 @@ class CUNFMD:
         omega2 = cp.vstack([[cp.sin(tx * 2 * cp.pi * freqs[x])] 
                             for x in range(self.num_freqs)])
         omega = cp.vstack([omega1, omega2]).T
-        # omega = cp.vstack( (cp.cos(tx * 2 * cp.pi * freqs[0]),
-        #                     cp.cos(tx * 2 * cp.pi * freqs[1]),
-        #                     cp.sin(tx * 2 * cp.pi * freqs[0]),
-        #                     cp.sin(tx * 2 * cp.pi * freqs[1]))).T
         
         A = cp.matmul(cp.linalg.pinv(omega), xt)
         

@@ -893,7 +893,8 @@ class FFTA:
         if override_window:
 
             win_size_cycle = int(self.sampling_rate / self.drive_freq)
-            self.window_size = (self.window_size // win_size_cycle) * win_size_cycle
+            self.window_size = max(self.window_size,
+                                   (self.window_size // win_size_cycle) * win_size_cycle)
 
             if verbose:
                 print('window size automatically adjusted to ', self.window_size)
@@ -1092,30 +1093,14 @@ class FFTA:
             [type] phase is...
         """
 
-        if timing:
-            t1 = time.time()
-
         # Remove DC component, first.
         if dc:
             self.remove_dc()
         else:
             self.signal = np.copy(self.signal_array)
 
-        # Phase-lock signals.
-        # self.phase_lock()
-
         # Average signals.
         self.average()
-
-        # Remove DC component again, introduced by phase-locking.
-        # self.remove_dc()
-
-        # Check the drive frequency.
-        if self.check_drive and self.method != 'nfmd':
-            self.check_drive_freq()
-
-        # DWT Denoise
-        # self.dwt_denoise()
 
         if self.method == 'wavelet':
 
@@ -1158,9 +1143,6 @@ class FFTA:
 
         else:
             raise ValueError('Invalid analysis method! Valid options: hilbert, wavelet, fft, nfmd')
-
-        if timing:
-            print('Time:', time.time() - t1, 's')
 
         # Filter out oscillatory noise from instantaneous frequency
         if self.filter_frequency:

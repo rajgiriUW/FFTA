@@ -8,7 +8,7 @@ class NFMD:
     def __init__(self, signal, num_freqs, window_size,
                  windows=None,
                  optimizer=torch.optim.SGD,
-                 optimizer_opts={'lr': 1e-4},
+                 optimizer_opts={'lr': 5e-4},
                  max_iters=1000,
                  target_loss=1e-4,
                  device='cpu',
@@ -193,42 +193,12 @@ class NFMD:
         t1 = time.time()
 
         window_size = self.window_size        
-        self.indices = [slice(x, x + window_size, None) for x in range(self.n-window_size+1)]
+        self.indices = [slice(x - window_size//2, x + window_size//2, None) 
+                        for x in range(window_size//2, self.n - window_size//2 + 1)]
+        self.mid_idcs = [x for x in range(window_size//2, self.n - window_size//2 + 1)]
         
         if self.verbose:                
             print(time.time() - t1, 's for compute')
-
-    def fit_window(self, xt, freqs=None, A=None):
-        '''
-        Fits a set of instantaneous frequency and component coefficient vectors
-        to the provided data.
-
-        :param xt: Temporal data of dimensions [T, ...]
-        :typer xt: numpy.ndarray
-            
-        :param freqs: 1D vector of (guess) instantaneous frequencies
-            (Note: assumes dt=1 in xt data array)
-        :type freqs: numpy.ndarray, optional
-        
-        :param A: 1D vector of cosine/sine coefficients
-        :type A: numpy.ndarray, optional
-        
-        :returns: tuple (loss, freqs, A)
-            WHERE
-            float loss is the loss for the fit window (mean squared error)
-            numpy.ndarray freqs is frequency vector of instantaneous frequencies
-            numpy.ndarray A is coefficient vector of component (sine/cosine) coefficients
-
-        '''
-        # If no frequency is provided, generate initial frequency guess:
-
-        if freqs is None:
-            freqs, A = self.fft(xt)
-
-        # Then begin SGD
-        loss, freqs, A = self.sgd(xt, freqs, A, max_iters=self.max_iters)
-
-        return loss, freqs, A
 
     @staticmethod 
     def omega_calc(freqs, tx, num_freqs=4):
@@ -280,6 +250,40 @@ class NFMD:
 
         return loss, freqs, A, 0        
  
+    def fit_window(self, xt, freqs=None, A=None, drive_freq=None, sampling_rate=1e7):
+        '''
+        Fits a set of instantaneous frequency and component coefficient vectors
+        to the provided data.
+
+        :param xt: Temporal data of dimensions [T, ...]
+        :typer xt: numpy.ndarray
+            
+        :param freqs: 1D vector of (guess) instantaneous frequencies
+            (Note: assumes dt=1 in xt data array)
+        :type freqs: numpy.ndarray, optional
+        
+        :param A: 1D vector of cosine/sine coefficients
+        :type A: numpy.ndarray, optional
+        
+        :returns: tuple (loss, freqs, A)
+            WHERE
+            float loss is the loss for the fit window (mean squared error)
+            numpy.ndarray freqs is frequency vector of instantaneous frequencies
+            numpy.ndarray A is coefficient vector of component (sine/cosine) coefficients
+
+        '''
+        # If no frequency is provided, generate initial frequency guess:
+        if freqs is None:
+            if drive_freq is not None:
+                freqs, A = self.fast_init(drive_freq, xt, sampling_rate)
+            else:
+                freqs, A = self.fft(xt)
+
+        # Then begin SGD
+        loss, freqs, A, i = self.sgd(xt, freqs, A, max_iters=self.max_iters)
+
+        return loss, freqs, A, i
+
     def fast_init(self, drive_freq, xt, sampling_rate = 1e7):
         '''
         Uses matrix math and given drive_frequency to initialize, since 
@@ -433,7 +437,7 @@ class NFMD:
         A = A.cpu().detach().numpy()
         freqs = freqs.cpu().detach().numpy()
 
-        return loss, freqs, A
+        return loss, freqs, A, i
 
     def predict(self, T):
         '''
