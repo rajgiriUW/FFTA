@@ -24,6 +24,9 @@ from ffta.pixel_utils import tfp_calc
 
 class Pixel:
 
+    _deprecation_warned = False
+    _fir_tap_cache: dict = {}
+
     def __init__(self,
                  signal_array,
                  params={},
@@ -167,23 +170,27 @@ class Pixel:
         :param recombination: Whether to invert the frequency (during a recombination or positive frequency shift event)
         :type recombination: bool, optional
             
-        
-        The following are necessary to define a signal, either in params or explicitly
-        trigger: bool, optional
-            The point where the event occurs.
-        total_time: bool, optional
-            The total time of the signal
-        sampling_rate: bool, optional
-            The sampling rate. Note that sampling_rate * total_time must equal number of samples
-        roi: bool, opertional
-            The length of the window to find a minimum frequency peak
+
+        :param trigger: Time of the trigger event, in seconds. Required (either here or in params).
+        :type trigger: float, optional
+
+        :param total_time: Total duration of the signal, in seconds.
+        :type total_time: float, optional
+
+        :param sampling_rate: Sampling rate in Hz. Must satisfy sampling_rate * total_time == n_points.
+        :type sampling_rate: int, optional
+
+        :param roi: Duration of the post-trigger window used to find the frequency peak, in seconds.
+        :type roi: float, optional
 
         """
         # Create parameter attributes for optional parameters.
         # These defaults are overwritten by values in 'params'
 
-        warnings.warn('This class will be rename "FFTA" in next major release.', 
-                      category=DeprecationWarning, stacklevel=2)
+        if not Pixel._deprecation_warned:
+            warnings.warn('This class will be renamed "FFTA" in the next major release.',
+                          category=DeprecationWarning, stacklevel=2)
+            Pixel._deprecation_warned = True
 
         # FIR (Hilbert) filtering parameters
         self.n_taps = 1499
@@ -218,7 +225,6 @@ class Pixel:
         self.window = 'blackman'
         self.bandpass_filter = 1
 
-        # Assign the fit parameter.
         self.fit = fit
         self.fit_form = fit_form
         self.method = method
@@ -235,7 +241,6 @@ class Pixel:
         self.Beta = 3114
         self.Q = 360
 
-        # Set up the array
         self.signal_array = signal_array
         self.signal_orig = None  # used in amplitude calc to undo any Windowing beforehand
 
@@ -252,10 +257,8 @@ class Pixel:
         if pycroscopy:
             self.signal_array = signal_array.T
 
-        # The copy of the signal we will manipulate
         self.signal = np.copy(self.signal_array)
 
-        # Read parameter attributes from parameters dictionary.
         for key, value in params.items():
             setattr(self, key, value)
 
@@ -334,11 +337,10 @@ class Pixel:
 
     def update_parm(self, **kwargs):
         """
-        Update the parameters, see ffta.pixel.Pixel for details on what to update
-        e.g. to switch from default Hilbert to Wavelets, for example
-        
-        :param kwargs:
-        :type kwargs:
+        Update the parameters. See :class:`Pixel` for valid parameter names.
+        e.g. ``p.update_parm(method='wavelet')``
+
+        :param kwargs: Keyword arguments matching existing Pixel attributes.
         """
         for k, v in kwargs.items():
             if hasattr(self, k):
@@ -349,11 +351,11 @@ class Pixel:
     def remove_dc(self, dc_width=10e3, plot=False):
         """
         Removes DC components from each signal using FFT.
-        
-        :param dc_width:
+
+        :param dc_width: Width of the DC band to remove, in Hz.
         :type dc_width: float, optional
-        
-        :param plot:
+
+        :param plot: Plot the removed DC component alongside the original and corrected signals.
         :type plot: bool, optional
         """
 
@@ -362,16 +364,14 @@ class Pixel:
         if self.n_signals == 1:
             self.signal = np.reshape(self.signal, (self.n_points, self.n_signals))
 
-        for i in range(self.n_signals):
-            f_ax = np.linspace(-self.sampling_rate / 2, self.sampling_rate / 2, self.n_points)
-            mid = int(len(f_ax) / 2)
-            # drive_bin = np.searchsorted(f_ax[mid:], self.drive_freq) + mid
-            delta_freq = self.sampling_rate / self.n_points
+        mid = self.n_points // 2
+        n_dc = int(dc_width * self.n_points / self.sampling_rate)
 
+        for i in range(self.n_signals):
             SIG_DC = np.fft.fftshift(np.fft.fft(self.signal[:, i]))
 
-            SIG_DC[:mid - int(dc_width / delta_freq)] = 0
-            SIG_DC[mid + int(dc_width / delta_freq):] = 0
+            SIG_DC[:mid - n_dc] = 0
+            SIG_DC[mid + n_dc:] = 0
             sig_dc = np.real(np.fft.ifft(np.fft.ifftshift(SIG_DC)))
 
             self.signal[:, i] -= sig_dc
@@ -393,11 +393,8 @@ class Pixel:
         Phase-locks signals in the signal array. This also cuts signals.
         """
 
-        # Phase-lock signals.
         self.signal_array, self.tidx = noise.phase_lock(self.signal_array, self.tidx,
                                                         np.ceil(self.sampling_rate / self.drive_freq))
-
-        # Update number of points after phase-locking.
         self.n_points = self.signal_array.shape[0]
 
         return
@@ -419,10 +416,9 @@ class Pixel:
         """
         Calculates drive frequency of averaged signals
         """
-        n_fft = 2 ** int(np.log2(self.tidx))  # For FFT, power of 2.
-        dfreq = self.sampling_rate / n_fft  # Frequency separation.
+        n_fft = 2 ** int(np.log2(self.tidx))  # power of 2 for FFT
+        dfreq = self.sampling_rate / n_fft
 
-        # Calculate drive frequency from maximum power of the FFT spectrum.
         signal = self.signal[:n_fft]
         fft_amplitude = np.abs(np.fft.rfft(signal))
         drive_freq = fft_amplitude.argmax() * dfreq
@@ -437,18 +433,16 @@ class Pixel:
         the given drive frequency.
         """
 
-        n_fft = 2 ** int(np.log2(self.tidx))  # For FFT, power of 2.
-        dfreq = self.sampling_rate / n_fft  # Frequency separation.
+        n_fft = 2 ** int(np.log2(self.tidx))  # power of 2 for FFT
+        dfreq = self.sampling_rate / n_fft
 
-        # Calculate drive frequency from maximum power of the FFT spectrum.
         signal = self.signal[:n_fft]
         fft_amplitude = np.abs(np.fft.rfft(signal))
         drive_freq = fft_amplitude.argmax() * dfreq
 
-        # Difference between given and calculated drive frequencies.
         difference = np.abs(drive_freq - self.drive_freq)
 
-        # If difference is too big, reassign. Otherwise, continue. != 0 for accidental DC errors
+        # Reassign if difference is too large; skip drive_freq == 0 to avoid DC errors
         if difference >= dfreq and drive_freq != 0:
             self.drive_freq = drive_freq
 
@@ -479,7 +473,6 @@ class Pixel:
         Filters signal with a FIR bandpass filter.
         """
 
-        # Calculate bandpass region from given parameters.
         nyq_rate = 0.5 * self.sampling_rate
         bw_half = self.filter_bandwidth / 2
 
@@ -488,16 +481,17 @@ class Pixel:
 
         band = [freq_low, freq_high]
 
-        # Create taps using window method.
-        try:
-            taps = sps.firwin(int(self.n_taps), band, pass_zero=False,
-                              window='blackman')
-        except:
-            print('band=', band)
-            print('nyq=', nyq_rate)
-            print('drive=', self.drive_freq)
+        cache_key = (int(self.n_taps), round(freq_low, 8), round(freq_high, 8))
+        if cache_key not in Pixel._fir_tap_cache:
+            try:
+                Pixel._fir_tap_cache[cache_key] = sps.firwin(int(self.n_taps), band,
+                                                              pass_zero=False, window='blackman')
+            except:
+                print('band=', band)
+                print('nyq=', nyq_rate)
+                print('drive=', self.drive_freq)
 
-        self.signal = sps.fftconvolve(self.signal, taps, mode='same')
+        self.signal = sps.fftconvolve(self.signal, Pixel._fir_tap_cache[cache_key], mode='same')
 
         # Shifts trigger due to causal nature of FIR filter
         self.tidx -= (self.n_taps - 1) / 2
@@ -511,18 +505,15 @@ class Pixel:
         time delay.
         """
 
-        # Calculate bandpass region from given parameters.
         nyq_rate = 0.5 * self.sampling_rate
         bw_half = self.filter_bandwidth / 2
 
         freq_low = (self.drive_freq - bw_half) / nyq_rate
         freq_high = (self.drive_freq + bw_half) / nyq_rate
 
-        # Do a high-pass filtfilt operation.
         b, a = sps.butter(9, freq_low, btype='high')
         self.signal = sps.filtfilt(b, a, self.signal)
 
-        # Do a low-pass filtfilt operation.
         b, a = sps.butter(9, freq_high, btype='low')
         self.signal = sps.filtfilt(b, a, self.signal)
 
@@ -582,7 +573,6 @@ class Pixel:
 
         center = int(len(FREQ) / 2)
 
-        # Find drive_bin
         df = self.sampling_rate / self.n_points
         drive_bin = int(np.ceil(self.drive_freq / df))
         bins = np.arange(len(FREQ) / 2)[::drive_bin]
@@ -660,16 +650,11 @@ class Pixel:
         :type correct_slope: bool, optional
         """
 
-        # Unwrap the phase.
         self.phase = np.unwrap(np.angle(self.signal))
 
         try:
             if correct_slope:
-                # Remove the drive from phase.
-                # self.phase -= (2 * np.pi * self.drive_freq *
-                #               np.arange(self.n_points) / self.sampling_rate)
-
-                # A curve fit on the initial part to make sure that it worked.
+                # Fit a line to the pre-trigger region and remove the drive phase.
                 start = int(0.3 * self.tidx)
                 end = int(0.7 * self.tidx)
                 fit = self.phase[start:end]
@@ -694,16 +679,13 @@ class Pixel:
         filter.
         """
 
-        dtime = 1 / self.sampling_rate  # Time step.
+        dtime = 1 / self.sampling_rate
 
-        # Do a Savitzky-Golay smoothing derivative
-        # using 5 point 1st order polynomial.
-
-        # -self.phase to correct for sign in DDHO solution
+        # Savitzky-Golay smoothing derivative (5-point, 1st order).
+        # Negate phase to correct sign in the DDHO solution.
         self.inst_freq_raw = sps.savgol_filter(-self.phase, 5, 1, deriv=1,
                                                delta=dtime)
 
-        # Bring trigger to zero.
         self.tidx = int(self.tidx)
         self.inst_freq = self.inst_freq_raw - self.inst_freq_raw[self.tidx]
 
@@ -716,27 +698,24 @@ class Pixel:
         
         wavelet specified in self.wavelet. See PyWavelets CWT documentation
         
-        :param f_center:
-        :type f_center:
-        
-        :param verbose:
+        :param f_center: Center frequency for scale selection. Defaults to drive_freq.
+        :type f_center: float, optional
+
+        :param verbose: Print scale range information.
         :type verbose: bool, optional
         
         :param optimize: Currently placeholder for iteratively determining wavelet scales
-        :type optimize: bool, optionals
+        :type optimize: bool, optional
             
         :param fit: Whether to curve-fit for ridge finding or use parabolic approximation
         :type fit: bool, optional
             
-        :param calc_phase: Calculates teh Phase (not usually needed)
+        :param calc_phase: Calculates the phase (not usually needed)
         :type calc_phase : bool, optional
             
         '''
 
-        # wavlist = pywt.wavelist(kind='continuous')
-        # w0, wavelet_increment, cwt_scale = self.__get_cwt__()
-
-        # determine if scales will capture the relevant frequency
+        # Determine if scales will capture the relevant frequency
         if not f_center:
             f_center = self.drive_freq
 
@@ -814,7 +793,7 @@ class Pixel:
             but the longer the FFT the finer the frequency bin spacing
         :type nfft: int
                
-        :param calc_phase: Calculates teh Phase (not usually needed)
+        :param calc_phase: Calculates the phase (not usually needed)
         :type calc_phase: bool, optional
             
         '''
@@ -827,7 +806,6 @@ class Pixel:
         if pts_per_ncycle > len(self.signal):
             pts_per_ncycle = len(self.signal)
 
-        # drivebin = int(self.drive_freq / (self.sampling_rate / nfft ))
         freq, times, spectrogram = sps.spectrogram(self.signal,
                                                    self.sampling_rate,
                                                    nperseg=pts_per_ncycle,
@@ -1039,7 +1017,7 @@ class Pixel:
         :type newplot: bool, optional
         
         :param fit: Overlays fit on the instantaneous frequency image
-        :type fit: bool, opttional
+        :type fit: bool, optional
             
         """
 
@@ -1088,46 +1066,30 @@ class Pixel:
         :param timing: prints the time to execute (for debugging)
         :type timing: bool, optional
             
-        :returns: tuple (inst_freq, amplitude, phase)
-            WHERE
-            array_like inst_freq is instantaneous frequency of the signal. in the format (n_points,)
-            [type] amplitude is...
-            [type] phase is...
+        :returns: tuple (inst_freq, amplitude, phase) each of shape (n_points,)
         """
 
         if timing:
             t1 = time.time()
 
-        # Remove DC component, first.
         if dc:
             self.remove_dc()
         else:
             self.signal = np.copy(self.signal_array)
 
-        # Phase-lock signals.
-        # self.phase_lock()
-
-        # Average signals.
         self.average()
 
-        # Remove DC component again, introduced by phase-locking.
-        # self.remove_dc()
-
-        # Check the drive frequency.
         if self.check_drive and self.method != 'nfmd':
             self.check_drive_freq()
 
-        # DWT Denoise
-        # self.dwt_denoise()
-
         if self.method == 'wavelet':
 
-            # Calculate instantenous frequency using wavelet transform.
+            # Calculate instantaneous frequency using wavelet transform.
             self.calculate_cwt(**self.wavelet_params)
 
         elif self.method == 'stft':
 
-            # Calculate instantenous frequency using sliding FFT
+            # Calculate instantaneous frequency using sliding FFT
             self.calculate_stft(**self.fft_params)
 
         elif self.method == 'nfmd':
@@ -1137,25 +1099,17 @@ class Pixel:
 
         elif self.method == 'hilbert':
 
-            # Hilbert transform method
-
-            # Apply window.
             if self.window != 0:
                 self.apply_window()
 
-            # Filter the signal with a filter, if wanted.
             if self.bandpass_filter == 1:
-
                 self.fir_filter()
-
             elif self.bandpass_filter == 2:
-
                 self.iir_filter()
 
-            # Get the analytical signal doing a Hilbert transform.
             self.hilbert()
 
-            # Filter out oscillatory noise from amplitude
+            # Filter drive-frequency artifact from amplitude
             if self.filter_amplitude:
                 self.amplitude_filter()
 
@@ -1179,24 +1133,22 @@ class Pixel:
             WHERE
             float tfp is time from trigger to first-peak, in seconds.
             float shift is frequency shift from trigger to first-peak, in Hz.
-            array_like inst_freq is instantenous frequency of the signal in format (n_points,)
+            array_like inst_freq is instantaneous frequency of the signal in format (n_points,)
             
         """
 
         self.inst_freq, self.amplitude, self.phase = self.generate_inst_freq()
 
-        # If it's a recombination image invert it to find minimum.
         if self.recombination:
             self.inst_freq = self.inst_freq * -1
 
-        # Find where the minimum is.
         self.find_tfp()
 
-        # Restore the length due to FIR filter being causal
+        # Restore original signal length shifted by the causal FIR filter
         if self.method == 'hilbert':
             self.restore_signal()
 
-        # If it's a recombination image invert it to find minimum.
+        # Re-invert after finding the peak so output has correct sign
         if self.recombination:
             self.inst_freq = self.inst_freq * -1
             self.best_fit = self.best_fit * -1
