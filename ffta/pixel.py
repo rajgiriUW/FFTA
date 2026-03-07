@@ -38,6 +38,7 @@ class Pixel:
                  filter_amplitude=False,
                  filter_frequency=False,
                  recombination=False,
+                 check_drive=None,
                  trigger=None,
                  total_time=None,
                  sampling_rate=None,
@@ -169,7 +170,11 @@ class Pixel:
         
         :param recombination: Whether to invert the frequency (during a recombination or positive frequency shift event)
         :type recombination: bool, optional
-            
+
+        :param check_drive: Verify and correct drive_freq from the signal FFT before processing.
+            Set to False when processing many pixels with a known stable drive frequency to skip
+            the per-pixel FFT check. Defaults to True; overrides any value set via params.
+        :type check_drive: bool or None, optional
 
         :param trigger: Time of the trigger event, in seconds. Required (either here or in params).
         :type trigger: float, optional
@@ -270,6 +275,9 @@ class Pixel:
                             [trigger, total_time, sampling_rate, roi]):
             if val:
                 setattr(self, key, val)
+
+        if check_drive is not None:
+            self.check_drive = check_drive
 
         # Check for missing required parameters
         if self.trigger == None:  # trigger can be 0

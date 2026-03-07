@@ -9,6 +9,7 @@ __email__ = "rgiri@uw.edu"
 __status__ = "Development"
 
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 import h5py
 import numpy as np
@@ -43,6 +44,20 @@ Example usage:
     >> h5_path, data_files, parm_dict = loadHDF5_folder(folder_path=ff_file_path, verbose=True, file_name=file_name)
     >> h5_avg = load_pixel_averaged_FF(data_files, parm_dict, h5_path, mirror=True)
 """
+
+
+def _load_and_process(args):
+    """Load and pixel-average a single FF-trEFM line file. Module-level for thread safety."""
+    k, parm_dict, num_cols, average, mirror = args
+    line_file = load.signal(k)
+    if average:
+        _ll = line.Line(line_file, parm_dict, n_pixels=num_cols, pycroscopy=False)
+        _ll = _ll.pixel_wise_avg().T
+    else:
+        _ll = line_file.transpose()
+    if mirror:
+        return np.flipud(_ll)
+    return _ll
 
 
 def load_wrapper(ibw_file_path='', ff_file_path='', ftype='FF', verbose=False,
@@ -252,7 +267,7 @@ def load_folder(folder_path='', xy_scansize=[0, 0], file_name='FF_H5',
 
 
 def load_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True,
-            average=True, mirror=True):
+            average=True, mirror=True, n_workers=None):
     """
     Generates the HDF5 file given path to data_files and parameters dictionary
 
@@ -282,7 +297,11 @@ def load_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True,
         with the associate topography as FFtrEFM is acquired during a retrace while
         topo is saved during a forward trace
     :type mirror: bool, optional
-        
+
+    :param n_workers: Number of parallel threads for loading and processing lines.
+        Defaults to None (uses all available CPU cores).
+    :type n_workers: int or None, optional
+
     :returns: The filename path to the H5 file created
     :rtype: str
         
@@ -345,28 +364,15 @@ def load_FF(data_files, parm_dict, h5_path, verbose=False, loadverbose=True,
 
     pnts_per_line = parm_dict['pnts_per_line']
 
-    # Cycles through the remaining files. This takes a while (~few minutes)
-    for k, num in zip(data_files, np.arange(0, len(data_files))):
+    # Load and process all lines in parallel, write to HDF5 serially
+    f = hdf.file[h5_ff.name]
+    args_list = [(k, parm_dict, num_cols, average, mirror) for k in data_files]
 
-        if loadverbose:
-            fname = k.replace('/', '\\')
-            print('####', fname.split('\\')[-1], '####')
-            fname = str(num).rjust(4, '0')
-
-        line_file = load.signal(k)
-
-        if average:
-            _ll = line.Line(line_file, parm_dict, n_pixels=num_cols, pycroscopy=False)
-            _ll = _ll.pixel_wise_avg().T
-        else:
-            _ll = line_file.transpose()
-
-        f = hdf.file[h5_ff.name]
-
-        if mirror:
-            f[pnts_per_line * num:pnts_per_line * (num + 1), :] = np.flipud(_ll[:, :])
-        else:
-            f[pnts_per_line * num:pnts_per_line * (num + 1), :] = _ll[:, :]
+    with ThreadPoolExecutor(max_workers=n_workers) as executor:
+        for num, _ll in enumerate(executor.map(_load_and_process, args_list)):
+            if loadverbose:
+                print(f'#### Row {num} ####')
+            f[pnts_per_line * num:pnts_per_line * (num + 1), :] = _ll
 
     if verbose == True:
         usid.hdf_utils.print_tree(hdf.file, rel_paths=True)
