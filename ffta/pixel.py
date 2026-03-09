@@ -15,7 +15,6 @@ from matplotlib import pyplot as plt
 from scipy import integrate as spg
 from scipy import signal as sps
 
-from ffta.nfmd import NFMD
 from ffta.pixel_utils import dwavelet
 from ffta.pixel_utils import noise
 from ffta.pixel_utils import parab
@@ -728,6 +727,17 @@ class Pixel:
             f_center = self.drive_freq
 
         dt = 1 / self.sampling_rate
+
+        # Auto-compute a narrow scale range (±20%) centered on f_center.
+        # scale = wavelet_center_freq / (freq * dt), so lower freq → larger scale.
+        wt_cf = pywt.scale2frequency(self.wavelet, 1.0)  # center freq at scale=1
+        bw_frac = 0.20
+        scale_lo = wt_cf / (f_center * (1 + bw_frac) * dt)
+        scale_hi = wt_cf / (f_center * (1 - bw_frac) * dt)
+        self.scales = np.arange(scale_hi, scale_lo, -1.0)
+        if len(self.scales) < 5:
+            self.scales = np.linspace(scale_hi, scale_lo, 20)[::-1]
+
         sc = pywt.scale2frequency(self.wavelet, self.scales) / dt
 
         if verbose:
@@ -743,7 +753,7 @@ class Pixel:
             lo = int(0.8 * drive_bin)
             self.scales = np.arange(hi, lo, -0.1)
 
-        spectrogram, freq = pywt.cwt(self.signal, self.scales, self.wavelet, sampling_period=dt)
+        spectrogram, freq = pywt.cwt(self.signal, self.scales, self.wavelet, sampling_period=dt, method='fft')
 
         if not fit:
 
@@ -886,6 +896,8 @@ class Pixel:
 
             if verbose:
                 print('window size automatically adjusted to ', self.window_size)
+
+        from ffta.nfmd import NFMD
 
         nfmd = NFMD(z / np.std(z),
                     num_freqs=self.num_freqs,
