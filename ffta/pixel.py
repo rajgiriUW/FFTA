@@ -11,7 +11,6 @@ import warnings
 
 import numpy as np
 import pywt
-from matplotlib import pyplot as plt
 from scipy import integrate as spg
 from scipy import signal as sps
 
@@ -347,7 +346,10 @@ class Pixel:
         Update the parameters. See :class:`Pixel` for valid parameter names.
         e.g. ``p.update_parm(method='wavelet')``
 
-        :param kwargs: Keyword arguments matching existing Pixel attributes.
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments matching existing Pixel attributes.
         """
         for k, v in kwargs.items():
             if hasattr(self, k):
@@ -359,11 +361,12 @@ class Pixel:
         """
         Removes DC components from each signal using FFT.
 
-        :param dc_width: Width of the DC band to remove, in Hz.
-        :type dc_width: float, optional
-
-        :param plot: Plot the removed DC component alongside the original and corrected signals.
-        :type plot: bool, optional
+        Parameters
+        ----------
+        dc_width : float, optional
+            Width of the DC band to remove, in Hz. Default 10000.
+        plot : bool, optional
+            Plot the removed DC component alongside the original and corrected signals. Default False.
         """
 
         self.signal = np.copy(self.signal_array)
@@ -384,11 +387,8 @@ class Pixel:
             self.signal[:, i] -= sig_dc
 
         if plot:
-            fig, ax = plt.subplots(nrows=2, figsize=(6, 10))
-            ax[0].plot(np.arange(0, self.total_time, 1 / self.sampling_rate), sig_dc, 'b')
-            ax[1].plot(np.arange(0, self.total_time, 1 / self.sampling_rate), self.signal_array, 'b')
-            ax[1].plot(np.arange(0, self.total_time, 1 / self.sampling_rate), self.signal, 'r')
-            plt.title('DC Offset')
+            from ffta.pixel_utils.plot import plot_dc_removal
+            plot_dc_removal(self, sig_dc, self.signal)
 
         if self.n_signals == 1:
             self.signal = self.signal[:, 0]
@@ -527,9 +527,9 @@ class Pixel:
         return
 
     def amplitude_filter(self):
-        '''
-        Filters the drive signal out of the amplitude response
-        '''
+        """
+        Filters the drive signal out of the amplitude response.
+        """
         AMP = np.fft.fftshift(np.fft.fft(self.amplitude))
 
         DRIVE = self.drive_freq / (self.sampling_rate / self.n_points)  # drive location in frequency space
@@ -544,10 +544,10 @@ class Pixel:
         return
 
     def frequency_filter(self):
-        '''
-        Filters the instantaneous frequency around DC peak to remove noise
-        Uses self.filter_bandwidth for the frequency filter
-        '''
+        """
+        Filters the instantaneous frequency around DC peak to remove noise.
+        Uses self.filter_bandwidth for the frequency filter.
+        """
         FREQ = np.fft.fftshift(np.fft.fft(self.inst_freq))
 
         center = int(len(FREQ) / 2)
@@ -568,14 +568,15 @@ class Pixel:
         return
 
     def frequency_harmonic_filter(self, width=5):
-        '''
-        Filters the instantaneous frequency to remove noise
-        Defaults to DC and then every multiple harmonic up to sampling
-        
-        :param width: Size of the boxcar around the various peaks
-        :type width: int, optional
-            
-        '''
+        """
+        Filters the instantaneous frequency to remove noise.
+        Defaults to DC and then every multiple harmonic up to sampling.
+
+        Parameters
+        ----------
+        width : int, optional
+            Size of the boxcar window around each harmonic peak. Default 5.
+        """
         FREQ = np.fft.fftshift(np.fft.fft(self.inst_freq))
 
         center = int(len(FREQ) / 2)
@@ -650,11 +651,13 @@ class Pixel:
 
     def calculate_phase(self, correct_slope=True):
         """
-        Gets the phase of the signal and correct the slope by removing
+        Gets the phase of the signal and corrects the slope by removing
         the drive phase.
-        
-        :param correct_slope:
-        :type correct_slope: bool, optional
+
+        Parameters
+        ----------
+        correct_slope : bool, optional
+            Fit and subtract the pre-trigger phase slope to remove the drive phase. Default True.
         """
 
         self.phase = np.unwrap(np.angle(self.signal))
@@ -700,27 +703,23 @@ class Pixel:
 
     def calculate_cwt(self, f_center=None, verbose=False, optimize=False, fit=False,
                       calc_phase=False):
-        '''
-        Calculate instantaneous frequency using continuous wavelet transfer
-        
-        wavelet specified in self.wavelet. See PyWavelets CWT documentation
-        
-        :param f_center: Center frequency for scale selection. Defaults to drive_freq.
-        :type f_center: float, optional
+        """
+        Calculate instantaneous frequency using continuous wavelet transform.
+        Wavelet specified in self.wavelet. See PyWavelets CWT documentation.
 
-        :param verbose: Print scale range information.
-        :type verbose: bool, optional
-        
-        :param optimize: Currently placeholder for iteratively determining wavelet scales
-        :type optimize: bool, optional
-            
-        :param fit: Whether to curve-fit for ridge finding or use parabolic approximation
-        :type fit: bool, optional
-            
-        :param calc_phase: Calculates the phase (not usually needed)
-        :type calc_phase : bool, optional
-            
-        '''
+        Parameters
+        ----------
+        f_center : float, optional
+            Center frequency for scale selection. Defaults to drive_freq.
+        verbose : bool, optional
+            Print scale range information. Default False.
+        optimize : bool, optional
+            Currently a placeholder for iteratively determining wavelet scales. Default False.
+        fit : bool, optional
+            Use curve-fitting for ridge finding instead of parabolic approximation. Default False.
+        calc_phase : bool, optional
+            Calculate the phase (not usually needed). Default False.
+        """
 
         # Determine if scales will capture the relevant frequency
         if not f_center:
@@ -804,17 +803,17 @@ class Pixel:
         return
 
     def calculate_stft(self, nfft=200, calc_phase=False):
-        '''
-        Sliding FFT approach
-        
-        :param nfft: Length of FFT calculated in the spectrogram. More points gets much slower
-            but the longer the FFT the finer the frequency bin spacing
-        :type nfft: int
-               
-        :param calc_phase: Calculates the phase (not usually needed)
-        :type calc_phase: bool, optional
-            
-        '''
+        """
+        Calculate instantaneous frequency using a sliding FFT (STFT) approach.
+
+        Parameters
+        ----------
+        nfft : int, optional
+            Length of the FFT in the spectrogram. More points increases frequency resolution
+            but slows computation. Default 200.
+        calc_phase : bool, optional
+            Calculate the phase (not usually needed). Default False.
+        """
 
         pts_per_ncycle = int(self.fft_time_res * self.sampling_rate)
 
@@ -869,20 +868,18 @@ class Pixel:
         return
 
     def calculate_nfmd(self, calc_phase=False, override_window=True, verbose=False):
-        '''
-        Nonstationary Fourier Mode Decomposition Approach
-        
-        :param calc_phase: Calculates the Phase (not usually needed)
-        :type calc_phase: bool, optional
-            
-        :param override_window: Automatically adjusts window to be integer number of cycles 
-        :type override_window: bool, optional
-            
-        :param verbose: Console feedback
-        :type verbose: bool, optional
-            
-    
-        '''
+        """
+        Calculate instantaneous frequency using Nonstationary Fourier Mode Decomposition.
+
+        Parameters
+        ----------
+        calc_phase : bool, optional
+            Calculate the phase (not usually needed). Default False.
+        override_window : bool, optional
+            Automatically adjust window size to be an integer number of drive cycles. Default True.
+        verbose : bool, optional
+            Print progress and window size information. Default False.
+        """
         if not self.signal.any():
             self.signal = np.copy(self.signal_array)
             self.average()
@@ -1030,63 +1027,38 @@ class Pixel:
         return
 
     def plot(self, newplot=True, fit=True):
-        """ 
-        Quick visualization of best_fit and cut.
-        
-        :param newplot: generates a new plot (True) or plots on existing plot figure (False)
-        :type newplot: bool, optional
-        
-        :param fit: Overlays fit on the instantaneous frequency image
-        :type fit: bool, optional
-            
         """
+        Quick visualization of instantaneous frequency, amplitude, and phase.
 
-        if newplot:
-            fig, a = plt.subplots(nrows=3, figsize=(6, 9), facecolor='white')
-
-        dt = 1 / self.sampling_rate
-        ridx = int(self.roi * self.sampling_rate)
-        fidx = int(self.tidx)
-
-        cut = self.amplitude[fidx:(fidx + ridx)]
-
-        cut = [fidx, (fidx + ridx)]
-        tx = np.arange(cut[0], cut[1]) * dt
-
-        a[0].plot(tx * 1e3, self.inst_freq[cut[0]:cut[1]], 'r-')
-
-        if fit:
-            if self.fit_form == 'ringdown':
-                a[1].plot(tx * 1e3, self.best_fit, 'g--')
-            elif self.fit_form == 'exp' and self.method == 'nfmd':
-                a[2].plot(tx * 1e3, self.best_fit + self.phase[self.tidx], 'g--')
-            else:
-                a[0].plot(tx * 1e3, self.best_fit, 'g--')
-
-        a[1].plot(tx * 1e3, self.amplitude[cut[0]:cut[1]], 'b')
-        if self.fit_form == 'exp' and self.method == 'nfmd':
-            a[2].plot(tx * 1e3, self.phase[cut[0]:cut[1]], 'm')
-        else:
-            a[2].plot(tx * 1e3, self.phase[cut[0]:cut[1]] * 180 / np.pi, 'm')
-
-        a[0].set_title('Instantaneous Frequency')
-        a[0].set_ylabel('Frequency Shift (Hz)')
-        a[1].set_ylabel('Amplitude (nm)')
-        a[2].set_ylabel('Phase (deg)')
-        a[2].set_xlabel('Time (ms)')
-
-        plt.tight_layout()
-
-        return
+        Parameters
+        ----------
+        newplot : bool, optional
+            Generate a new figure. If False, plot on the current axes. Default True.
+        fit : bool, optional
+            Overlay the best-fit curve on the frequency panel. Default True.
+        """
+        from ffta.pixel_utils.plot import plot_pixel
+        plot_pixel(self, newplot=newplot, fit=fit)
 
     def generate_inst_freq(self, timing=False, dc=True):
         """
-        Generates the instantaneous frequency
-        
-        :param timing: prints the time to execute (for debugging)
-        :type timing: bool, optional
-            
-        :returns: tuple (inst_freq, amplitude, phase) each of shape (n_points,)
+        Generate the instantaneous frequency using the configured method.
+
+        Parameters
+        ----------
+        timing : bool, optional
+            Print execution time to console (for debugging). Default False.
+        dc : bool, optional
+            Remove DC offset before processing. Default True.
+
+        Returns
+        -------
+        inst_freq : ndarray, shape (n_points,)
+            Instantaneous frequency of the signal.
+        amplitude : ndarray, shape (n_points,)
+            Instantaneous amplitude of the signal.
+        phase : ndarray, shape (n_points,)
+            Phase of the signal.
         """
 
         if timing:
@@ -1147,14 +1119,16 @@ class Pixel:
 
     def analyze(self):
         """
-        Analyzes the pixel with the given method.
+        Analyze the pixel with the configured method.
 
-        :returns: tuple (tfp, shift, inst_freq)
-            WHERE
-            float tfp is time from trigger to first-peak, in seconds.
-            float shift is frequency shift from trigger to first-peak, in Hz.
-            array_like inst_freq is instantaneous frequency of the signal in format (n_points,)
-            
+        Returns
+        -------
+        tfp : float
+            Time from trigger to first-peak, in seconds.
+        shift : float
+            Frequency shift from trigger to first-peak, in Hz.
+        inst_freq : ndarray, shape (n_points,)
+            Instantaneous frequency of the signal. Returns phase instead if phase_fitting is True.
         """
 
         self.inst_freq, self.amplitude, self.phase = self.generate_inst_freq()
