@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Mar 31 11:16:36 2020
-
-@author: Raj
-"""
+"""load_ringdown.py: Loads and processes ringdown IBW data from FF-trEFM experiments."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 import os
 

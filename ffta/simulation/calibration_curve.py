@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Mar  4 10:27:55 2021
-
-@author: Raj
-"""
+"""calibration_curve.py: Generates a tFP calibration curve from simulated cantilever responses."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 import numpy as np
 import pandas as pd

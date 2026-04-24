@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Feb 22 13:16:05 2018
-
-@author: Raj
-"""
+"""analyze_h5.py: Analyzes HDF5-format FF-trEFM datasets and writes results back to file."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 import os
 

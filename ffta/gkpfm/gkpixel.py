@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Sep  3 11:55:14 2019
-
-@author: Raj
-"""
+"""gkpixel.py: Signal processing class for G-kPFM (Gated Kelvin Probe Force Microscopy) pixels."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 import warnings
 from math import pi

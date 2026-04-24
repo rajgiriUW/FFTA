@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Mar 22 21:19:26 2018
-
-@author: Raj
-"""
+"""dist_cluster.py: Clustering and animation utilities for FF-trEFM tFP image analysis."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 import matplotlib.animation as animation
 import numpy as np

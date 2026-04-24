@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Mar 22 18:43:21 2018
-
-@author: Raj
-"""
+"""mask_utils.py: Utilities for loading and applying spatial masks to FF-trEFM datasets."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 import numpy as np
 

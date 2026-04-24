@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Mar 23 16:23:12 2020
-
-@author: Raj
-"""
+"""generate_chirp.py: Generates a broadband chirp signal for FF-trEFM excitation."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 import argparse
 

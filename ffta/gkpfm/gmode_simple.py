@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jul 25 17:07:34 2018
-
-@author: Raj
-"""
+"""gmode_simple.py: Simple G-Mode analyzer for F3R data without transfer function correction."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 import numpy as np
 

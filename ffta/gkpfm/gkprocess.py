@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Feb 11 18:07:06 2020
-
-@author: Raj
-"""
+"""gkprocess.py: Parallel pixel processing for G-kPFM datasets using pyUSID."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 import os
 import warnings

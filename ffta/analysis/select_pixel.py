@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Mar 27 21:19:11 2022
-
-@author: Raj
-"""
+"""select_pixel.py: Interactive pixel selection tool for FF-trEFM tFP image data."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 import warnings
 

@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Aug 19 12:10:38 2019
-
-@author: Raj
-"""
+"""transfer_func.py: Transfer function computation and correction for G-kPFM measurements."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 import time
 from math import pi

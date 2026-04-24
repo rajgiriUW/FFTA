@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Feb 26 17:15:36 2018
-
-@author: Raj
-"""
+"""filtering.py: Frequency filtering utilities for FF-trEFM time-domain signals."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 import warnings
 

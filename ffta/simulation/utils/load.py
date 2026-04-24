@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue May 12 11:23:17 2020
-
-@author: Raj
-"""
+"""load.py: Parameter loading utilities for FF-trEFM cantilever simulations."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 import configparser
 import urllib

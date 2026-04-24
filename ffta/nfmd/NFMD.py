@@ -21,23 +21,25 @@ class NFMD:
             (Note: The 'mean' mode counts as a frequency mode)
         :type num_freqs: integer
         
-        :param window_size:
-        :type window_size:
-        
-        :param windows:
-        :type windows:
-        
+        :param window_size: number of samples in each analysis window
+        :type window_size: int
+
+        :param windows: number of windows to divide the signal into.
+            Defaults to one window per sample (self.n) if not provided.
+        :type windows: int, optional
+
         :param optimizer: Optimization algorithm to employ for learning.
         :type optimizer: optimizer object (torch.optim)
-        
+
         :param optimizer_opts: Parameters to pass to the optimizer class.
         :type optimizer_opts: dict
-        
+
         :param max_iters: number of steps for optimizer to take (maximum)
         :type max_iters: int
-        
-         the loss value at which the window is considered sufficiently 'fit'
-            (note: setting this too low can cause issues by pushing freqs to 0):param target_loss:
+
+        :param target_loss: the loss value at which the window is considered
+            sufficiently 'fit'. Setting this too low can cause issues by
+            pushing frequencies to 0.
         :type target_loss: float
         
         :param device: device to use for optimization
@@ -185,7 +187,7 @@ class NFMD:
         to the provided data.
 
         :param xt: Temporal data of dimensions [T, ...]
-        :typer xt: numpy.ndarray
+        :type xt: numpy.ndarray
             
         :param freqs: 1D vector of (guess) instantaneous frequencies
             (Note: assumes dt=1 in xt data array)
@@ -224,8 +226,8 @@ class NFMD:
 
         :returns: tuple (freqs, A)
             WHERE
-            numpy.ndarray freqs is vector of instantaneous frequency estimates for each timepoint
-            numpy.ndarray A is vector of component coefficients
+            list freqs is list of k dominant frequency estimates (one per mode)
+            numpy.ndarray A is coefficient vector of component (sine/cosine) coefficients
 
         '''
         # Ensure input signal is 1D:
@@ -236,60 +238,49 @@ class NFMD:
         k = self.num_freqs
         N = xt.shape[0]
 
-        # Initialize a list of frequencies:
+        # Precompute constant arrays outside the loop
+        t = np.expand_dims(np.arange(N) + 1, -1)
+        w = np.fft.fftfreq(N, 1)[:N // 2]
+
         freqs = []
+        residual = xt
+        A = None
 
         for i in range(k):
+            # Find dominant frequency in current residual
+            ffts = sum(np.abs(np.fft.fft(residual[:, j])[:N // 2])
+                       for j in range(xt.shape[1]))
+            freqs.append(w[np.argmax(ffts)])
 
-            if len(freqs) == 0:
-                residual = xt
-            else:
-                t = np.expand_dims(np.arange(N) + 1, -1)
-                ws = np.asarray(freqs)
-                Omega = np.concatenate([np.cos(t * 2 * np.pi * ws),
-                                        np.sin(t * 2 * np.pi * ws)], -1)
-                A = np.dot(np.linalg.pinv(Omega), xt)
-
-                pred = np.dot(Omega, A)
-
-                residual = pred - xt
-
-            ffts = 0
-
-            for j in range(xt.shape[1]):
-                ffts += np.abs(np.fft.fft(residual[:, j])[:N // 2])
-
-            w = np.fft.fftfreq(N, 1)[:N // 2]
-            idxs = np.argmax(ffts)
-
-            freqs.append(w[idxs])
+            # Fit all frequencies found so far (one pinv call per iteration, not two)
             ws = np.asarray(freqs)
-
-            t = np.expand_dims(np.arange(N) + 1, -1)
-
             Omega = np.concatenate([np.cos(t * 2 * np.pi * ws),
                                     np.sin(t * 2 * np.pi * ws)], -1)
-
             A = np.dot(np.linalg.pinv(Omega), xt)
+
+            # Update residual for next iteration using the current fit
+            residual = np.dot(Omega, A) - xt
 
         return freqs, A
 
     def sgd(self, xt, freqs, A, max_iters=None):
         '''
-        Given temporal data xt, sgd improves the initial guess of omega
-        by SGD. It uses the pseudo-inverse to obtain A.
+        Given temporal data xt, sgd improves the initial frequency guess
+        by SGD. At each step, A is analytically solved via least squares
+        (torch.linalg.lstsq) given the current frequencies.
 
         :param xt: Temporal data of dimensions [T, ...]
         :type xt: numpy.ndarray
-        
-        :param freqs: frequency vector
-        :type freqs: numpy.ndarray
-        
-        :param A: Component coefficient vector
+
+        :param freqs: initial frequency vector
+        :type freqs: list or numpy.ndarray
+
+        :param A: initial component coefficient vector
         :type A: numpy.ndarray
-            
-        :param max_iters: Number of optimizer steps to take (maximum)
-        :type max_iters:
+
+        :param max_iters: Number of optimizer steps to take (maximum).
+            Overrides self.max_iters if provided.
+        :type max_iters: int
             
         :returns: tuple (loss, freqs, A)
             WHERE
@@ -311,6 +302,9 @@ class NFMD:
                                          dtype=torch.get_default_dtype(),
                                          device=self.device) + 1, -1)
 
+        # Precompute constant to avoid recomputing 2*pi every iteration
+        two_pi = torch.tensor(2 * np.pi, dtype=torch.get_default_dtype(), device=self.device)
+
         # Determine how many iterations will be used
         if not max_iters:
             max_iters = self.max_iters
@@ -318,10 +312,11 @@ class NFMD:
         # SGD to determine solution
         for i in range(max_iters):
             # Compute new model
-            Omega = torch.cat([torch.cos(t * 2 * np.pi * freqs),
-                               torch.sin(t * 2 * np.pi * freqs)], -1)
+            Omega = torch.cat([torch.cos(t * two_pi * freqs),
+                               torch.sin(t * two_pi * freqs)], -1)
 
-            A = torch.matmul(torch.pinverse(Omega.data), xt)
+            # lstsq is faster than pinverse (avoids forming full pseudoinverse)
+            A = torch.linalg.lstsq(Omega.data, xt).solution
 
             xhat = torch.matmul(Omega, A)
 
@@ -378,11 +373,7 @@ class NFMD:
         :rtype: numpy.ndarray
             
         '''
-        corrected_freqs = []
-        for freq in self.freqs:
-            corrected_freqs.append(freq / dt)
-        corrected_freqs = np.asarray(corrected_freqs)
-        return corrected_freqs
+        return self.freqs / dt
 
     def compute_amps(self):
         '''
@@ -393,20 +384,10 @@ class NFMD:
         :rtype: numpy.ndarray
             
         '''
-        # initialize amps list
-        Amps = np.ndarray((self.A.shape[0], self.num_freqs))
-        # print(Amps.shape)
-        # Populate amps list
-        for i, A in enumerate(self.A):
-            # print(A.shape)
-            # Reshape the As list into a 2 x k matrix of
-            # cosine and sine coefficients
-            AsBs = A.reshape(-1, self.num_freqs)
-            # Compute amplitude of each mode:
-            for j in range(AsBs.shape[-1]):
-                Amp = complex(*AsBs[:, j])
-                Amps[i, j] = abs(Amp)
-        Amps = np.asarray(Amps)
+        # Reshape to (num_windows, 2, num_freqs): axis 1 = [cos_coeffs, sin_coeffs]
+        AsBs = self.A.reshape(self.A.shape[0], 2, self.num_freqs)
+        # Amplitude = sqrt(cos^2 + sin^2), computed vectorized over all windows/modes
+        Amps = np.linalg.norm(AsBs, axis=1)
         return Amps
 
     def compute_mean(self, lf_mode=None):

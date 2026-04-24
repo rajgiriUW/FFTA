@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Feb 21 10:06:12 2018
-
-@author: Raj Giridharagopal
-"""
-
-from __future__ import division, print_function, absolute_import, unicode_literals
+"""gl_ibw.py: IBW-to-HDF5 translator for FF-trEFM data files."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 from os import path  # File Path formatting
 

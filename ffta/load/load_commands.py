@@ -1,16 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jan 30 15:53:47 2020
-
-@author: Raj
-"""
-from __future__ import division, print_function, absolute_import, unicode_literals
-
+"""load_commands.py: High-level load commands for FF-trEFM HDF5 files and folders."""
 __author__ = "Rajiv Giridharagopal"
-__copyright__ = "Copyright 2018, Ginger Lab"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
 __maintainer__ = "Rajiv Giridharagopal"
 __email__ = "rgiri@uw.edu"
-__status__ = "Development"
 
 import h5py
 import pyUSID as usid

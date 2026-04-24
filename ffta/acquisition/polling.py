@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jan 22 12:45:01 2020
-
-@author: Raj
-"""
+"""polling.py: Folder-polling script for real-time FF-trEFM data acquisition and display."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 '''
 Script to constantly poll a folder of data and generate an image from that

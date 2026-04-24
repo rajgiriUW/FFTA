@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Mar  8 13:17:12 2018
-
-@author: Raj
-"""
+"""test_pixel.py: Tests FF-trEFM pixel processing on random pixels from an HDF5 file."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 from matplotlib import pyplot as plt
 

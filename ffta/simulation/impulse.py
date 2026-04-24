@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun May  8 13:59:18 2022
-
-@author: Raj
-"""
+"""impulse.py: Generates the cantilever impulse force response for deconvolution."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 from .mechanical_drive import MechanicalDrive
 from .utils.load import params_from_experiment as load_parm

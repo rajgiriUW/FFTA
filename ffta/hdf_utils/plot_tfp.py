@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Mar 27 14:05:42 2020
-
-@author: Raj
-"""
+"""plot_tfp.py: Plotting utilities for tFP, shift, and related FF-trEFM result images."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 import os
 

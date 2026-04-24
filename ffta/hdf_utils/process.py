@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Feb 11 18:07:06 2020
-
-@author: Raj
-"""
-
 import os
 
 import h5py
@@ -55,51 +48,39 @@ class FFtrEFM(Process):
                  **kwargs):
         """
 
-        :param h5_main: Dataset to process
-        :type h5_main: h5py.Dataset object
-            
-        :param parm_dict: Additional updates to the parameters dictionary. e.g. changing the trigger.
-            You can also explicitly update self.parm_dict.update({'key': value})
-        :type parm_dict: dict, optional
-            
-        :param can_params: Cantilever parameters describing the behavior
-            Can be loaded from ffta.pixel_utils.load.cantilever_params
-        :type can_params: dict, optional
-        
-        :param pixel_params:
-            Pixel class accepts the following:
-                fit: bool, (default: True)
-                    Whether to fit the frequency data or use derivative. 
-                pycroscopy: bool (default: False)
-                    Usually does not need to change. This parameter is because of
-                    how Pycroscopy stores a matrix compared to original numpy ffta approach
-                method: str (default: 'hilbert')
-                    Method for generating instantaneous frequency, amplitude, and phase response
-                    One of 
-                        hilbert: Hilbert transform method (default)
-                        wavelet: Morlet CWT approach
-                        emd: Hilbert-Huang decomposition
-                        fft: sliding FFT approach
-                        fit_form: str (default: 'product')
-                filter_amp : bool (default: False)
-                    Whether to filter the amplitude signal around DC (to remove drive sine artifact)
-        :type pixel_params: dict, optional
-            
-        :param if_only: If True, only calculates the instantaneous frequency and not tfp/shift
-        :type if_only: bool, optional
-        
-        :param override: If True, forces creation of new results group. Use in _get_existing_datasets
-        :type override : bool, optional
-            
-        :param process_name:
-        :type process_name: str, optional
-        
-        :param cuda: If true, uses a GPU and CUFFTA to process the data. Faster for STFT/related, less so for Hilbert
-        :type cuda: bool, optional
-        
-        :param kwargs: Keyword pairs to pass to Process constructor
-        :type kwargs: dictionary or variable
-            
+        Parameters
+        ----------
+        h5_main : h5py.Dataset
+            Dataset to process.
+        parm_dict : dict, optional
+            Additional updates to the parameters dictionary, e.g. changing the trigger.
+            You can also explicitly update via self.parm_dict.update({'key': value}).
+        can_params : dict, optional
+            Cantilever parameters describing the cantilever behavior.
+            Can be loaded from ffta.ffsignal_utils.load.cantilever_params.
+        pixel_params : dict, optional
+            FFSignal class keyword arguments. Accepted keys:
+
+            fit : bool, default True
+                Whether to fit the frequency data or use the raw derivative.
+            pycroscopy : bool, default False
+                Corrects matrix orientation for Pycroscopy-loaded data.
+            method : str, default 'hilbert'
+                Instantaneous frequency method. One of 'hilbert', 'wavelet', 'stft', 'nfmd'.
+            fit_form : str, default 'product'
+                Functional form used for fitting.
+            filter_amp : bool, default False
+                Filter the amplitude signal around DC to remove drive sine artifact.
+        if_only : bool, optional
+            If True, only calculate instantaneous frequency; skip tfp/shift. Default False.
+        override : bool, optional
+            If True, force creation of a new results group. Default False.
+        process_name : str, optional
+            Name of the results group written to HDF5. Default 'Fast_Free'.
+        cuda : bool, optional
+            If True, use GPU via CUFFTA. Faster for STFT; less so for Hilbert. Default False.
+        **kwargs
+            Additional keyword pairs passed to the Process constructor.
         """
 
         self.parm_dict = parm_dict
@@ -152,13 +133,14 @@ class FFtrEFM(Process):
 
     def update_parm(self, **kwargs):
         """
-        Update the parameters, see ffta.pixel.Pixel for details on what to update
-        e.g. to switch from default Hilbert to Wavelets, for example
-        
-        :param kwargs:
-        :type kwargs:
-        
-        """
+        Update the parameters. See :class:`ffta.ffsignal.FFSignal` for valid parameter names.
+        e.g. ``p.update_parm(method='wavelet')``
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments matching existing parm_dict keys.
+"""
         self.parm_dict.update(kwargs)
 
         return
@@ -167,14 +149,14 @@ class FFtrEFM(Process):
         """
         Generates impulse response using simulation with given cantilever parameters file        
 
-        :param can_path: Path to cantilever parameters.txt file 
-        :type can_path: str
-
-        :param voltage: Voltage to simulate the impulse response at
-        :type param: float
-    
-        :param plot: Whether the plot the processed instantaneous frequency/Pixel response
-        :type param: bool
+        Parameters
+        ----------
+        can_path : str
+            Path to cantilever parameters .txt file.
+        voltage : float, optional
+            Voltage at which to simulate the impulse response.
+        plot : bool, optional
+            Whether to plot the processed instantaneous frequency response. Default True.
         """
         
         can_params, force_params, sim_params, _, _ = load_parm(can_path, self.parm_dict)
@@ -192,18 +174,16 @@ class FFtrEFM(Process):
     def test_deconv(self, window, pixel_ind=[0, 0], iterations=10):
         """
         Tests the deconvolution by bracketing the impulse around window
-        A reasonable window size might be 100 us pre-trigger to 500 us post-trigger
+        A reasonable window size might be 100 µs pre-trigger to 500 µs post-trigger
         
-        :param window: List of format [left_index, right_index] for impulse
-        :type window: list
-        
-        :param pixel_ind: Index of the pixel in the dataset that the process needs to be tested on.
-            If a list it is read as [row, column]
-        :type pixel_ind: uint or list
-            
-        
-        :param iterations: Number of Richardson-Lucy deconvolution iterations
-        :type iterations: int
+        Parameters
+        ----------
+        window : list
+            Two-element list [left_index, right_index] bracketing the impulse.
+        pixel_ind : int or list, optional
+            Index of the pixel to test. If a list, read as [row, column]. Default [0, 0].
+        iterations : int, optional
+            Number of Richardson-Lucy deconvolution iterations. Default 10.
 
         """
         if len(window) != 2 or not isinstance(window, list):
@@ -291,16 +271,16 @@ class FFtrEFM(Process):
         """
         Test the Pixel analysis of a single pixel
 
-        :param pixel_ind: Index of the pixel in the dataset that the process needs to be tested on.
-            If a list it is read as [row, column]
-        :type pixel_ind: uint or list
-            
+        Parameters
+        ----------
+        pixel_ind : int or list, optional
+            Index of the pixel to test. If a list, read as [row, column]. Default [0, 0].
 
-        :returns: List [inst_freq, tfp, shift]
-            WHERE
-            array inst_freq is the instantaneous frequency array for that pixel
-            float tfp is the time to first peak
-            float shift the frequency shift at time t=tfp (i.e. maximum frequency shift)
+        Returns
+        -------
+        list
+            [inst_freq, tfp, shift] where inst_freq is the instantaneous frequency array,
+            tfp is time to first peak, and shift is the frequency shift at t=tfp.
 
         """
         # First read the HDF5 dataset to get the deflection for this pixel
@@ -321,20 +301,11 @@ class FFtrEFM(Process):
         return self._map_function(defl, self.parm_dict, self.pixel_params, self.impulse)
 
     def _create_results_datasets(self):
-        '''
-        Creates the datasets an Groups necessary to store the results.
-        
-        Parameters
-        ----------
-        h5_if : 'Inst_Freq' h5 Dataset
-            Contains the Instantaneous Frequencies
-            
-        tfp : 'tfp' h5 Dataset
-            Contains the time-to-first-peak data as a 1D matrix
-            
-        shift : 'shift' h5 Dataset
-            Contains the frequency shift data as a 1D matrix
-        '''
+        """
+        Creates the datasets and groups necessary to store the results.
+
+        Creates h5 datasets: Inst_Freq, Amplitude, Phase, PowerDissipation, tfp, shift.
+        """
 
         print('Creating results datasets')
 
@@ -423,12 +394,15 @@ class FFtrEFM(Process):
 
     def reshape(self, cal=None):
         
-        '''
-        Reshapes the tFP and shift data to be a matrix, then saves that dataset instead of the 1D
-        
-        :param cal:
-        :type cal: UNivariateSpline file from ffta.simulation.cal_curve
-        '''
+        """
+        Reshape the tFP and shift data from 1D to a 2D matrix and overwrite the datasets.
+
+        Parameters
+        ----------
+        cal : UnivariateSpline, optional
+            Calibration spline from ffta.simulation.calibration_curve. If provided,
+            also writes a calibrated tfp dataset. Default None.
+        """
 
         h5_tfp = self.h5_tfp[()]
         h5_shift = self.h5_shift[()]
@@ -467,10 +441,9 @@ class FFtrEFM(Process):
         return
 
     def _write_results_chunk(self):
-        '''
-        Write the computed results back to the H5
-        In this case, there isn't any more additional post-processing required
-        '''
+        """
+        Write the computed results back to the HDF5 file.
+        """
         # Find out the positions to write to:
         pos_in_batch = self._get_pixels_in_current_batch()
 
@@ -496,9 +469,11 @@ class FFtrEFM(Process):
         """
         Extracts references to the existing datasets that hold the results
         
-        :param index: which existing dataset to get
-        :type index:
-        
+        Parameters
+        ----------
+        index : int, optional
+            Which existing result dataset to load. Default -1 (most recent).
+
         """
 
         if not self.override:
@@ -522,11 +497,12 @@ class FFtrEFM(Process):
         The unit computation that is performed per data chunk. This allows room for any data pre / post-processing
         as well as multiple calls to parallel_compute if necessary
         
-        :param args:
-        :type args:
-        
-        :param kwargs:
-        :type kwargs:
+        Parameters
+        ----------
+        *args
+            Passed through to parallel_compute.
+        **kwargs
+            Passed through to parallel_compute.
         """
 
         args = [self.parm_dict, self.pixel_params, self.impulse]
@@ -543,23 +519,19 @@ class FFtrEFM(Process):
     def _map_function(defl, *args, **kwargs):
         """
         
-        :param defl:
-        :type defl:
-        
-        :param args:
-        :type args:
-        
-        :param kwargs:
-        :type kwargs:
-        
-        :returns: List [inst_freq, amplitude, phase, tfp, shift, pwr_diss]
-            WHERE
-            [type] inst_freq is...
-            [type] amplitude is...
-            [type] phase is...
-            [type] tfp is...
-            [type] shift is...
-            [type] pwr_diss is...
+        Parameters
+        ----------
+        defl : ndarray
+            Deflection signal array for a single pixel.
+        *args
+            Positional args: parm_dict, pixel_params, impulse.
+        **kwargs
+            Additional keyword arguments passed to FFSignal.
+
+        Returns
+        -------
+        list
+            [inst_freq, amplitude, phase, tfp, shift, pwr_diss]
         """
         parm_dict = args[0]
         pixel_params = args[1]
@@ -600,21 +572,18 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False, offset=0):
     """
     Saves the tfp, shift, and fixed_tfp as CSV files
     
-    :param h5_file: Reminder you can always type: h5_svd.file or h5_avg.file for this
-    :type h5_file: H5Py file of FFtrEFM class
-        
-    :param h5_path: specific folder path to search for the tfp data. Usually not needed.
-    :type h5_path: str, optional
-        
-    :param append: text to append to file name
-    :type append: str, optional
-    
-    :param mirror:
-    :type mirror: bool, optional
-    
-    :param offset: if calculating tFP with a fixed offset for fitting, this subtracts it out
-    :type offset: float
-        
+    Parameters
+    ----------
+    h5_file : h5py.File or FFtrEFM
+        HDF5 file or FFtrEFM instance. Tip: use h5_svd.file or h5_avg.file to get the file.
+    h5_path : str, optional
+        Folder path within the HDF5 file to search for tfp data. Default '/'.
+    append : str, optional
+        Text to append to each output CSV filename. Default ''.
+    mirror : bool, optional
+        If True, flip the data left-right before saving. Default False.
+    offset : float, optional
+        Fixed tFP offset to subtract before saving. Default 0.
     """
 
     h5_ff = h5_file
@@ -672,30 +641,27 @@ def save_CSV_from_file(h5_file, h5_path='/', append='', mirror=False, offset=0):
 
 
 def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
-    '''
-    Quickly plots the tfp and shift data. If there's a height image in the h5_file associated
-     with ffprocess, will plot that as well
-    
-    :param ffprocess:
-    :type ffprocess: FFtrEFM class object (inherits Process) or the parent Group
-    
-    :param scale_tfp:
-    :type scale_tfp:
-    
-    :param scale_shift:
-    :type scale_shift:
-    
-    :param threshold:
-    :type threshold:
-    
-    :param kwargs:
-    :type kwargs:
-    
-    :returns: tuple (fig, a)
-        WHERE
-        fig is figure object
-        ax is axes object
-    '''
+    """
+    Quickly plot the tFP and shift data. Also plots the height image if present in the HDF5 file.
+
+    Parameters
+    ----------
+    ffprocess : FFtrEFM or h5py.Group
+        Processed FFtrEFM instance or the parent results Group.
+    scale_tfp : float, optional
+        Scaling factor for tFP values (e.g. 1e6 converts s → µs). Default 1e6.
+    scale_shift : float, optional
+        Scaling factor for shift values. Default 1.
+    threshold : float, optional
+        Threshold (in standard deviations) for bad-pixel correction. Default 2.
+    **kwargs
+        Additional keyword arguments passed to plot_utils.plot_map.
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+    a : ndarray of matplotlib.axes.Axes
+    """
     fig, a = plt.subplots(nrows=2, ncols=2, figsize=(13, 6))
 
     tfp_ax = a[0][1]
@@ -766,12 +732,12 @@ def plot_tfp(ffprocess, scale_tfp=1e6, scale_shift=1, threshold=2, **kwargs):
     try:
         tfp_cal_image, cbar_tfp_cal = plot_utils.plot_map(tfp_cal_ax, tfp_cal_fixed * scale_tfp,
                                                           cmap='inferno', **kwargs)
-        cbar_tfp_cal.set_label('Time Calib. (us)', rotation=90, labelpad=16)
+        cbar_tfp_cal.set_label('Time Calib. (µs)', rotation=90, labelpad=16)
     except:
         tfp_cal_image = tfp_cal_ax.imshow(tfp_cal_fixed * scale_tfp,
                                                           cmap='inferno', origin='lower')
     
-    cbar_tfp.set_label('Time (us)', rotation=270, labelpad=16)
+    cbar_tfp.set_label('Time (µs)', rotation=270, labelpad=16)
     cbar_sh.set_label('Frequency Shift (Hz)', rotation=270, labelpad=16)
 
     text = tfp_ax.text(num_cols / 2, num_rows + 3, '')

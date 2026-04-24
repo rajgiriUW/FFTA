@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jan 22 12:35:38 2020
-
-@author: Raj
-"""
+"""analyze_pixel.py: Loads, analyzes, and plots a single FF-trEFM pixel from an IBW file."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 import matplotlib.pyplot as plt
 

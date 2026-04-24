@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Feb 22 14:28:28 2018
-
-@author: Raj
-"""
+"""hdf_utils.py: Common HDF5 interfacing utilities for FF-trEFM datasets."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 import h5py
 import pyUSID as usid
 

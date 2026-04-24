@@ -1,15 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri May 22 15:00:13 2015
-
-@author: Raj
-"""
-
-"""
-For finding the point scans and tfps of various points in an image.
-In Igor/MFP code, the locations are actually as column, row when 
-here you want row, column (load the row .ibw, find column pixel)
-"""
+"""badpixels.py: Utilities for detecting and correcting bad pixels in tFP image arrays."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 import sys
 from os.path import splitext

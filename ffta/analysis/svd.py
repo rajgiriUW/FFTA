@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Mar  7 22:04:39 2018
-
-@author: Raj
-"""
+"""svd.py: SVD-based filtering and reconstruction wrapper for FF-trEFM HDF5 datasets."""
+__author__ = "Rajiv Giridharagopal"
+__copyright__ = "Copyright 2012-2026, Rajiv Giridharagopal"
+__maintainer__ = "Rajiv Giridharagopal"
+__email__ = "rgiri@uw.edu"
 
 import h5py
 import numpy as np
