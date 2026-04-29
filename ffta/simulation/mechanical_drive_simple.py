@@ -15,87 +15,68 @@ PI2 = 2 * pi
 
 
 class MechanicalDrive_Simple(Cantilever):
+    """DDHO simulator with an explicitly supplied resonance frequency array and no electrostatic force.
 
-    def __init__(self, 
-                 can_params={}, 
-                 force_params={}, 
+    Simulates a cantilever under mechanical drive where the resonance frequency
+    shift is provided directly as an array rather than computed from an
+    exponential or arbitrary function.
+
+    Attributes
+    ----------
+    Z : ndarray
+        ODE integration of the DDHO response.
+
+    Methods
+    -------
+    simulate(trigger_phase=180)
+        Simulates the cantilever motion with excitation at the given phase.
+
+    See Also
+    --------
+    MechanicalDrive : standard DDHO with function- or array-based excitation.
+    Cantilever : base class.
+
+    Examples
+    --------
+    >>> from ffta.simulation import mechanical_drive_simple
+    >>> from ffta.simulation.utils import load
+    >>>
+    >>> params_file = '../examples/sim_params.cfg'
+    >>> params = load.simulation_configuration(params_file)
+    >>>
+    >>> n_points = int(params[2]['total_time'] * params[2]['sampling_rate'])
+    >>> w_array = np.ones(n_points) * 2 * np.pi * 300e3  # flat resonance frequency
+    >>> c = mechanical_drive_simple.MechanicalDrive_Simple(*params, w_array=w_array)
+    >>> Z, infodict = c.simulate()
+    >>> c.analyze()
+    >>> c.analyze(roi=0.004)
+    """
+
+    def __init__(self,
+                 can_params={},
+                 force_params={},
                  sim_params={},
                  w_array=[]):
-        """Damped Driven Harmonic Oscillator Simulator for AFM Cantilevers under 
-        Mechanical drive (i.e. conventional DDHO)
-
-        Simulates a DDHO under excitation with explicitly supplied resonance 
-        frequency shift and NO electrostatic force change
-
-        Attributes
+        """
+        Parameters
         ----------
-        Z : ndarray
-            ODE integration of the DDHO response
+        can_params : dict
+            Cantilever properties. See :class:`Cantilever`.
+        force_params : dict
+            Force parameters. Beyond Cantilever, contains:
 
-        Method
-        ------
-        simulate(trigger_phase=180)
-            Simulates the cantilever motion with excitation happening
-            at the given phase.
+            es_force : float (N)
+            delta_freq : float (Hz)
+            tau : float (s)
+        sim_params : dict
+            Simulation parameters. Contains:
 
-        See Also
-        --------
-        pixel: Pixel processing for FF-trEFM data.
-        Cantilever: base class
-
-        Examples
-        --------
-        >>> from ffta.simulation import mechanical_drive
-        >>> from ffta.simulation.utils import load
-        >>>
-        >>> params_file = '../examples/sim_params.cfg'
-        >>> params = load.simulation_configuration(params_file)
-        >>>
-        >>> c = mechanical_dirve.MechanicalDrive_Simple(*params)
-        >>> Z, infodict = c.simulate()
-        >>> c.analyze()
-        >>> c.analyze(roi=0.004) # can change the parameters as desired
-        >>>
-        >>> # To supply an arbitary v_array
-        >>> n_points = int(params[2]['total_time'] * params[2]['sampling_rate'])
-        >>> v_array = np.ones(n_points) # create just a flat excitation
-        >>> c = mechanical_dirve.MechanicalDrive(*params, v_array = v_array)
-        >>> Z, _ = c.simulate()
-        >>> c.analyze() 
-        >>>
-        >>> # To use a function instead of artbitary array, say stretch exponential
-        >>> c = mechanical_dirve.MechanicalDrive(*params, func=excitation.str_exp, func_args=[1e-3, 0.8])
-        >>> Z, _ = c.simulate()
-        >>> c.analyze() 
-        >>> c.func_args = [1e-3, 0.7] # change beta value in stretched exponential
-        >>> Z, _ = c.simulate()
-        >>> c.analyze() 
-        
-        :param can_params: Parameters for cantilever properties. See Cantilever
-        :type can_params: dict
-            
-        :param force_params: Parameters for forces. Beyond Cantilever, the dictionary contains:
-
-            es_force = float (in N)
-            delta_freq = float (in Hz)
-            tau = float (in seconds)
-        :type force_params: dict
-        
-        :param sim_params: Parameters for simulation. The dictionary contains:
-
-            trigger = float (in seconds)
-            total_time = float (in seconds)
-            sampling_rate = int (in Hz)
-        :type sim_params: dict
-        
-        :param v_array: If supplied, v_array is the time-dependent excitation to the resonance 
-            frequency and the electrostatic force, scaled from 0 to 1.
-            v_array must be the exact length and sampling of the desired signal
-        :type v_array: ndarray, optional
-        
-        :param func: 
-        :type func: function, optional
-        
+            trigger : float (s)
+            total_time : float (s)
+            sampling_rate : int (Hz)
+        w_array : ndarray
+            Time-dependent resonance frequency in rad/s. Must match the length
+            implied by total_time * sampling_rate.
         """
         parms = [can_params, force_params, sim_params]
         super(MechanicalDrive_Simple, self).__init__(*parms)
@@ -112,14 +93,17 @@ class MechanicalDrive_Simple(Cantilever):
 
     def omega(self, t):
         """
-        Exponentially decaying resonance frequency.
+        Returns the resonance frequency at time t from the supplied w_array.
 
-        :param float: time in seconds
-        :type t: float
+        Parameters
+        ----------
+        t : float
+            Time in seconds.
 
-        :returns: Resonance frequency of the cantilever at a given time, in rad/s.
-        :rtype: float
-            
+        Returns
+        -------
+        float
+            Resonance frequency at time t, in rad/s.
         """
 
         # return self.w0 + self.delta_w * self.__gamma__(t, t0, tau)
@@ -132,22 +116,21 @@ class MechanicalDrive_Simple(Cantilever):
 
     def force(self, t, t0, tau):
         """
-        Force on the cantilever at a given time. It contains driving force and
-        electrostatic force.
+        Force on the cantilever at a given time (driving force only; no electrostatic term).
 
-        :param t: time in seconds
-        :type t: float
-        
-        :param t0: Event time in seconds.
-        :type t0: float
-        
-        :param tau: Decay constant in the exponential function, in seconds.
-        :type tau: float
-            
-        :returns: Force on the cantilever at a given time, in N/kg.
-        :rtype: float
-            
+        Parameters
+        ----------
+        t : float
+            Time in seconds.
+        t0 : float
+            Event time in seconds.
+        tau : float
+            Decay constant in seconds (unused here, kept for interface compatibility).
 
+        Returns
+        -------
+        float
+            Force on the cantilever at time t, in N/kg.
         """
 
         driving_force = self.f0 * np.sin(self.wd * t)
@@ -157,20 +140,19 @@ class MechanicalDrive_Simple(Cantilever):
 
     def dZ_dt(self, Z, t=0):
         """
-        Takes the derivative of the given Z with respect to time.
+        Derivative of the state vector Z with respect to time.
 
-        :param Z: Z[0] is the cantilever position, and Z[1] is the cantilever
-            velocity.
-        :type Z: (2, ) array_like
-        
-        :param t: time
-        :type t: float
+        Parameters
+        ----------
+        Z : array_like, shape (2,)
+            Z[0] is cantilever position, Z[1] is cantilever velocity.
+        t : float, optional
+            Time in seconds. Default 0.
 
-        :returns: Zdot[0] is the cantilever velocity, and Zdot[1] is the cantilever
-            acceleration.
-        :rtype: (2, ) array_like
-            
-
+        Returns
+        -------
+        ndarray, shape (2,)
+            Zdot[0] is cantilever velocity, Zdot[1] is cantilever acceleration.
         """
 
         t0 = self.t0

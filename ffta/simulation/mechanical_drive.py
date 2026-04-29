@@ -74,29 +74,30 @@ class MechanicalDrive(Cantilever):
     >>> Z, _ = c.simulate()
     >>> c.analyze()
 
-    :param can_params: Parameters for cantilever properties. See Cantilever
-    :type can_params: dict
-        
-    :param force_params: Parameters for forces. Beyond Cantilever, the dictionary contains:
-        es_force = float (in N)
-        delta_freq = float (in Hz)
-        tau = float (in seconds)
-    :type force_params: dict
-    
-    :param sim_params: Parameters for simulation. The dictionary contains:
-        trigger = float (in seconds)
-        total_time = float (in seconds)
-        sampling_rate = int (in Hz)  
-    :type sim_params: dict
-        
-    :param v_array: If supplied, v_array is the time-dependent excitation to the resonance
-        frequency and the electrostatic force, scaled from 0 to 1.
-        v_array must be the exact length and sampling of the desired signal
-    :type v_array: ndarray, optional
-    
-    :param func:
-    :type func: function, optional
+    Parameters
+    ----------
+    can_params : dict
+        Cantilever properties. See :class:`Cantilever`.
+    force_params : dict
+        Force parameters. Beyond Cantilever, contains:
 
+        es_force : float (N)
+        delta_freq : float (Hz)
+        tau : float (s)
+    sim_params : dict
+        Simulation parameters. Contains:
+
+        trigger : float (s)
+        total_time : float (s)
+        sampling_rate : int (Hz)
+    v_array : ndarray, optional
+        Explicit time-dependent excitation scaled from 0 to 1. Must match
+        total_time * sampling_rate in length. If supplied, overrides func.
+    func : callable, optional
+        Excitation function of the form ``func(t, *func_args)``. Default
+        is ``excitation.single_exp`` (single exponential decay).
+    func_args : list, optional
+        Arguments passed to func. Defaults to ``[self.tau]``.
     """
 
     def __init__(self, 
@@ -149,12 +150,15 @@ class MechanicalDrive(Cantilever):
         If supplying an explicit v_array, then this function will call the values
         in that array
 
-        :param t: Time in seconds.
-        :type t: float
-            
-        :returns: Value of the function at the given time.
-        :rtype: float
-            
+        Parameters
+        ----------
+        t : float
+            Time in seconds.
+
+        Returns
+        -------
+        float
+            Value of the excitation function at time t.
         """
 
         p = int(t * self.sampling_rate)
@@ -181,18 +185,19 @@ class MechanicalDrive(Cantilever):
         """
         Exponentially decaying resonance frequency.
 
-        :param t: Time in seconds.
-        :type t: float
-        
-        :param t0: Event time in seconds.
-        :type t0: float
-        
-        :param tau: Decay constant in the exponential function, in seconds.
-        :type tau: float
-            
-        :returns: Resonance frequency of the cantilever at a given time, in rad/s.
-        :rtype: float
-            
+        Parameters
+        ----------
+        t : float
+            Time in seconds.
+        t0 : float
+            Event time in seconds.
+        tau : float
+            Decay constant in seconds.
+
+        Returns
+        -------
+        float
+            Resonance frequency at time t, in rad/s.
         """
 
         return self.w0 + self.delta_w * self.__gamma__(t)
@@ -202,18 +207,19 @@ class MechanicalDrive(Cantilever):
         Force on the cantilever at a given time. It contains driving force and
         electrostatic force.
 
-        :param float: time in seconds
-        :type t: float
-        
-        :param t0: event time in seconds
-        :type t0: float
-        
-        :param tau: Decay constant in the exponential function, in seconds.
-        :type tau: float
-            
-        :returns: Force on the cantilever at a given time, in N/kg.
-        :rtype: float
-            
+        Parameters
+        ----------
+        t : float
+            Time in seconds.
+        t0 : float
+            Event time in seconds.
+        tau : float
+            Decay constant in seconds.
+
+        Returns
+        -------
+        float
+            Force on the cantilever at time t, in N/kg.
         """
 
         driving_force = self.f0 * np.sin(self.wd * t)
