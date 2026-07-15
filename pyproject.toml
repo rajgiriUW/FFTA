@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "FFTA"
+dynamic = ["version"]
+description = "Fast Free Transient Analysis"
+readme = "README.md"
+license = { file = "LICENSE.txt" }
+authors = [
+    { name = "Rajiv Giridharagopal", email = "rgiri@uw.edu" },
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.20.0",
+    "scipy>=1.4.1",
+    "igor2>=0.5.2",
+    "numexpr>=2.7.1",
+    "pyUSID>=0.0.11",
+    "pywavelets>=1.1.1",
+    "sidpy>=0.12.0",
+    "pandas>=1.1.0",
+    "torch>=2.1.2",
+    "scikit-image>=0.19.2",
+]
+
+[project.optional-dependencies]
+gkpfm = ["BGlib>=0.0.3"]
+
+[project.urls]
+Homepage = "https://github.com/rajgiriUW/ffta/"
+
+[tool.setuptools.dynamic]
+version = { attr = "ffta.__version__.version" }
+
+[tool.setuptools.packages.find]
+exclude = ["xop", "docs", "data", "notebooks"]
