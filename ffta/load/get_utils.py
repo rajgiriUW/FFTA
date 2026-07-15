@@ -210,7 +210,7 @@ def get_pixel(h5_path, rc, params={}, pixel_params={},
     :type params: dict
     
     :param pixel_params: Parameters 'fit', 'pycroscopy', 'method', 'fit_form'
-        See ffta.pixel for details. 'pycroscopy' is set to True in this function
+        See ffta.ffsignal for details. 'pycroscopy' is set to True in this function
     :type pixel_params: dict, optional
     
     :param array_form: Returns the raw array contents rather than Pixel class

@@ -21,7 +21,7 @@ from sidpy.hdf.hdf_utils import get_attributes
 from ffta import line
 from ffta.load import get_utils
 from ffta.load import gl_ibw
-from ffta.pixel_utils import load
+from ffta.ffsignal_utils import load
 
 """
 Common HDF Loading functions

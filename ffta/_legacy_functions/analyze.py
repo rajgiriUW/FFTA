@@ -20,8 +20,8 @@ from matplotlib import gridspec as gs
 from matplotlib import pyplot as plt
 
 import ffta.line as line
-from .pixel_utils import badpixels
-from .pixel_utils import load
+from .ffsignal_utils import badpixels
+from .ffsignal_utils import load
 
 
 def process_line(args):

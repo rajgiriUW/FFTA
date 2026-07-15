@@ -13,10 +13,10 @@ import pywt
 from scipy import integrate as spg
 from scipy import signal as sps
 
-from ffta.pixel_utils import dwavelet
-from ffta.pixel_utils import noise
-from ffta.pixel_utils import parab
-from ffta.pixel_utils import tfp_calc
+from ffta.ffsignal_utils import dwavelet
+from ffta.ffsignal_utils import noise
+from ffta.ffsignal_utils import parab
+from ffta.ffsignal_utils import tfp_calc
 
 
 class FFSignal:
@@ -98,13 +98,13 @@ class FFSignal:
 
         Examples
         --------
-        >>> from ffta import ffsignal, pixel_utils
+        >>> from ffta import ffsignal, ffsignal_utils
         >>>
         >>> signal_file = '../data/SW_0000.ibw'
         >>> params_file = '../data/parameters.cfg'
         >>>
-        >>> signal_array = pixel_utils.load.signal(signal_file)
-        >>> n_pixels, params = pixel_utils.load.configuration(params_file)
+        >>> signal_array = ffsignal_utils.load.signal(signal_file)
+        >>> n_pixels, params = ffsignal_utils.load.configuration(params_file)
         >>>
         >>> p = ffsignal.FFSignal(signal_array, params)
         >>> tfp, shift, inst_freq = p.analyze()
@@ -134,7 +134,7 @@ class FFSignal:
         :type params: dict, optional
             
         :param can_params: Contains the cantilever parameters (e.g. AMPINVOLS).
-            see ffta.pixel_utils.load.cantilever_params
+            see ffta.ffsignal_utils.load.cantilever_params
         :type can_params: dict, optional
         
         :param fit: Find tFP by just raw minimum (False) or fitting product of 2 exponentials (True)
@@ -387,7 +387,7 @@ class FFSignal:
             self.signal[:, i] -= sig_dc
 
         if plot:
-            from ffta.pixel_utils.plot import plot_dc_removal
+            from ffta.ffsignal_utils.plot import plot_dc_removal
             plot_dc_removal(self, sig_dc, self.signal)
 
         if self.n_signals == 1:
@@ -1037,7 +1037,7 @@ class FFSignal:
         fit : bool, optional
             Overlay the best-fit curve on the frequency panel. Default True.
         """
-        from ffta.pixel_utils.plot import plot_pixel
+        from ffta.ffsignal_utils.plot import plot_pixel
         plot_pixel(self, newplot=newplot, fit=fit)
 
     def generate_inst_freq(self, timing=False, dc=True):

@@ -14,7 +14,7 @@ from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 
 # from ffta.hdf_utils import get_utils
 from ffta.load import get_utils
-from ffta.pixel_utils import badpixels
+from ffta.ffsignal_utils import badpixels
 
 
 def plot_tfps(h5_file, h5_path='/', append='', savefig=True, stdevs=2, scale=None):

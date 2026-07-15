@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 from scipy.interpolate import InterpolatedUnivariateSpline as ius
 from scipy.signal import medfilt
 
-from ffta.pixel_utils.load import configuration
+from ffta.ffsignal_utils.load import configuration
 from .mechanical_drive import MechanicalDrive
 from .utils.load import params_from_experiment as load_parm
 from .utils.load import simulation_configuration as load_sim_config

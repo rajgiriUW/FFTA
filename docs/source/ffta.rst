@@ -12,7 +12,7 @@ Subpackages
    ffta.gkpfm
    ffta.hdf_utils
    ffta.load
-   ffta.pixel_utils
+   ffta.ffsignal_utils
    ffta.simulation
 
 Pixel

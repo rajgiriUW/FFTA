@@ -1,4 +1,4 @@
-"""pixel.py: Contains pixel class."""
+"""CUFFTA.py: Contains CUFFTA class, the GPU-accelerated equivalent of ffsignal.FFSignal."""
 # pylint: disable=E1101,R0902,C0103
 __author__ = "Rajiv Giridharagopal"
 __copyright__ = "Copyright 2023"
@@ -19,10 +19,10 @@ import cupy as cp
 import cusignal
 
 from ffta.nfmd import NFMD
-from ffta.pixel_utils import dwavelet
-from ffta.pixel_utils import noise
-from ffta.pixel_utils import parab
-from ffta.pixel_utils import tfp_calc
+from ffta.ffsignal_utils import dwavelet
+from ffta.ffsignal_utils import noise
+from ffta.ffsignal_utils import parab
+from ffta.ffsignal_utils import tfp_calc
 
 
 class CUFFTA:
@@ -101,15 +101,15 @@ class CUFFTA:
 
         Examples
         --------
-        >>> from ffta import pixel, pixel_utils
+        >>> from ffta import ffsignal, ffsignal_utils
         >>>
         >>> signal_file = '../data/SW_0000.ibw'
         >>> params_file = '../data/parameters.cfg'
         >>>
-        >>> signal_array = pixel_utils.load.signal(signal_file)
-        >>> n_pixels, params = pixel_utils.load.configuration(params_file)
+        >>> signal_array = ffsignal_utils.load.signal(signal_file)
+        >>> n_pixels, params = ffsignal_utils.load.configuration(params_file)
         >>>
-        >>> p = pixel.Pixel(signal_array, params)
+        >>> p = ffsignal.FFSignal(signal_array, params)
         >>> tfp, shift, inst_freq = p.analyze()
         >>>
         >>> p.plot()
@@ -137,7 +137,7 @@ class CUFFTA:
         :type params: dict, optional
             
         :param can_params: Contains the cantilever parameters (e.g. AMPINVOLS).
-            see ffta.pixel_utils.load.cantilever_params
+            see ffta.ffsignal_utils.load.cantilever_params
         :type can_params: dict, optional
         
         :param fit: Find tFP by just raw minimum (False) or fitting product of 2 exponentials (True)
@@ -187,7 +187,7 @@ class CUFFTA:
         # These defaults are overwritten by values in 'params'
 
         if isinstance(signal_array, numpy.ndarray):
-            raise TypeError('Signal must be a cupy.ndarray. For Numpy processing use FFTA/Pixel')
+            raise TypeError('Signal must be a cupy.ndarray. For Numpy processing use FFTA/FFSignal')
 
         # FIR (Hilbert) filtering parameters
         self.n_taps = 1499
@@ -338,7 +338,7 @@ class CUFFTA:
 
     def update_parm(self, **kwargs):
         """
-        Update the parameters, see ffta.pixel.Pixel for details on what to update
+        Update the parameters, see ffta.ffsignal.FFSignal for details on what to update
         e.g. to switch from default Hilbert to Wavelets, for example
         
         :param kwargs:

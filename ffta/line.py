@@ -34,12 +34,12 @@ class Line:
 
         See Also
         --------
-        ffta.pixel: Pixel processing for FF-trEFM data.
+        ffta.ffsignal: FFSignal processing for FF-trEFM data.
         ffta.simulation: Simulation for synthetic FF-trEFM data.
 
         Examples
         --------
-        >>> from ffta import line, pixel_utils
+        >>> from ffta import line, ffsignal_utils
         >>>
         >>> signal_file = '../data/SW_0000.ibw'
         >>> params_file = '../data/parameters.cfg'

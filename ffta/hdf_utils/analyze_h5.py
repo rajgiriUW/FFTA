@@ -14,7 +14,7 @@ from pyUSID.io import Dimension
 
 from ffta.hdf_utils import hdf_utils
 from ffta.load import get_utils
-from ffta.pixel_utils import badpixels
+from ffta.ffsignal_utils import badpixels
 
 """
 Analyzes an HDF_5 format trEFM data set and writes the result into that file

@@ -15,7 +15,7 @@ from skimage import restoration
 import ffta
 from ffta.load import get_utils
 from ffta.pixel import Pixel
-from ffta.pixel_utils import badpixels
+from ffta.ffsignal_utils import badpixels
 from ffta.simulation.impulse import impulse
 from ffta.simulation.utils.load import params_from_experiment as load_parm
 
@@ -23,7 +23,7 @@ from ffta.simulation.utils.load import params_from_experiment as load_parm
 class FFtrEFM(Process):
     """
     This class processes the deflection data into instantaneous frequency and tFP
-    Implements the pixel-by-pixel processing using ffta.pixel routines
+    Implements the pixel-by-pixel processing using ffta.ffsignal routines
     Abstracted using the Process class for parallel processing on image dataset
     
     Example usage:

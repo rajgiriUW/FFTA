@@ -16,7 +16,7 @@ from sidpy import Dimension
 
 from ffta.load import gl_ibw
 from ffta.load.load_hdf import load_folder
-from ffta.pixel_utils import badpixels
+from ffta.ffsignal_utils import badpixels
 
 '''
 Loads Ringdown data from raw .ibw and with the associated *.ibw Image file.

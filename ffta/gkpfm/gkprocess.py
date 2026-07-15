@@ -20,7 +20,7 @@ import ffta
 from ffta.gkpfm.gkpixel import GKPixel
 from ffta.hdf_utils.process import FFtrEFM
 from ffta.load import get_utils
-from ffta.pixel_utils import badpixels
+from ffta.ffsignal_utils import badpixels
 
 '''
 To do:
@@ -30,7 +30,7 @@ To do:
 
 class GKPFM(FFtrEFM):
     """
-    Implements the pixel-by-pixel processing using ffta.pixel routines
+    Implements the pixel-by-pixel processing using ffta.ffsignal routines
     Abstracted using the Process class for parallel processing
 
     Example usage:
@@ -64,7 +64,7 @@ class GKPFM(FFtrEFM):
         :type parm_dict: dict, optional
         
         :param can_params: Cantilever parameters describing the behavior
-            Can be loaded from ffta.pixel_utils.load.cantilever_params
+            Can be loaded from ffta.ffsignal_utils.load.cantilever_params
             The default is {}.
         :type can_params: dict, optional
         
@@ -146,7 +146,7 @@ class GKPFM(FFtrEFM):
 
     def update_parm(self, **kwargs):
         """
-        Update the parameters, see ffta.pixel.Pixel for details on what to update
+        Update the parameters, see ffta.ffsignal.FFSignal for details on what to update
         e.g. to switch from default Hilbert to Wavelets, for example
         
         :param **kwargs:

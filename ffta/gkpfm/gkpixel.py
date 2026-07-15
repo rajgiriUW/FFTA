@@ -17,7 +17,7 @@ from scipy.optimize import fmin_tnc
 from scipy.signal import fftconvolve, chirp
 
 from ffta.pixel import Pixel
-from ffta.pixel_utils.load import cantilever_params
+from ffta.ffsignal_utils.load import cantilever_params
 from ffta.simulation.cantilever import Cantilever
 from ..analysis.fft import get_noise_floor, NoiseBandFilter
 from ..analysis.gmode_utils import test_filter
@@ -389,7 +389,7 @@ class GKPixel(Pixel):
         """
         Uses the cantilever simulation to generate a tune as the transfer function
         
-        :param can_params_dict: use ffta.pixel_utils.load.cantilever_params()
+        :param can_params_dict: use ffta.ffsignal_utils.load.cantilever_params()
         :type can_params_dict: Dict
             
         :param plot: Plots the time-dependent tune

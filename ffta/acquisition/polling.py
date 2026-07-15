@@ -25,7 +25,7 @@ from matplotlib import pyplot as plt
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from ffta import line, pixel_utils
+from ffta import line, ffsignal_utils
 
 
 class MyHandler(FileSystemEventHandler):
@@ -88,7 +88,7 @@ class MyHandler(FileSystemEventHandler):
 
             path = event.src_path.split('\\')
 
-            signal = pixel_utils.load.signal(event.src_path)
+            signal = ffsignal_utils.load.signal(event.src_path)
             this_line = line.Line(signal, self.parameters, self.n_pixels)
             self.tfp, self.shift, _ = this_line.analyze()
             print('Analyzed', path[-1], 'tFP avg =', np.mean(self.tfp),
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     print('Loading data from ', path_to_watch)
 
     params_file = path_to_watch + r'\parameters.cfg'
-    n_pixels, parameters = pixel_utils.load.configuration(params_file)
+    n_pixels, parameters = ffsignal_utils.load.configuration(params_file)
     lines = parameters['lines_per_image']
 
     print('Pixels = ', n_pixels)

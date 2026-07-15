@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 
 # Script that loads, analyzes, and plots fast free point scan with fit
 from ffta.pixel import Pixel
-from ffta.pixel_utils.load import configuration
-from ffta.pixel_utils.load import signal
+from ffta.ffsignal_utils.load import configuration
+from ffta.ffsignal_utils.load import signal
 
 
 def analyze_pixel(ibw_file, param_file):

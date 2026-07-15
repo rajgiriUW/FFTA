@@ -7,8 +7,8 @@ __email__ = "rgiri@uw.edu"
 import configparser
 import urllib
 
-from ffta.pixel_utils.load import cantilever_params
-from ffta.pixel_utils.load import configuration
+from ffta.ffsignal_utils.load import cantilever_params
+from ffta.ffsignal_utils.load import configuration
 
 
 def simulation_configuration(path, is_url=False):
